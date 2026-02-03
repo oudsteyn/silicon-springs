@@ -3,9 +3,9 @@ class_name StatusPill
 ## Compact status display showing budget, population, date, and speed controls
 ## Top-left corner, 300x50px, click opens Dashboard
 
-const PILL_WIDTH: int = 300
-const PILL_HEIGHT: int = 50
-const PADDING: int = 12
+const PILL_WIDTH: int = 380
+const PILL_HEIGHT: int = 60
+const PADDING: int = 16
 const ANIMATION_DURATION: float = 0.2
 
 # Components
@@ -59,9 +59,9 @@ func _setup_ui() -> void:
 	panel.anchor_top = 0
 	panel.anchor_right = 0
 	panel.anchor_bottom = 0
-	panel.offset_left = 60  # Leave room for tool palette
+	panel.offset_left = 70  # Leave room for tool palette
 	panel.offset_top = 10
-	panel.offset_right = 60 + PILL_WIDTH
+	panel.offset_right = 70 + PILL_WIDTH
 	panel.offset_bottom = 10 + PILL_HEIGHT
 
 	# Apply style using centralized theme
@@ -81,13 +81,13 @@ func _setup_ui() -> void:
 	budget_label = Label.new()
 	budget_label.text = "$50K"
 	budget_label.add_theme_color_override("font_color", UIManager.COLORS.text)
-	budget_label.add_theme_font_size_override("font_size", 14)
+	budget_label.add_theme_font_size_override("font_size", 18)
 	budget_box.add_child(budget_label)
 
 	budget_delta_label = Label.new()
 	budget_delta_label.text = "+$2K"
 	budget_delta_label.add_theme_color_override("font_color", UIManager.COLORS.success)
-	budget_delta_label.add_theme_font_size_override("font_size", 11)
+	budget_delta_label.add_theme_font_size_override("font_size", 14)
 	budget_box.add_child(budget_delta_label)
 
 	hbox.add_child(budget_box)
@@ -102,7 +102,7 @@ func _setup_ui() -> void:
 	population_label = Label.new()
 	population_label.text = "0"
 	population_label.add_theme_color_override("font_color", UIManager.COLORS.text)
-	population_label.add_theme_font_size_override("font_size", 14)
+	population_label.add_theme_font_size_override("font_size", 18)
 	hbox.add_child(population_label)
 
 	# Separator
@@ -115,7 +115,7 @@ func _setup_ui() -> void:
 	date_label = Label.new()
 	date_label.text = "Jan 2024"
 	date_label.add_theme_color_override("font_color", UIManager.COLORS.text)
-	date_label.add_theme_font_size_override("font_size", 14)
+	date_label.add_theme_font_size_override("font_size", 18)
 	hbox.add_child(date_label)
 
 	# Separator
@@ -128,7 +128,7 @@ func _setup_ui() -> void:
 	weather_label = Label.new()
 	weather_label.text = "20C"
 	weather_label.add_theme_color_override("font_color", UIManager.COLORS.text_dim)
-	weather_label.add_theme_font_size_override("font_size", 12)
+	weather_label.add_theme_font_size_override("font_size", 16)
 	weather_label.tooltip_text = "Current weather (D for details)"
 	hbox.add_child(weather_label)
 
@@ -228,7 +228,7 @@ func _create_alert_icons() -> void:
 		var icon = Label.new()
 		icon.text = data.icon
 		icon.add_theme_color_override("font_color", data.color)
-		icon.add_theme_font_size_override("font_size", 12)
+		icon.add_theme_font_size_override("font_size", 16)
 		icon.visible = false
 		icon.tooltip_text = alert_type.capitalize() + " Alert"
 		_alert_icons[alert_type] = icon
@@ -434,10 +434,10 @@ func _show_tooltip() -> void:
 	_expanded_tooltip = PanelContainer.new()
 	_expanded_tooltip.anchor_left = 0
 	_expanded_tooltip.anchor_top = 0
-	_expanded_tooltip.offset_left = 60
+	_expanded_tooltip.offset_left = 70
 	_expanded_tooltip.offset_top = PILL_HEIGHT + 15
-	_expanded_tooltip.offset_right = 60 + 250
-	_expanded_tooltip.offset_bottom = PILL_HEIGHT + 15 + 150
+	_expanded_tooltip.offset_right = 70 + 280
+	_expanded_tooltip.offset_bottom = PILL_HEIGHT + 15 + 170
 
 	# Use centralized panel style
 	var style = UIManager.get_panel_style(ThemeConstants.RADIUS_MEDIUM)
@@ -484,7 +484,7 @@ func _show_tooltip() -> void:
 	var hint = Label.new()
 	hint.text = "Click for full Dashboard (D)"
 	hint.add_theme_color_override("font_color", UIManager.COLORS.accent)
-	hint.add_theme_font_size_override("font_size", 11)
+	hint.add_theme_font_size_override("font_size", 14)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(hint)
 
@@ -504,14 +504,14 @@ func _add_tooltip_row(container: VBoxContainer, label_text: String, value_text: 
 	var label = Label.new()
 	label.text = label_text
 	label.add_theme_color_override("font_color", UIManager.COLORS.text_dim)
-	label.add_theme_font_size_override("font_size", 12)
+	label.add_theme_font_size_override("font_size", 15)
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(label)
 
 	var value = Label.new()
 	value.text = value_text
 	value.add_theme_color_override("font_color", color)
-	value.add_theme_font_size_override("font_size", 12)
+	value.add_theme_font_size_override("font_size", 15)
 	value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	row.add_child(value)
 

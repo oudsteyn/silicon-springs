@@ -3,10 +3,10 @@ class_name ToolPalette
 ## Photoshop-style vertical tool strip on left edge
 ## 45px wide, always visible, with flyout menus for complex tools
 
-const PALETTE_WIDTH: int = 45
-const BUTTON_SIZE: int = 36
-const PADDING: int = 4
-const BUTTON_SPACING: int = 2
+const PALETTE_WIDTH: int = 56
+const BUTTON_SIZE: int = 46
+const PADDING: int = 5
+const BUTTON_SPACING: int = 3
 
 # Tool definitions with icons
 const TOOLS = [
@@ -185,7 +185,7 @@ func _create_tool_button(tool_def: Dictionary) -> Button:
 	btn.flat = true
 
 	# Font styling
-	btn.add_theme_font_size_override("font_size", 14)
+	btn.add_theme_font_size_override("font_size", 18)
 	btn.add_theme_color_override("font_color", UIManager.COLORS.text)
 	btn.add_theme_color_override("font_hover_color", UIManager.COLORS.text)
 	btn.add_theme_color_override("font_pressed_color", UIManager.COLORS.text)

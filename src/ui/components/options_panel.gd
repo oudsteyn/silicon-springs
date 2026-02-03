@@ -43,7 +43,7 @@ func _build_ui() -> void:
 
 	var title = Label.new()
 	title.text = "Options"
-	title.add_theme_font_size_override("font_size", 18)
+	title.add_theme_font_size_override("font_size", 24)
 	title.add_theme_color_override("font_color", UIManager.COLORS.text)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(title)
@@ -109,7 +109,7 @@ func _build_ui() -> void:
 	var audio_note = Label.new()
 	audio_note.text = "Audio settings coming soon..."
 	audio_note.add_theme_color_override("font_color", UIManager.COLORS.text_dim)
-	audio_note.add_theme_font_size_override("font_size", 12)
+	audio_note.add_theme_font_size_override("font_size", 16)
 	content.add_child(audio_note)
 
 	# Separator
@@ -137,7 +137,7 @@ func _build_ui() -> void:
 func _add_section(title_text: String) -> void:
 	var section = Label.new()
 	section.text = title_text
-	section.add_theme_font_size_override("font_size", 14)
+	section.add_theme_font_size_override("font_size", 18)
 	section.add_theme_color_override("font_color", UIManager.COLORS.accent)
 	content.add_child(section)
 
@@ -164,14 +164,14 @@ func _add_shortcut_row(parent: Control, key: String, action: String) -> void:
 	var key_label = Label.new()
 	key_label.text = key
 	key_label.add_theme_color_override("font_color", UIManager.COLORS.accent)
-	key_label.add_theme_font_size_override("font_size", 11)
-	key_label.custom_minimum_size.x = 60
+	key_label.add_theme_font_size_override("font_size", 14)
+	key_label.custom_minimum_size.x = 70
 	parent.add_child(key_label)
 
 	var action_label = Label.new()
 	action_label.text = action
 	action_label.add_theme_color_override("font_color", UIManager.COLORS.text_dim)
-	action_label.add_theme_font_size_override("font_size", 11)
+	action_label.add_theme_font_size_override("font_size", 14)
 	parent.add_child(action_label)
 
 

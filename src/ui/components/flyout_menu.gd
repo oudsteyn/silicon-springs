@@ -159,7 +159,7 @@ func _add_menu_item(item: Dictionary) -> void:
 	# Style based on lock state
 	var text_color = UIManager.COLORS.text if not is_locked else UIManager.COLORS.text_dim
 	btn.add_theme_color_override("font_color", text_color)
-	btn.add_theme_font_size_override("font_size", 12)
+	btn.add_theme_font_size_override("font_size", 16)
 
 	# Use centralized button styles
 	var style_normal = UIManager.get_button_normal_style()

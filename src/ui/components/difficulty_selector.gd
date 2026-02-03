@@ -86,7 +86,7 @@ func _setup_ui() -> void:
 
 	# Create main panel
 	_main_panel = PanelContainer.new()
-	_main_panel.custom_minimum_size = Vector2(600, 500)
+	_main_panel.custom_minimum_size = Vector2(720, 600)
 
 	var style = UIManager.get_modal_style()
 	style.set_corner_radius_all(ThemeConstants.RADIUS_LARGE + 4)
@@ -103,7 +103,7 @@ func _setup_ui() -> void:
 	var title = Label.new()
 	title.text = "SELECT DIFFICULTY"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 28)
+	title.add_theme_font_size_override("font_size", 32)
 	title.add_theme_color_override("font_color", UIManager.COLORS.text)
 	vbox.add_child(title)
 
@@ -162,14 +162,14 @@ func _setup_ui() -> void:
 	# Cancel button
 	_cancel_button = Button.new()
 	_cancel_button.text = "Cancel"
-	_cancel_button.custom_minimum_size = Vector2(100, 40)
+	_cancel_button.custom_minimum_size = Vector2(120, 48)
 	_cancel_button.pressed.connect(_on_cancel_pressed)
 	button_row.add_child(_cancel_button)
 
 	# Start button
 	_start_button = Button.new()
 	_start_button.text = "Start Game"
-	_start_button.custom_minimum_size = Vector2(140, 40)
+	_start_button.custom_minimum_size = Vector2(160, 48)
 	_start_button.pressed.connect(_on_start_pressed)
 	button_row.add_child(_start_button)
 
@@ -186,7 +186,7 @@ func _setup_ui() -> void:
 func _create_difficulty_button(difficulty: GameConfigClass.Difficulty) -> Button:
 	var info = DIFFICULTY_INFO[difficulty]
 	var btn = Button.new()
-	btn.custom_minimum_size = Vector2(260, 80)
+	btn.custom_minimum_size = Vector2(320, 100)
 	btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	btn.text = "  " + info.name + "\n  " + info.description
 	btn.pressed.connect(_on_difficulty_pressed.bind(difficulty))

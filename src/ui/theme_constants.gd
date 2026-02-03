@@ -15,11 +15,11 @@ const RADIUS_PILL: int = 25
 # FONT SIZES
 # ============================================
 
-const FONT_SMALL: int = 11
-const FONT_NORMAL: int = 13
-const FONT_MEDIUM: int = 14
-const FONT_LARGE: int = 16
-const FONT_TITLE: int = 18
+const FONT_SMALL: int = 14
+const FONT_NORMAL: int = 16
+const FONT_MEDIUM: int = 18
+const FONT_LARGE: int = 20
+const FONT_TITLE: int = 24
 
 # ============================================
 # MARGINS AND PADDING
@@ -83,7 +83,7 @@ const ANIM_PANEL_SLIDE: float = 0.2
 # COMPONENT SIZES
 # ============================================
 
-const BUTTON_MIN_SIZE = Vector2(30, 30)
-const ICON_SIZE_SMALL: int = 16
-const ICON_SIZE_NORMAL: int = 24
-const ICON_SIZE_LARGE: int = 32
+const BUTTON_MIN_SIZE = Vector2(40, 40)
+const ICON_SIZE_SMALL: int = 20
+const ICON_SIZE_NORMAL: int = 32
+const ICON_SIZE_LARGE: int = 40

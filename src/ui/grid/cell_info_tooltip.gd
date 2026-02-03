@@ -294,14 +294,14 @@ func _add_cell_info(cell: Vector2i) -> void:
 
 	# Zone info
 	if zoning_system:
-		var zone_data = zoning_system.get_zone_at(cell)
-		if zone_data:
-			var zone_name = zoning_system.get_zone_name(zone_data.type)
+		var zone_type = zoning_system.get_zone_at(cell)
+		if zone_type and zone_type != 0:  # 0 = ZoneType.NONE
+			var zone_name = zoning_system.get_zone_name(zone_type)
 			_tooltip_content.append({
 				"type": "row",
 				"label": "Zone",
 				"value": zone_name,
-				"color": zoning_system.get_zone_color(zone_data.type)
+				"color": zoning_system.get_zone_color(zone_type)
 			})
 
 	# Section divider
