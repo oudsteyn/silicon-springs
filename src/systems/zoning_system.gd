@@ -489,7 +489,7 @@ func _update_zone_counts(zone_type: int, delta: int) -> void:
 			GameState.industrial_zones += delta
 
 
-func _get_zone_name(zone_type: int) -> String:
+func get_zone_name(zone_type: int) -> String:
 	match zone_type:
 		ZoneType.RESIDENTIAL_LOW: return "Residential (Low)"
 		ZoneType.RESIDENTIAL_MED: return "Residential (Med)"
