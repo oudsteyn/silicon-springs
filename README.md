@@ -48,19 +48,43 @@ A city simulation game built with Godot 4.6 where players build and manage a cit
 - **Mini Minimap** (bottom-right): City overview with navigation
 - **Info Panel** (right edge): Building/cell details
 
+## Architecture
+
+The game uses an event-driven architecture with clear separation between simulation and UI layers:
+
+- **Event Bus** (`Events.gd`): Central hub for all signals - simulation events, commands, and queries
+- **Notification Bridge**: Translates simulation events into user-facing notifications
+- **Command Pattern**: Build, demolish, and zone actions go through command signals
+- **Query Pattern**: UI components request data via query signals, enabling loose coupling
+
 ## Project Structure
 
 ```
-├── assets/ui/          # Theme resources
+├── assets/
+│   ├── buildings/      # Building sprites
+│   ├── tiles/          # Tile assets
+│   └── ui/             # Theme resources
+├── data/
+│   └── terrain_templates/
 ├── scenes/             # Main scene files
 ├── src/
-│   ├── autoloads/      # Global singletons (Events, GameState, Simulation, UIManager)
+│   ├── autoloads/      # Global singletons
+│   │   ├── events.gd           # Event bus
+│   │   ├── game_state.gd       # Game data
+│   │   ├── simulation.gd       # Simulation orchestrator
+│   │   ├── notification_bridge.gd
+│   │   └── ui_manager.gd
+│   ├── calculation/    # Pure calculation logic
+│   ├── core/           # Core utilities
 │   ├── data/           # Building data resources (.tres)
 │   ├── entities/       # Building entity
 │   ├── resources/      # Custom resource definitions
 │   ├── systems/        # Game systems (power, water, traffic, etc.)
-│   └── ui/             # UI components
-│       └── components/ # New minimalist UI components
+│   └── ui/
+│       ├── components/ # Reusable UI components
+│       ├── dashboard/  # Dashboard panels
+│       └── grid/       # Grid-related UI
+├── tests/              # Test files
 └── project.godot
 ```
 
