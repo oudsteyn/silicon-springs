@@ -101,7 +101,7 @@ func _connect_infrastructure_events() -> void:
 
 func _on_road_network_changed(cell: Vector2i, _added: bool) -> void:
 	# Only roads need to update when adjacent roads change
-	if not building_data or building_data.building_type != "road":
+	if not building_data or not GridConstants.is_road_type(building_data.building_type):
 		return
 	if _is_adjacent_cell(cell):
 		_update_visual()
@@ -109,7 +109,7 @@ func _on_road_network_changed(cell: Vector2i, _added: bool) -> void:
 
 func _on_water_pipe_network_changed(cell: Vector2i, _added: bool) -> void:
 	# Only water pipes need to update when adjacent pipes change
-	if not building_data or building_data.building_type != "water_pipe":
+	if not building_data or not GridConstants.is_water_type(building_data.building_type):
 		return
 	if _is_adjacent_cell(cell):
 		_update_visual()
@@ -117,7 +117,7 @@ func _on_water_pipe_network_changed(cell: Vector2i, _added: bool) -> void:
 
 func _on_power_line_network_changed(cell: Vector2i, _added: bool) -> void:
 	# Only power lines need to update when adjacent lines change
-	if not building_data or building_data.building_type != "power_line":
+	if not building_data or not GridConstants.is_power_type(building_data.building_type):
 		return
 	if _is_adjacent_cell(cell):
 		_update_visual()
@@ -279,11 +279,11 @@ func _update_visual() -> void:
 	if renderer:
 		if building_data.category == "zone":
 			sprite.texture = renderer.get_building_texture(building_data, development_level, grid_cell)
-		elif building_data.building_type == "road":
+		elif GridConstants.is_road_type(building_data.building_type):
 			sprite.texture = renderer.get_building_texture(building_data, development_level, grid_cell)
-		elif building_data.building_type == "power_line":
+		elif GridConstants.is_power_type(building_data.building_type):
 			sprite.texture = renderer.get_building_texture(building_data, development_level, grid_cell)
-		elif building_data.building_type == "water_pipe":
+		elif GridConstants.is_water_type(building_data.building_type):
 			sprite.texture = renderer.get_building_texture(building_data, development_level, grid_cell)
 
 	# Show dark overlay if not operational

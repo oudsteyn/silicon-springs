@@ -64,13 +64,14 @@ func get_building_texture(building_data, development_level: int = 1, grid_cell: 
 	var neighbors: Dictionary = {}
 
 	# Determine cache key based on building type
-	if building_data.building_type == "road" and grid_cell != Vector2i(-1, -1):
+	var btype = building_data.building_type
+	if GridConstants.is_road_type(btype) and grid_cell != Vector2i(-1, -1):
 		neighbors = _get_road_neighbors(grid_cell)
 		cache_key = "%s_%d_%d_%d_%d_%d" % [building_data.id, development_level, neighbors.north, neighbors.south, neighbors.east, neighbors.west]
-	elif building_data.building_type == "power_line" and grid_cell != Vector2i(-1, -1):
+	elif GridConstants.is_power_type(btype) and grid_cell != Vector2i(-1, -1):
 		neighbors = _get_road_neighbors(grid_cell)
 		cache_key = "%s_%d_%d_%d_%d_%d" % [building_data.id, development_level, neighbors.north, neighbors.south, neighbors.east, neighbors.west]
-	elif building_data.building_type == "water_pipe" and grid_cell != Vector2i(-1, -1):
+	elif GridConstants.is_water_type(btype) and grid_cell != Vector2i(-1, -1):
 		neighbors = _get_water_pipe_neighbors(grid_cell)
 		cache_key = "%s_%d_%d_%d_%d_%d" % [building_data.id, development_level, neighbors.north, neighbors.south, neighbors.east, neighbors.west]
 	else:
@@ -157,48 +158,51 @@ func _generate_texture(building_data, level: int, road_neighbors: Dictionary = {
 
 	var image = Image.create(width, height, false, Image.FORMAT_RGBA8)
 	var base_color = building_data.color
+	var btype = building_data.building_type
 
-	# Fill based on building type
-	match building_data.building_type:
-		"road":
-			_draw_road(image, width, height, road_neighbors)
-		"power_line":
-			_draw_power_line(image, width, height, base_color, road_neighbors)
-		"water_pipe":
-			_draw_water_pipe(image, width, height, base_color, road_neighbors)
-		"generator":
-			_draw_power_plant(image, width, height, base_color, building_data.id)
-		"water_source":
-			_draw_water_facility(image, width, height, base_color, building_data.id)
-		"residential":
-			_draw_residential(image, width, height, base_color, level)
-		"commercial":
-			_draw_commercial(image, width, height, base_color, level)
-		"industrial":
-			_draw_industrial(image, width, height, base_color, level)
-		"agricultural":
-			_draw_farm(image, width, height, base_color)
-		"park":
-			_draw_park(image, width, height, base_color, size)
-		"data_center":
-			_draw_data_center(image, width, height, base_color, building_data.data_center_tier)
-		"bus_stop":
-			_draw_bus_stop(image, width, height, base_color)
-		"bus_depot":
-			_draw_bus_depot(image, width, height, base_color)
-		"subway_station":
-			_draw_subway_station(image, width, height, base_color)
-		"rail_station":
-			_draw_rail_station(image, width, height, base_color)
-		"airport":
-			_draw_airport(image, width, height, base_color)
-		"seaport":
-			_draw_seaport(image, width, height, base_color)
-		"landmark":
-			_draw_landmark(image, width, height, base_color, building_data.id)
-		_:
-			# Service buildings and others
-			_draw_service_building(image, width, height, base_color, building_data.service_type)
+	# Handle infrastructure types using GridConstants helpers
+	if GridConstants.is_road_type(btype):
+		_draw_road(image, width, height, road_neighbors)
+	elif GridConstants.is_power_type(btype):
+		_draw_power_line(image, width, height, base_color, road_neighbors)
+	elif GridConstants.is_water_type(btype):
+		_draw_water_pipe(image, width, height, base_color, road_neighbors)
+	else:
+		# Fill based on building type
+		match btype:
+			"generator":
+				_draw_power_plant(image, width, height, base_color, building_data.id)
+			"water_source":
+				_draw_water_facility(image, width, height, base_color, building_data.id)
+			"residential":
+				_draw_residential(image, width, height, base_color, level)
+			"commercial":
+				_draw_commercial(image, width, height, base_color, level)
+			"industrial":
+				_draw_industrial(image, width, height, base_color, level)
+			"agricultural":
+				_draw_farm(image, width, height, base_color)
+			"park":
+				_draw_park(image, width, height, base_color, size)
+			"data_center":
+				_draw_data_center(image, width, height, base_color, building_data.data_center_tier)
+			"bus_stop":
+				_draw_bus_stop(image, width, height, base_color)
+			"bus_depot":
+				_draw_bus_depot(image, width, height, base_color)
+			"subway_station":
+				_draw_subway_station(image, width, height, base_color)
+			"rail_station":
+				_draw_rail_station(image, width, height, base_color)
+			"airport":
+				_draw_airport(image, width, height, base_color)
+			"seaport":
+				_draw_seaport(image, width, height, base_color)
+			"landmark":
+				_draw_landmark(image, width, height, base_color, building_data.id)
+			_:
+				# Service buildings and others
+				_draw_service_building(image, width, height, base_color, building_data.service_type)
 
 	var texture = ImageTexture.create_from_image(image)
 	return texture
