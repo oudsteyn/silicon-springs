@@ -59,7 +59,7 @@ var _needs_redraw: bool = true
 
 
 func _ready() -> void:
-	z_index = 2  # Above terrain, below buildings
+	z_index = ZLayers.GRID_LINES  # Above terrain, below buildings
 
 	# Connect to terrain changes
 	Events.terrain_changed.connect(_on_terrain_changed)

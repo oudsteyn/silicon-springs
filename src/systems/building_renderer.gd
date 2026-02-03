@@ -106,7 +106,7 @@ func _get_road_neighbors(cell: Vector2i) -> Dictionary:
 
 
 func _get_water_pipe_neighbors(cell: Vector2i) -> Dictionary:
-	# For water pipes, check both roads AND other water pipes as neighbors
+	# For water pipes, check roads, other water pipes, and water buildings as neighbors
 	var neighbors = {"north": 0, "south": 0, "east": 0, "west": 0}
 	if not grid_system:
 		return neighbors
@@ -126,11 +126,17 @@ func _get_water_pipe_neighbors(cell: Vector2i) -> Dictionary:
 			neighbors[dir_name] = 1
 			continue
 
-		# Check for water pipes in buildings
+		# Check for buildings (water pipes, water sources, water towers, etc.)
 		if grid_system.buildings.has(neighbor_cell):
 			var building = grid_system.buildings[neighbor_cell]
 			if is_instance_valid(building) and building.building_data:
-				if building.building_data.building_type == "water_pipe":
+				var btype = building.building_data.building_type
+				# Connect to water pipes and water infrastructure
+				if btype == "water_pipe" or btype == "water_source" or btype == "water_tower":
+					neighbors[dir_name] = 1
+					continue
+				# Also connect to any building that produces or consumes water
+				if building.building_data.water_production > 0 or building.building_data.water_consumption > 0:
 					neighbors[dir_name] = 1
 					continue
 
@@ -418,8 +424,9 @@ func _draw_water_pipe(image: Image, w: int, h: int, _base_color: Color, neighbor
 
 	var cx: int = int(w * 0.5)
 	var cy: int = int(h * 0.5)
+	var pipe_radius: int = 9
 
-	# Determine orientation based on road neighbors
+	# Determine connections
 	var has_north = neighbors.get("north", 0) == 1
 	var has_south = neighbors.get("south", 0) == 1
 	var has_east = neighbors.get("east", 0) == 1
@@ -428,38 +435,69 @@ func _draw_water_pipe(image: Image, w: int, h: int, _base_color: Color, neighbor
 	var has_vertical = has_north or has_south
 	var has_horizontal = has_east or has_west
 
-	var is_vertical_road = has_vertical and not has_horizontal
+	# Draw pipe segments based on connections
+	# North segment
+	if has_north:
+		for y in range(0, cy + pipe_radius):
+			for x in range(cx - pipe_radius, cx + pipe_radius + 1):
+				if x >= 0 and x < w and y >= 0 and y < h:
+					var dist = abs(x - cx)
+					var c = _get_pipe_color(dist, pipe_radius, highlight, pipe_color, shadow)
+					image.set_pixel(x, y, c)
 
-	if is_vertical_road:
-		# Vertical pipe (north-south)
-		for y in range(h):
-			for x in range(cx - 9, cx + 10):
-				if x >= 0 and x < w:
-					# Gradient effect for 3D appearance
-					var dist_from_center = abs(x - cx)
-					var c: Color
-					if dist_from_center <= 2:
-						c = highlight
-					elif dist_from_center <= 5:
-						c = pipe_color
-					else:
-						c = shadow
+	# South segment
+	if has_south:
+		for y in range(cy - pipe_radius, h):
+			for x in range(cx - pipe_radius, cx + pipe_radius + 1):
+				if x >= 0 and x < w and y >= 0 and y < h:
+					var dist = abs(x - cx)
+					var c = _get_pipe_color(dist, pipe_radius, highlight, pipe_color, shadow)
 					image.set_pixel(x, y, c)
-	else:
-		# Horizontal pipe (east-west) - default
+
+	# East segment
+	if has_east:
+		for x in range(cx - pipe_radius, w):
+			for y in range(cy - pipe_radius, cy + pipe_radius + 1):
+				if x >= 0 and x < w and y >= 0 and y < h:
+					var dist = abs(y - cy)
+					var c = _get_pipe_color(dist, pipe_radius, highlight, pipe_color, shadow)
+					image.set_pixel(x, y, c)
+
+	# West segment
+	if has_west:
+		for x in range(0, cx + pipe_radius):
+			for y in range(cy - pipe_radius, cy + pipe_radius + 1):
+				if x >= 0 and x < w and y >= 0 and y < h:
+					var dist = abs(y - cy)
+					var c = _get_pipe_color(dist, pipe_radius, highlight, pipe_color, shadow)
+					image.set_pixel(x, y, c)
+
+	# If no connections, draw horizontal by default
+	if not has_vertical and not has_horizontal:
 		for x in range(w):
-			for y in range(cy - 9, cy + 10):
+			for y in range(cy - pipe_radius, cy + pipe_radius + 1):
 				if y >= 0 and y < h:
-					# Gradient effect for 3D appearance
-					var dist_from_center = abs(y - cy)
-					var c: Color
-					if dist_from_center <= 2:
-						c = highlight
-					elif dist_from_center <= 5:
-						c = pipe_color
-					else:
-						c = shadow
+					var dist = abs(y - cy)
+					var c = _get_pipe_color(dist, pipe_radius, highlight, pipe_color, shadow)
 					image.set_pixel(x, y, c)
+
+	# Draw center junction if needed (for corners and intersections)
+	if has_vertical and has_horizontal:
+		for x in range(cx - pipe_radius, cx + pipe_radius + 1):
+			for y in range(cy - pipe_radius, cy + pipe_radius + 1):
+				if x >= 0 and x < w and y >= 0 and y < h:
+					var dist = min(abs(x - cx), abs(y - cy))
+					var c = _get_pipe_color(dist, pipe_radius, highlight, pipe_color, shadow)
+					image.set_pixel(x, y, c)
+
+
+func _get_pipe_color(dist: int, radius: int, highlight: Color, pipe_color: Color, shadow: Color) -> Color:
+	if dist <= 2:
+		return highlight
+	elif dist <= 5:
+		return pipe_color
+	else:
+		return shadow
 
 
 func _draw_power_plant(image: Image, w: int, h: int, base_color: Color, id: String) -> void:
@@ -494,10 +532,10 @@ func _draw_power_plant(image: Image, w: int, h: int, base_color: Color, id: Stri
 
 
 func _draw_coal_plant(image: Image, w: int, h: int, _base_color: Color) -> void:
-	# Coal: Dark charcoal gray with brown undertones - dirty industrial look
-	var building_color = Color(0.22, 0.20, 0.18)
-	var stack_color = Color(0.28, 0.25, 0.22)
-	var smoke_color = Color(0.35, 0.32, 0.30, 0.75)  # Darker smoke for coal
+	# Coal: Industrial gray-brown - visible but still industrial
+	var building_color = Color(0.40, 0.38, 0.35)
+	var stack_color = Color(0.50, 0.47, 0.42)
+	var smoke_color = Color(0.55, 0.52, 0.48, 0.85)  # Lighter smoke for visibility
 
 	# Main building
 	_draw_rect(image, 10, int(h * 0.5), w - 20, int(h * 0.5) - 10, building_color)
@@ -513,7 +551,7 @@ func _draw_coal_plant(image: Image, w: int, h: int, _base_color: Color) -> void:
 		_draw_circle(image, sx + 12, 8, 7, smoke_color.lightened(0.1))
 
 	# Coal pile
-	_draw_rect(image, w - 60, h - 40, 45, 25, Color(0.15, 0.15, 0.15))
+	_draw_rect(image, w - 60, h - 40, 45, 25, Color(0.25, 0.23, 0.20))
 
 
 func _draw_gas_plant(image: Image, w: int, h: int, _base_color: Color) -> void:

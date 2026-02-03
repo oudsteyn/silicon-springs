@@ -13,6 +13,9 @@ const TERRAIN: int = -2
 ## Zone overlay (residential, commercial, etc.)
 const ZONE_LAYER: int = -1
 
+## Grid lines (above zones, below buildings)
+const GRID_LINES: int = 0
+
 ## Buildings and structures (default layer for placed buildings)
 const BUILDINGS: int = 1
 
