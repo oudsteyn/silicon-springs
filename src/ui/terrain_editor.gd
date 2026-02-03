@@ -54,8 +54,8 @@ func _load_biomes() -> void:
 		dir.list_dir_end()
 
 	# Set default biome
-	if biome_presets.has("great_river_valley"):
-		current_biome_id = "great_river_valley"
+	if biome_presets.has("coastal_shelf"):
+		current_biome_id = "coastal_shelf"
 	elif biome_presets.size() > 0:
 		current_biome_id = biome_presets.keys()[0]
 
