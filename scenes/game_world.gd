@@ -126,6 +126,12 @@ func _ready() -> void:
 	# Add to group for easy finding
 	add_to_group("game_world")
 
+	# Center camera on the game board
+	camera.position = Vector2(
+		GridConstants.WORLD_WIDTH / 2.0,
+		GridConstants.WORLD_HEIGHT / 2.0
+	)
+
 	# Connect UIManager tool changes
 	UIManager.tool_changed.connect(_on_ui_manager_tool_changed)
 
