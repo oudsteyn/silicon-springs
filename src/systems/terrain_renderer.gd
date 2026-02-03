@@ -43,6 +43,9 @@ const BEACH_COLOR: Color = Color(0.85, 0.8, 0.6)
 
 
 func _ready() -> void:
+	# Ensure terrain renders behind buildings (lower z_index = further back)
+	z_index = ZLayers.TERRAIN  # Behind zone layer (-1) and buildings (1)
+
 	# Connect to terrain changes
 	Events.terrain_changed.connect(_on_terrain_changed)
 

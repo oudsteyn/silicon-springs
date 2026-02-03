@@ -7,13 +7,13 @@ extends RefCounted
 # WORLD LAYERS (Below UI)
 # ============================================
 
-## Base terrain (grass, water, etc.)
-const TERRAIN: int = 0
+## Base terrain (grass, water, etc.) - rendered first/behind everything
+const TERRAIN: int = -2
 
 ## Zone overlay (residential, commercial, etc.)
 const ZONE_LAYER: int = -1
 
-## Buildings and structures
+## Buildings and structures (default layer for placed buildings)
 const BUILDINGS: int = 1
 
 ## Infrastructure connections (power lines, pipes visible through roads)

@@ -83,6 +83,7 @@ var condition_icon: Label = null  # Shows poor infrastructure condition
 
 func _ready() -> void:
 	add_to_group("buildings")
+	z_index = ZLayers.BUILDINGS  # Ensure buildings render above terrain
 	_setup_hover_outline()
 	_setup_status_icons()
 	_connect_infrastructure_events()

@@ -8,7 +8,7 @@ var zone_tiles: Dictionary = {}  # {Vector2i: ColorRect}
 
 func _ready() -> void:
 	# Ensure this layer is behind buildings but above terrain
-	z_index = -1
+	z_index = ZLayers.ZONE_LAYER
 
 
 func set_zoning_system(system) -> void:
