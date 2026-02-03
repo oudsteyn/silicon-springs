@@ -368,6 +368,18 @@ func place_building(cell: Vector2i, building_data: Resource) -> Node2D:
 		_emit_water_pipe_changed(cell, true)
 	elif GridConstants.is_power_type(building_type):
 		_emit_power_line_changed(cell, true)
+
+	# Emit network changes for buildings that produce/consume utilities
+	# This triggers adjacent pipes to update their visuals
+	if building_data.water_production > 0 or building_data.water_consumption > 0:
+		# Emit for all cells of multi-cell buildings to update all adjacent pipes
+		for x in range(building_data.size.x):
+			for y in range(building_data.size.y):
+				_emit_water_pipe_changed(cell + Vector2i(x, y), true)
+	if building_data.power_production > 0 or building_data.power_consumption > 0:
+		for x in range(building_data.size.x):
+			for y in range(building_data.size.y):
+				_emit_power_line_changed(cell + Vector2i(x, y), true)
 	# Zone counting is handled by ZoningSystem via building events
 
 	# Update building counts
@@ -455,6 +467,17 @@ func remove_building(cell: Vector2i) -> bool:
 		_emit_water_pipe_changed(origin_cell, false)
 	elif GridConstants.is_power_type(building_type):
 		_emit_power_line_changed(origin_cell, false)
+
+	# Emit network changes for buildings that produce/consume utilities
+	# This triggers adjacent pipes to update their visuals
+	if building_data.water_production > 0 or building_data.water_consumption > 0:
+		for x in range(building_data.size.x):
+			for y in range(building_data.size.y):
+				_emit_water_pipe_changed(origin_cell + Vector2i(x, y), false)
+	if building_data.power_production > 0 or building_data.power_consumption > 0:
+		for x in range(building_data.size.x):
+			for y in range(building_data.size.y):
+				_emit_power_line_changed(origin_cell + Vector2i(x, y), false)
 	# Zone counting is handled by ZoningSystem via building events
 
 	# Refund partial cost (50%)
