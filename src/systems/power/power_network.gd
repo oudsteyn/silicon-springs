@@ -96,7 +96,7 @@ func _flood_fill_power(start_cell: Vector2i, grid_system) -> void:
 				if grid_system.utility_overlays.has(neighbor):
 					var overlay = grid_system.utility_overlays[neighbor]
 					if is_instance_valid(overlay) and overlay.building_data:
-						if overlay.building_data.building_type == "power_line":
+						if GridConstants.is_power_type(overlay.building_data.building_type):
 							to_visit.append([neighbor, distance + 1])
 
 

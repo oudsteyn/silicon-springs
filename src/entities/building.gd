@@ -23,7 +23,7 @@ func _get_renderer() -> Node:
 		return _building_renderer
 	return null
 
-var building_data = null  # BuildingData
+var building_data: Resource = null  # BuildingData resource
 var grid_cell: Vector2i = Vector2i.ZERO
 
 # Operational status
@@ -206,7 +206,7 @@ func _setup_status_icons() -> void:
 	status_icons.add_child(condition_icon)
 
 
-func initialize(data, cell: Vector2i) -> void:
+func initialize(data: Resource, cell: Vector2i) -> void:
 	building_data = data
 	grid_cell = cell
 	name = "%s_%d_%d" % [data.id, cell.x, cell.y]

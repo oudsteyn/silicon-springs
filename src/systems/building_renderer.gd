@@ -1,6 +1,9 @@
 extends Node
 class_name BuildingRenderer
 ## Generates procedural textures for buildings based on type and level
+##
+## This renderer creates procedural textures for all building types including
+## roads, utilities, and structures. Textures are cached with LRU eviction.
 
 # Cached textures
 var texture_cache: Dictionary = {}
@@ -8,9 +11,14 @@ var texture_cache: Dictionary = {}
 # Cache management
 const MAX_CACHE_SIZE: int = 500  # Maximum textures to cache
 var _cache_access_order: Array[String] = []  # LRU tracking
+var _cache_hits: int = 0
+var _cache_misses: int = 0
 
 # Reference to grid system for neighbor checks
-var grid_system = null
+var grid_system: Node = null
+
+# Sentinel value for no grid position
+const NO_CELL := Vector2i(-1, -1)
 
 
 func _ready() -> void:
@@ -18,7 +26,7 @@ func _ready() -> void:
 	add_to_group("building_renderer")
 
 
-func set_grid_system(system) -> void:
+func set_grid_system(system: Node) -> void:
 	grid_system = system
 
 
@@ -37,19 +45,27 @@ func _cache_texture(cache_key: String, texture: ImageTexture) -> void:
 ## Get texture from cache, updating LRU order
 func _get_cached_texture(cache_key: String) -> ImageTexture:
 	if texture_cache.has(cache_key):
+		_cache_hits += 1
 		# Move to end of access order (most recently used)
 		_cache_access_order.erase(cache_key)
 		_cache_access_order.append(cache_key)
 		return texture_cache[cache_key]
+	_cache_misses += 1
 	return null
 
 
-## Get cache statistics
+## Get cache statistics including hit rate
 func get_cache_stats() -> Dictionary:
+	var total_requests = _cache_hits + _cache_misses
+	var hit_rate = 0.0
+	if total_requests > 0:
+		hit_rate = float(_cache_hits) / float(total_requests)
 	return {
 		"size": texture_cache.size(),
 		"max_size": MAX_CACHE_SIZE,
-		"hit_rate": 0.0  # Could track this if needed
+		"hits": _cache_hits,
+		"misses": _cache_misses,
+		"hit_rate": hit_rate
 	}
 
 
@@ -57,23 +73,36 @@ func get_cache_stats() -> Dictionary:
 func clear_cache() -> void:
 	texture_cache.clear()
 	_cache_access_order.clear()
+	_cache_hits = 0
+	_cache_misses = 0
 
 
-func get_building_texture(building_data, development_level: int = 1, grid_cell: Vector2i = Vector2i(-1, -1)) -> ImageTexture:
+## Get or generate a texture for a building
+## building_data: The BuildingData resource describing the building
+## development_level: Development level (1-3) for residential/commercial/industrial
+## grid_cell: Grid position for context-aware textures (roads, pipes), or NO_CELL
+func get_building_texture(building_data: Resource, development_level: int = 1, grid_cell: Vector2i = NO_CELL) -> ImageTexture:
+	# Validate input
+	if not building_data:
+		push_error("BuildingRenderer.get_building_texture: building_data is null")
+		return _create_error_texture()
+
 	var cache_key: String
 	var neighbors: Dictionary = {}
+	var has_position = grid_cell != NO_CELL
+	var btype: String = building_data.building_type if building_data.get("building_type") else ""
 
 	# Determine cache key based on building type
-	var btype = building_data.building_type
-	if GridConstants.is_road_type(btype) and grid_cell != Vector2i(-1, -1):
+	# Infrastructure types need neighbor info for context-aware rendering
+	if has_position and GridConstants.is_road_type(btype):
 		neighbors = _get_road_neighbors(grid_cell)
-		cache_key = "%s_%d_%d_%d_%d_%d" % [building_data.id, development_level, neighbors.north, neighbors.south, neighbors.east, neighbors.west]
-	elif GridConstants.is_power_type(btype) and grid_cell != Vector2i(-1, -1):
-		neighbors = _get_road_neighbors(grid_cell)
-		cache_key = "%s_%d_%d_%d_%d_%d" % [building_data.id, development_level, neighbors.north, neighbors.south, neighbors.east, neighbors.west]
-	elif GridConstants.is_water_type(btype) and grid_cell != Vector2i(-1, -1):
+		cache_key = _make_neighbor_cache_key(building_data.id, development_level, neighbors)
+	elif has_position and GridConstants.is_power_type(btype):
+		neighbors = _get_road_neighbors(grid_cell)  # Power lines follow roads
+		cache_key = _make_neighbor_cache_key(building_data.id, development_level, neighbors)
+	elif has_position and GridConstants.is_water_type(btype):
 		neighbors = _get_water_pipe_neighbors(grid_cell)
-		cache_key = "%s_%d_%d_%d_%d_%d" % [building_data.id, development_level, neighbors.north, neighbors.south, neighbors.east, neighbors.west]
+		cache_key = _make_neighbor_cache_key(building_data.id, development_level, neighbors)
 	else:
 		cache_key = "%s_%d" % [building_data.id, development_level]
 
@@ -88,85 +117,108 @@ func get_building_texture(building_data, development_level: int = 1, grid_cell: 
 	return texture
 
 
+## Create cache key including neighbor state
+func _make_neighbor_cache_key(id: String, level: int, neighbors: Dictionary) -> String:
+	return "%s_%d_%d_%d_%d_%d" % [
+		id, level,
+		neighbors.get("north", 0),
+		neighbors.get("south", 0),
+		neighbors.get("east", 0),
+		neighbors.get("west", 0)
+	]
+
+
+## Create a placeholder texture for error cases
+func _create_error_texture() -> ImageTexture:
+	var image = Image.create(GridConstants.CELL_SIZE, GridConstants.CELL_SIZE, false, Image.FORMAT_RGBA8)
+	image.fill(Color(1.0, 0.0, 1.0, 1.0))  # Magenta for visibility
+	return ImageTexture.create_from_image(image)
+
+
+## Get road neighbors for a cell (used by roads and power lines)
 func _get_road_neighbors(cell: Vector2i) -> Dictionary:
-	var neighbors = {"north": 0, "south": 0, "east": 0, "west": 0}
 	if not grid_system:
-		return neighbors
+		return {"north": 0, "south": 0, "east": 0, "west": 0}
 
-	# Check each direction for roads
-	if grid_system.road_cells.has(cell + Vector2i(0, -1)):
-		neighbors.north = 1
-	if grid_system.road_cells.has(cell + Vector2i(0, 1)):
-		neighbors.south = 1
-	if grid_system.road_cells.has(cell + Vector2i(1, 0)):
-		neighbors.east = 1
-	if grid_system.road_cells.has(cell + Vector2i(-1, 0)):
-		neighbors.west = 1
-
-	return neighbors
+	# Use GridConstants utility for simple cell set lookup
+	return GridConstants.get_directional_neighbors(cell, [grid_system.road_cells])
 
 
+## Get water pipe neighbors (roads, water infrastructure, buildings with water)
 func _get_water_pipe_neighbors(cell: Vector2i) -> Dictionary:
-	# For water pipes, check roads, other water pipes, and water buildings as neighbors
 	var neighbors = {"north": 0, "south": 0, "east": 0, "west": 0}
 	if not grid_system:
 		return neighbors
 
-	var directions = {
-		"north": Vector2i(0, -1),
-		"south": Vector2i(0, 1),
-		"east": Vector2i(1, 0),
-		"west": Vector2i(-1, 0)
-	}
+	for dir_name in GridConstants.DIRECTIONS:
+		var neighbor_cell = cell + GridConstants.DIRECTIONS[dir_name]
 
-	for dir_name in directions:
-		var neighbor_cell = cell + directions[dir_name]
-
-		# Check for roads
+		# Check for roads (pipes run under roads)
 		if grid_system.road_cells.has(neighbor_cell):
 			neighbors[dir_name] = 1
 			continue
 
-		# Check for buildings (water pipes, water sources, water towers, etc.)
-		if grid_system.buildings.has(neighbor_cell):
-			var building = grid_system.buildings[neighbor_cell]
-			if is_instance_valid(building) and building.building_data:
-				var btype = building.building_data.building_type
-				# Connect to water pipes and water infrastructure
-				if btype == "water_pipe" or btype == "water_source" or btype == "water_tower":
-					neighbors[dir_name] = 1
-					continue
-				# Also connect to any building that produces or consumes water
-				if building.building_data.water_production > 0 or building.building_data.water_consumption > 0:
-					neighbors[dir_name] = 1
-					continue
+		# Check for buildings with water connectivity
+		if _is_water_connectable_building(neighbor_cell):
+			neighbors[dir_name] = 1
+			continue
 
 		# Check for water pipes in utility overlays
-		if grid_system.utility_overlays.has(neighbor_cell):
-			var overlay = grid_system.utility_overlays[neighbor_cell]
-			if is_instance_valid(overlay) and overlay.building_data:
-				if overlay.building_data.building_type == "water_pipe":
-					neighbors[dir_name] = 1
+		if _is_water_pipe_overlay(neighbor_cell):
+			neighbors[dir_name] = 1
 
 	return neighbors
 
 
-func _generate_texture(building_data, level: int, road_neighbors: Dictionary = {}) -> ImageTexture:
-	var size = building_data.size
-	var width = size.x * GridConstants.CELL_SIZE
-	var height = size.y * GridConstants.CELL_SIZE
+## Check if a building at cell can connect to water pipes
+func _is_water_connectable_building(cell: Vector2i) -> bool:
+	if not grid_system.buildings.has(cell):
+		return false
+
+	var building = grid_system.buildings[cell]
+	if not is_instance_valid(building) or not building.building_data:
+		return false
+
+	var btype: String = building.building_data.building_type
+	# Water infrastructure types
+	if GridConstants.is_water_type(btype) or btype == "water_source" or btype == "water_tower":
+		return true
+	# Buildings that produce or consume water
+	if building.building_data.water_production > 0 or building.building_data.water_consumption > 0:
+		return true
+
+	return false
+
+
+## Check if there's a water pipe overlay at cell
+func _is_water_pipe_overlay(cell: Vector2i) -> bool:
+	if not grid_system.utility_overlays.has(cell):
+		return false
+
+	var overlay = grid_system.utility_overlays[cell]
+	if not is_instance_valid(overlay) or not overlay.building_data:
+		return false
+
+	return GridConstants.is_water_type(overlay.building_data.building_type)
+
+
+## Generate the actual texture for a building
+func _generate_texture(building_data: Resource, level: int, neighbors: Dictionary = {}) -> ImageTexture:
+	var size: Vector2i = building_data.size
+	var width: int = size.x * GridConstants.CELL_SIZE
+	var height: int = size.y * GridConstants.CELL_SIZE
 
 	var image = Image.create(width, height, false, Image.FORMAT_RGBA8)
-	var base_color = building_data.color
-	var btype = building_data.building_type
+	var base_color: Color = building_data.color
+	var btype: String = building_data.building_type
 
 	# Handle infrastructure types using GridConstants helpers
 	if GridConstants.is_road_type(btype):
-		_draw_road(image, width, height, road_neighbors)
+		_draw_road(image, width, height, neighbors)
 	elif GridConstants.is_power_type(btype):
-		_draw_power_line(image, width, height, base_color, road_neighbors)
+		_draw_power_line(image, width, height, base_color, neighbors)
 	elif GridConstants.is_water_type(btype):
-		_draw_water_pipe(image, width, height, base_color, road_neighbors)
+		_draw_water_pipe(image, width, height, base_color, neighbors)
 	else:
 		# Fill based on building type
 		match btype:

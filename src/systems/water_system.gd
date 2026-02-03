@@ -92,11 +92,11 @@ func _on_building_placed(cell: Vector2i, building: Node2D) -> void:
 		_recalculate_pressure_boost()
 
 	# Track water pipes
-	if data.building_type == "water_pipe":
+	if GridConstants.is_water_type(data.building_type):
 		water_pipe_cells[cell] = true
 
 	# Track roads (roads conduct water between adjacent buildings)
-	if data.building_type == "road":
+	if GridConstants.is_road_type(data.building_type):
 		road_cells[cell] = true
 
 	# Recalculate network and immediately update water status
@@ -119,10 +119,10 @@ func _on_building_removed(cell: Vector2i, building: Node2D) -> void:
 	if data.building_type in ["water_tower", "pumping_station"]:
 		_recalculate_pressure_boost()
 
-	if data.building_type == "water_pipe":
+	if GridConstants.is_water_type(data.building_type):
 		water_pipe_cells.erase(cell)
 
-	if data.building_type == "road":
+	if GridConstants.is_road_type(data.building_type):
 		road_cells.erase(cell)
 
 	_update_water_network()
@@ -402,7 +402,7 @@ func _flood_fill_water(start_cell: Vector2i) -> void:
 					var overlay = grid_system.utility_overlays[neighbor]
 					if is_instance_valid(overlay) and overlay.building_data:
 						# Water flows through water pipes on roads
-						if overlay.building_data.building_type == "water_pipe":
+						if GridConstants.is_water_type(overlay.building_data.building_type):
 							to_visit.append([neighbor, distance + 1])
 
 

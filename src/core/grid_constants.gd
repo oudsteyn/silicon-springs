@@ -247,3 +247,83 @@ const ROAD_ACCESS_TYPES: Dictionary = {
 ## Check if a road type allows direct building access
 static func road_allows_access(road_type: String) -> bool:
 	return ROAD_ACCESS_TYPES.get(road_type, true)
+
+
+# =============================================================================
+# DIRECTIONAL NEIGHBOR UTILITIES
+# =============================================================================
+
+## Cardinal direction offsets for neighbor checking
+const DIRECTIONS: Dictionary = {
+	"north": Vector2i(0, -1),
+	"south": Vector2i(0, 1),
+	"east": Vector2i(1, 0),
+	"west": Vector2i(-1, 0)
+}
+
+## Get directional neighbors as a dictionary with 0/1 values
+## cell_sets: Array of dictionaries/sets to check (e.g., [road_cells, buildings])
+## Returns: {"north": 0/1, "south": 0/1, "east": 0/1, "west": 0/1}
+static func get_directional_neighbors(cell: Vector2i, cell_sets: Array) -> Dictionary:
+	var neighbors = {"north": 0, "south": 0, "east": 0, "west": 0}
+	for dir_name in DIRECTIONS:
+		var neighbor_cell = cell + DIRECTIONS[dir_name]
+		for cell_set in cell_sets:
+			if cell_set.has(neighbor_cell):
+				neighbors[dir_name] = 1
+				break
+	return neighbors
+
+
+## Unpack a neighbor dictionary into boolean flags
+## Returns: {"has_north": bool, "has_south": bool, "has_east": bool, "has_west": bool,
+##           "has_vertical": bool, "has_horizontal": bool, "connection_count": int}
+static func unpack_neighbors(neighbors: Dictionary) -> Dictionary:
+	var has_north = neighbors.get("north", 0) == 1
+	var has_south = neighbors.get("south", 0) == 1
+	var has_east = neighbors.get("east", 0) == 1
+	var has_west = neighbors.get("west", 0) == 1
+	return {
+		"has_north": has_north,
+		"has_south": has_south,
+		"has_east": has_east,
+		"has_west": has_west,
+		"has_vertical": has_north or has_south,
+		"has_horizontal": has_east or has_west,
+		"connection_count": int(has_north) + int(has_south) + int(has_east) + int(has_west)
+	}
+
+
+# =============================================================================
+# MULTI-CELL BUILDING UTILITIES
+# =============================================================================
+
+## Get all cells occupied by a building at the given origin
+static func get_building_cells(origin: Vector2i, size: Vector2i) -> Array[Vector2i]:
+	var cells: Array[Vector2i] = []
+	for x in range(size.x):
+		for y in range(size.y):
+			cells.append(origin + Vector2i(x, y))
+	return cells
+
+
+## Get all cells on the perimeter around a building (for road access checks)
+static func get_building_perimeter(origin: Vector2i, size: Vector2i) -> Array[Vector2i]:
+	var perimeter: Array[Vector2i] = []
+	# Top and bottom edges
+	for x in range(-1, size.x + 1):
+		var top = origin + Vector2i(x, -1)
+		var bottom = origin + Vector2i(x, size.y)
+		if is_valid_cell(top):
+			perimeter.append(top)
+		if is_valid_cell(bottom):
+			perimeter.append(bottom)
+	# Left and right edges (excluding corners already added)
+	for y in range(size.y):
+		var left = origin + Vector2i(-1, y)
+		var right = origin + Vector2i(size.x, y)
+		if is_valid_cell(left):
+			perimeter.append(left)
+		if is_valid_cell(right):
+			perimeter.append(right)
+	return perimeter
