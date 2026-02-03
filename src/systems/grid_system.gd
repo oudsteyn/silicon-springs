@@ -283,190 +283,49 @@ func _check_far_compliance(cell: Vector2i, building_data: Resource) -> Dictionar
 
 
 # =============================================================================
-# BUILDING PLACEMENT
+# BUILDING PLACEMENT (Delegated to BuildingOperations)
 # =============================================================================
 
 ## Place a building at the specified cell. Returns the Building node or null on failure.
 func place_building(cell: Vector2i, building_data: Resource) -> Node2D:
+	# Validate placement first
 	var check = can_place_building(cell, building_data)
 	if not check.can_place:
 		return null
 
-	# Calculate effective build cost (apply weather multiplier)
-	var effective_cost = building_data.build_cost
-	if weather_system and weather_system.has_method("get_construction_cost_multiplier"):
-		effective_cost = int(effective_cost * weather_system.get_construction_cost_multiplier())
+	# Delegate to BuildingOperations
+	var result = BuildingOperations.place_building(
+		cell,
+		building_data,
+		buildings,
+		_unique_buildings,
+		utility_overlays,
+		_building_spatial_index,
+		_road_network,
+		_building_registry.get_building_scene(),
+		self,
+		weather_system
+	)
 
-	# Check if player can afford it
-	if not GameState.can_afford(effective_cost):
-		Events.simulation_event.emit("insufficient_funds", {"cost": effective_cost})
-		return null
-
-	# Spend the money
-	GameState.spend(effective_cost)
-
-	# Create building instance
-	var building = building_scene.instantiate()
-	building.position = grid_to_world(cell)
-	add_child(building)
-	building.initialize(building_data, cell)
-
-	# Determine if this is an overlay situation
-	var building_type = building_data.building_type if building_data.get("building_type") else ""
-	var is_utility = GridConstants.is_utility_type(building_type)
-	var is_overlay = false
-
-	# Register in all occupied cells
-	for x in range(building_data.size.x):
-		for y in range(building_data.size.y):
-			var occupied_cell = cell + Vector2i(x, y)
-
-			# Check if placing utility on existing road
-			if is_utility and buildings.has(occupied_cell):
-				var existing = buildings[occupied_cell]
-				if existing.building_data and GridConstants.is_road_type(existing.building_data.building_type):
-					utility_overlays[occupied_cell] = building
-					is_overlay = true
-					continue
-
-			buildings[occupied_cell] = building
-
-	# Add to unique buildings cache
-	_unique_buildings[building.get_instance_id()] = building
-
-	# Track special building types
-	if GridConstants.is_road_type(building_type):
-		_add_road(cell)
-	elif GridConstants.is_water_type(building_type):
-		_emit_water_pipe_changed(cell, true)
-	elif GridConstants.is_power_type(building_type):
-		_emit_power_line_changed(cell, true)
-
-	# Emit network changes for buildings that produce/consume utilities
-	# This triggers adjacent pipes to update their visuals
-	if building_data.water_production > 0 or building_data.water_consumption > 0:
-		# Emit for all cells of multi-cell buildings to update all adjacent pipes
-		for x in range(building_data.size.x):
-			for y in range(building_data.size.y):
-				_emit_water_pipe_changed(cell + Vector2i(x, y), true)
-	if building_data.power_production > 0 or building_data.power_consumption > 0:
-		for x in range(building_data.size.x):
-			for y in range(building_data.size.y):
-				_emit_power_line_changed(cell + Vector2i(x, y), true)
-	# Zone counting is handled by ZoningSystem via building events
-
-	# Update building counts
-	GameState.increment_building_count(building_data.id)
-
-	# Add to spatial index
-	if not is_overlay:
-		var building_cells: Array[Vector2i] = []
-		for x in range(building_data.size.x):
-			for y in range(building_data.size.y):
-				building_cells.append(cell + Vector2i(x, y))
-		_building_spatial_index.insert_multi(building.get_instance_id(), building_cells, building)
-
-	Events.building_placed.emit(cell, building)
-	return building
+	return result.building if result.success else null
 
 
 # =============================================================================
-# BUILDING REMOVAL
+# BUILDING REMOVAL (Delegated to BuildingOperations)
 # =============================================================================
 
+## Remove a building at the specified cell. Returns true if successful.
 func remove_building(cell: Vector2i) -> bool:
-	# First check if there's a utility overlay at this cell (remove overlay first)
-	if utility_overlays.has(cell):
-		var overlay = utility_overlays[cell]
-		if is_instance_valid(overlay):
-			var overlay_data = overlay.building_data
-			var overlay_origin = overlay.grid_cell
+	var result = BuildingOperations.remove_building(
+		cell,
+		buildings,
+		_unique_buildings,
+		utility_overlays,
+		_building_spatial_index,
+		_road_network
+	)
 
-			# Remove overlay from all its cells
-			for x in range(overlay_data.size.x):
-				for y in range(overlay_data.size.y):
-					var occupied_cell = overlay_origin + Vector2i(x, y)
-					utility_overlays.erase(occupied_cell)
-
-			# Update adjacent infrastructure if this was a utility
-			if GridConstants.is_water_type(overlay_data.building_type):
-				_emit_water_pipe_changed(overlay_origin, false)
-			elif GridConstants.is_power_type(overlay_data.building_type):
-				_emit_power_line_changed(overlay_origin, false)
-
-			# Refund and cleanup
-			var overlay_refund = int(overlay_data.build_cost * 0.5)
-			GameState.earn(overlay_refund)
-			GameState.decrement_building_count(overlay_data.id)
-
-			# Remove from unique buildings cache
-			_unique_buildings.erase(overlay.get_instance_id())
-
-			Events.building_removed.emit(overlay_origin, overlay)
-			overlay.queue_free()
-			return true
-		else:
-			utility_overlays.erase(cell)
-
-	if not buildings.has(cell):
-		return false
-
-	var building = buildings[cell]
-	if not is_instance_valid(building):
-		buildings.erase(cell)
-		return false
-
-	var building_data = building.building_data
-	var origin_cell = building.grid_cell
-
-	# Remove from all occupied cells
-	for x in range(building_data.size.x):
-		for y in range(building_data.size.y):
-			var occupied_cell = origin_cell + Vector2i(x, y)
-			buildings.erase(occupied_cell)
-			# Also remove any overlays on this building
-			if utility_overlays.has(occupied_cell):
-				var overlay = utility_overlays[occupied_cell]
-				if is_instance_valid(overlay):
-					_unique_buildings.erase(overlay.get_instance_id())
-					overlay.queue_free()
-				utility_overlays.erase(occupied_cell)
-
-	# Handle special building type removal
-	var building_type = building_data.building_type if building_data.get("building_type") else ""
-	if GridConstants.is_road_type(building_type):
-		_remove_road(origin_cell)
-	elif GridConstants.is_water_type(building_type):
-		_emit_water_pipe_changed(origin_cell, false)
-	elif GridConstants.is_power_type(building_type):
-		_emit_power_line_changed(origin_cell, false)
-
-	# Emit network changes for buildings that produce/consume utilities
-	# This triggers adjacent pipes to update their visuals
-	if building_data.water_production > 0 or building_data.water_consumption > 0:
-		for x in range(building_data.size.x):
-			for y in range(building_data.size.y):
-				_emit_water_pipe_changed(origin_cell + Vector2i(x, y), false)
-	if building_data.power_production > 0 or building_data.power_consumption > 0:
-		for x in range(building_data.size.x):
-			for y in range(building_data.size.y):
-				_emit_power_line_changed(origin_cell + Vector2i(x, y), false)
-	# Zone counting is handled by ZoningSystem via building events
-
-	# Refund partial cost (50%)
-	var refund = int(building_data.build_cost * 0.5)
-	GameState.earn(refund)
-
-	# Update building counts
-	GameState.decrement_building_count(building_data.id)
-
-	# Remove from caches
-	_unique_buildings.erase(building.get_instance_id())
-	_building_spatial_index.remove(building.get_instance_id())
-
-	Events.building_removed.emit(origin_cell, building)
-	building.queue_free()
-	return true
+	return result.success
 
 
 # =============================================================================

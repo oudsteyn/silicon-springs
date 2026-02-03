@@ -103,17 +103,9 @@ func _create_condition_bar(value: float) -> ProgressBar:
 	return bar
 
 
-## Format a number with thousands separators
+## Format a number with thousands separators (delegates to FormatUtils)
 func _format_number(num: int) -> String:
-	var num_str = str(num)
-	var result = ""
-	var count = 0
-	for i in range(num_str.length() - 1, -1, -1):
-		if count > 0 and count % 3 == 0:
-			result = "," + result
-		result = num_str[i] + result
-		count += 1
-	return result
+	return FormatUtils.format_number(num)
 
 
 ## Get system reference safely

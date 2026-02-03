@@ -201,15 +201,7 @@ func _add_line_item(container: VBoxContainer, item_name: String, amount: int, de
 
 
 func _format_number(num: int) -> String:
-	var str_num = str(abs(num))
-	var result = ""
-	var count = 0
-	for i in range(str_num.length() - 1, -1, -1):
-		if count > 0 and count % 3 == 0:
-			result = "," + result
-		result = str_num[i] + result
-		count += 1
-	return result
+	return FormatUtils.format_number(num)
 
 
 func _input(event: InputEvent) -> void:

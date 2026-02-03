@@ -549,15 +549,7 @@ func _draw_info_panel(size: Vector2i) -> void:
 
 
 func _format_number(num: int) -> String:
-	var str_num = str(num)
-	var result = ""
-	var count = 0
-	for i in range(str_num.length() - 1, -1, -1):
-		if count > 0 and count % 3 == 0:
-			result = "," + result
-		result = str_num[i] + result
-		count += 1
-	return result
+	return FormatUtils.format_number(num)
 
 
 ## Get placement analysis for external use
