@@ -521,6 +521,11 @@ func _input(event: InputEvent) -> void:
 				set_tool(ToolMode.SELECT)
 
 	# Mouse handling for pan mode
+	# Skip if mouse is over UI elements (like minimap)
+	if event is InputEventMouseButton or event is InputEventMouseMotion:
+		if _is_mouse_over_ui():
+			return
+
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			if event.pressed:
@@ -629,6 +634,22 @@ func _update_ghost_preview() -> void:
 
 	if placement_preview_overlay:
 		placement_preview_overlay.update_position(hovered_cell, can_afford)
+
+
+## Check if mouse is over UI elements that should block game input
+func _is_mouse_over_ui() -> bool:
+	# Check if minimap is being dragged
+	if minimap_overlay and minimap_overlay._is_dragging:
+		return true
+
+	# Check if mouse is within minimap bounds
+	if minimap_overlay and minimap_overlay.visible:
+		var mouse_pos = get_viewport().get_mouse_position()
+		var minimap_rect = minimap_overlay.get_global_rect()
+		if minimap_rect.has_point(mouse_pos):
+			return true
+
+	return false
 
 
 ## Check if building is linear infrastructure (roads, power lines, water pipes)

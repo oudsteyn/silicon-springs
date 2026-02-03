@@ -76,7 +76,6 @@ const COLORS = {
 var status_pill = null
 var tool_palette = null
 var info_panel = null
-var mini_minimap = null
 var dashboard_panel = null
 
 

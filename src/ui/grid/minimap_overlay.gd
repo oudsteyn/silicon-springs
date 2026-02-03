@@ -300,9 +300,11 @@ func _gui_input(event: InputEvent) -> void:
 				_navigate_to_position(event.position)
 			else:
 				_is_dragging = false
+			accept_event()  # Consume event to prevent building placement
 
 	elif event is InputEventMouseMotion and _is_dragging:
 		_navigate_to_position(event.position)
+		accept_event()  # Consume event to prevent building placement
 
 
 func _navigate_to_position(minimap_pos: Vector2) -> void:

@@ -8,7 +8,6 @@ extends Node
 # New minimalist UI components
 var status_pill: StatusPill
 var tool_palette: ToolPalette
-var mini_minimap: MiniMinimap
 var dashboard_panel: DashboardPanel
 var toast_system: ToastNotificationSystem
 var difficulty_selector: DifficultySelector
@@ -164,11 +163,6 @@ func _create_new_ui() -> void:
 	tool_palette = ToolPalette.new()
 	add_child(tool_palette)
 	UIManager.tool_palette = tool_palette
-
-	# Mini Minimap (bottom-right, compact)
-	mini_minimap = MiniMinimap.new()
-	add_child(mini_minimap)
-	UIManager.mini_minimap = mini_minimap
 
 	# Dashboard Panel (modal, hidden by default)
 	dashboard_panel = DashboardPanel.new()
