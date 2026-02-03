@@ -80,10 +80,13 @@ func _process(delta: float) -> void:
 	if not camera:
 		return
 
-	# Hide tooltip when modal dialogs are open
+	# Hide tooltip immediately when modal dialogs are open
 	if UIManager.is_modal_open():
 		if _is_visible:
 			_hide_tooltip()
+		_alpha = 0.0
+		modulate.a = 0.0
+		visible = false
 		return
 
 	# Handle hover delay

@@ -15,6 +15,10 @@ const CHUNK_SIZE: int = 16  # Render in 16x16 cell chunks
 var dirty_chunks: Dictionary = {}  # Vector2i -> bool (chunk needs redraw)
 var chunk_textures: Dictionary = {}  # Vector2i -> ImageTexture
 
+# Track camera position to detect movement and trigger redraws
+var _last_camera_position: Vector2 = Vector2.ZERO
+var _last_camera_zoom: float = 1.0
+
 # Color palette for elevation levels
 const ELEVATION_COLORS = {
 	-3: Color(0.1, 0.2, 0.5),    # Deep water
@@ -64,6 +68,21 @@ func set_grid_system(gs: Node) -> void:
 
 func set_camera(cam: Camera2D) -> void:
 	camera = cam
+	if camera:
+		_last_camera_position = camera.position
+		_last_camera_zoom = camera.zoom.x
+
+
+func _process(_delta: float) -> void:
+	# Check if camera has moved and trigger redraw
+	if camera:
+		var position_changed = camera.position != _last_camera_position
+		var zoom_changed = camera.zoom.x != _last_camera_zoom
+
+		if position_changed or zoom_changed:
+			_last_camera_position = camera.position
+			_last_camera_zoom = camera.zoom.x
+			queue_redraw()
 
 
 func _mark_all_chunks_dirty() -> void:

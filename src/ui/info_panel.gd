@@ -117,6 +117,9 @@ func _slide_in() -> void:
 	_is_visible = true
 	visible = true
 
+	# Register as modal to hide tooltips
+	UIManager.open_panel("info")
+
 	# Cancel any existing animation
 	if _slide_tween and _slide_tween.is_valid():
 		_slide_tween.kill()
@@ -137,6 +140,9 @@ func _slide_out() -> void:
 		return
 
 	_is_visible = false
+
+	# Unregister from modal state
+	UIManager.close_panel("info")
 
 	# Cancel any existing animation
 	if _slide_tween and _slide_tween.is_valid():

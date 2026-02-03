@@ -154,7 +154,9 @@ func _on_simulation_event(event_type: String, data: Dictionary) -> void:
 	if not template:
 		# Unknown event type - use generic based on severity in data
 		var severity = data.get("severity", "info")
-		template = EVENT_MESSAGES.get("generic_" + severity, EVENT_MESSAGES["generic_info"])
+		if severity is int:
+			severity = "info"  # Default to info if severity is numeric
+		template = EVENT_MESSAGES.get("generic_" + str(severity), EVENT_MESSAGES["generic_info"])
 		if not data.has("message"):
 			push_warning("NotificationBridge: Unknown event type '%s' with no message" % event_type)
 			return

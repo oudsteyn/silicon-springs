@@ -194,7 +194,7 @@ func open_panel(panel_name: String) -> void:
 	panel_opened.emit(panel_name)
 
 	# Set modal mode for certain panels
-	if panel_name in ["dashboard", "budget", "settings", "save_load", "difficulty", "terrain_editor"]:
+	if panel_name in ["dashboard", "budget", "settings", "save_load", "difficulty", "terrain_editor", "info"]:
 		set_mode(UIMode.MODAL)
 
 
@@ -207,7 +207,7 @@ func close_panel(panel_name: String) -> void:
 	# Exit modal mode if no modals left
 	if current_mode == UIMode.MODAL:
 		var any_modal = false
-		for p in ["dashboard", "budget", "settings", "save_load", "difficulty", "terrain_editor"]:
+		for p in ["dashboard", "budget", "settings", "save_load", "difficulty", "terrain_editor", "info"]:
 			if _open_panels.get(p, false):
 				any_modal = true
 				break
