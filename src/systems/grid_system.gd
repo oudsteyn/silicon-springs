@@ -2,12 +2,23 @@ extends Node2D
 class_name GridSystem
 ## Manages the game grid, building placement, and tile-to-world conversions
 ##
-## This is the core system for all grid-based operations. It handles:
+## This is the core system for all grid-based operations. It coordinates:
 ## - Building placement and removal
-## - Coordinate conversions (delegated to GridConstants)
-## - Road network management with AStar pathfinding
+## - Road network management (delegated to RoadNetworkManager)
+## - Building data registry (delegated to BuildingRegistry)
 ## - Spatial indexing for efficient range queries
 ## - Utility overlay management (power/water on roads)
+
+# =============================================================================
+# SUBSYSTEMS (Extracted for better separation of concerns)
+# =============================================================================
+
+## Building data registry - handles loading and querying building definitions
+var _building_registry: BuildingRegistry = BuildingRegistry.new()
+
+## Road network manager - handles road cells and pathfinding
+var _road_network: RoadNetworkManager = RoadNetworkManager.new()
+
 
 # =============================================================================
 # BUILDING STORAGE
@@ -29,18 +40,22 @@ var utility_overlays: Dictionary = {}
 
 
 # =============================================================================
-# ROAD NETWORK
+# BACKWARD COMPATIBILITY: Road network data exposed via RoadNetworkManager
 # =============================================================================
 
 ## Cells that contain roads: {Vector2i: true}
-var road_cells: Dictionary = {}
+## NOTE: Now backed by _road_network.road_cells for backward compatibility
+var road_cells: Dictionary:
+	get: return _road_network.road_cells
+	set(value): _road_network.load_roads(value)
 
-## AStar pathfinding for road connectivity
-var astar: AStar2D = AStar2D.new()
+## AStar pathfinding for road connectivity (exposed for backward compatibility)
+var astar: AStar2D:
+	get: return _road_network._astar
 
-## Maps cell positions to AStar point IDs: {Vector2i: point_id}
-## Uses cell-based IDs: cell.x + cell.y * GRID_WIDTH
-var _astar_cells: Dictionary = {}  # Tracks which cells have AStar points
+## AStar cell tracking (exposed for backward compatibility)
+var _astar_cells: Dictionary:
+	get: return _road_network._astar_cells
 
 
 # =============================================================================
@@ -55,14 +70,16 @@ var weather_system: Node = null
 
 
 # =============================================================================
-# BUILDING REGISTRY
+# BACKWARD COMPATIBILITY: Building registry exposed via BuildingRegistry
 # =============================================================================
 
-## Building scene template
-var building_scene: PackedScene = preload("res://src/entities/building.tscn")
+## Building scene template (delegated to registry)
+var building_scene: PackedScene:
+	get: return _building_registry.get_building_scene()
 
-## Building data registry: {id: BuildingData}
-var building_registry: Dictionary = {}
+## Building data registry: {id: BuildingData} (delegated to registry)
+var building_registry: Dictionary:
+	get: return _building_registry.get_all_building_data()
 
 
 # =============================================================================
@@ -70,72 +87,28 @@ var building_registry: Dictionary = {}
 # =============================================================================
 
 func _ready() -> void:
-	_load_building_registry()
+	_building_registry.load_registry()
 	Events.building_placed.connect(_on_building_placed)
 	Events.building_removed.connect(_on_building_removed)
 
 
-func _load_building_registry() -> void:
-	var data_path = "res://src/data/"
-	var dir = DirAccess.open(data_path)
-	if not dir:
-		push_error("GridSystem: Cannot open building data directory: " + data_path)
-		return
-
-	dir.list_dir_begin()
-	var file_name = dir.get_next()
-	while file_name != "":
-		if file_name.ends_with(".tres"):
-			var resource = load(data_path + file_name)
-			# Only process BuildingData resources, skip other resource types
-			if resource and resource.get_script() and resource.get_script().get_global_name() == "BuildingData":
-				if _validate_building_data(resource):
-					building_registry[resource.id] = resource
-				else:
-					push_warning("GridSystem: Invalid building data in " + file_name)
-		file_name = dir.get_next()
-	dir.list_dir_end()
-
-
-## Validate building data has required fields
-func _validate_building_data(data) -> bool:
-	if data.get("id") == null or data.id == "":
-		return false
-	if not data.get("size") is Vector2i:
-		return false
-	if data.size.x <= 0 or data.size.y <= 0:
-		return false
-	if not data.get("build_cost") is int:
-		return false
-	if data.build_cost < 0:
-		return false
-	if data.get("display_name") == null:
-		return false
-	return true
-
-
 # =============================================================================
-# BUILDING REGISTRY ACCESS
+# BUILDING REGISTRY ACCESS (Delegated to BuildingRegistry)
 # =============================================================================
 
 ## Returns BuildingData resource or null if not found
 func get_building_data(id: String) -> Resource:
-	return building_registry.get(id, null)
+	return _building_registry.get_building_data(id)
 
 
 ## Returns full building registry dictionary
 func get_all_building_data() -> Dictionary:
-	return building_registry
+	return _building_registry.get_all_building_data()
 
 
 ## Returns array of BuildingData resources matching category
 func get_buildings_by_category(category: String) -> Array[Resource]:
-	var result: Array[Resource] = []
-	for id in building_registry:
-		var data: Resource = building_registry[id]
-		if data.category == category:
-			result.append(data)
-	return result
+	return _building_registry.get_buildings_by_category(category)
 
 
 # =============================================================================
@@ -497,11 +470,11 @@ func remove_building(cell: Vector2i) -> bool:
 
 
 # =============================================================================
-# BUILDING QUERIES
+# BUILDING QUERIES (Some delegated to BuildingQueries static class)
 # =============================================================================
 
 func get_building_at(cell: Vector2i) -> Node2D:
-	return buildings.get(cell)
+	return BuildingQueries.get_building_at(cell, buildings)
 
 
 func get_all_buildings() -> Dictionary:
@@ -510,93 +483,40 @@ func get_all_buildings() -> Dictionary:
 
 ## Get all unique buildings (O(1) - uses cache)
 func get_all_unique_buildings() -> Array[Node2D]:
-	var result: Array[Node2D] = []
-	for building in _unique_buildings.values():
-		if is_instance_valid(building):
-			result.append(building)
-	return result
+	return BuildingQueries.get_all_unique_buildings(_unique_buildings)
 
 
 ## Get buildings of a specific type (uses unique cache for efficiency)
 func get_buildings_of_type(building_type: String) -> Array[Node2D]:
-	var result: Array[Node2D] = []
-	for building in _unique_buildings.values():
-		if is_instance_valid(building) and building.building_data:
-			if building.building_data.building_type == building_type:
-				result.append(building)
-	return result
+	return BuildingQueries.get_buildings_of_type(building_type, _unique_buildings)
 
 
-## Get total maintenance cost for all buildings
+## Get total maintenance cost for all buildings (delegated to BuildingQueries)
 func get_total_maintenance(traffic_system: Node = null) -> int:
-	var total = 0
-	for building in _unique_buildings.values():
-		if not is_instance_valid(building) or not building.building_data:
-			continue
-
-		var base_maintenance = building.building_data.monthly_maintenance
-
-		# Roads have additional maintenance based on traffic
-		if GridConstants.is_road_type(building.building_data.building_type) and traffic_system:
-			var cell = building.grid_cell
-			var congestion = traffic_system.get_congestion_at(cell)
-			if congestion > 0.5:
-				var traffic_multiplier = 1.0 + (congestion - 0.5) * 2.0
-				base_maintenance = int(base_maintenance * traffic_multiplier)
-				base_maintenance = max(base_maintenance, int(5 * congestion))
-
-		total += base_maintenance
-	return total
+	return BuildingQueries.get_total_maintenance(_unique_buildings, traffic_system)
 
 
 # =============================================================================
-# ROAD NETWORK MANAGEMENT
+# ROAD NETWORK MANAGEMENT (Delegated to RoadNetworkManager)
 # =============================================================================
 
-## Convert cell to AStar point ID (deterministic, based on position)
+## Convert cell to AStar point ID (for backward compatibility)
 func _cell_to_astar_id(cell: Vector2i) -> int:
-	return cell.x + cell.y * GridConstants.GRID_WIDTH
+	return _road_network._cell_to_astar_id(cell)
 
 
+## Add a road cell (delegated to RoadNetworkManager)
 func _add_road(cell: Vector2i) -> void:
-	road_cells[cell] = true
-
-	# Add to AStar pathfinding using cell-based ID
-	var point_id = _cell_to_astar_id(cell)
-
-	if not astar.has_point(point_id):
-		astar.add_point(point_id, Vector2(cell.x, cell.y))
-		_astar_cells[cell] = true
-
-	# Connect to adjacent road cells
-	var neighbors = GridConstants.get_adjacent_cells(cell)
-	for neighbor in neighbors:
-		if road_cells.has(neighbor):
-			var neighbor_id = _cell_to_astar_id(neighbor)
-			if astar.has_point(neighbor_id) and not astar.are_points_connected(point_id, neighbor_id):
-				astar.connect_points(point_id, neighbor_id)
-
-	# Emit event for decoupled visual updates (buildings listen and update themselves)
-	Events.road_network_changed.emit(cell, true)
+	_road_network.add_road(cell)
 
 
+## Remove a road cell (delegated to RoadNetworkManager)
 func _remove_road(cell: Vector2i) -> void:
-	road_cells.erase(cell)
-
-	var point_id = _cell_to_astar_id(cell)
-	if astar.has_point(point_id):
-		astar.remove_point(point_id)
-		_astar_cells.erase(cell)
-
-	# Emit event for decoupled visual updates
-	Events.road_network_changed.emit(cell, false)
+	_road_network.remove_road(cell)
 
 
 ## DEPRECATED: Visual updates now handled via events
-## Kept for backward compatibility - will be removed in future version
 func _update_adjacent_road_visuals(_cell: Vector2i) -> void:
-	# Visual updates are now decoupled via Events.road_network_changed
-	# Buildings subscribe to this event and update themselves
 	pass
 
 
@@ -610,19 +530,14 @@ func _emit_power_line_changed(cell: Vector2i, added: bool) -> void:
 	Events.power_line_network_changed.emit(cell, added)
 
 
+## Check if a cell has a road (delegated to RoadNetworkManager)
 func has_road_at(cell: Vector2i) -> bool:
-	return road_cells.has(cell)
+	return _road_network.has_road_at(cell)
 
 
+## Check if two cells are connected by road (delegated to RoadNetworkManager)
 func is_connected_by_road(from: Vector2i, to: Vector2i) -> bool:
-	var from_id = _cell_to_astar_id(from)
-	var to_id = _cell_to_astar_id(to)
-
-	if not astar.has_point(from_id) or not astar.has_point(to_id):
-		return false
-
-	var path = astar.get_id_path(from_id, to_id)
-	return path.size() > 0
+	return _road_network.is_connected_by_road(from, to)
 
 
 func get_adjacent_cells(cell: Vector2i) -> Array[Vector2i]:
