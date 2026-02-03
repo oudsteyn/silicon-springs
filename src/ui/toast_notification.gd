@@ -2,10 +2,17 @@ extends CanvasLayer
 class_name ToastNotificationSystem
 ## Polished toast notification system with stacking and animations
 
-const MAX_VISIBLE_TOASTS: int = 5
-const TOAST_DURATION: float = 4.0
-const TOAST_FADE_TIME: float = 0.5
-const TOAST_SLIDE_TIME: float = 0.3
+const MAX_VISIBLE_TOASTS: int = 3
+const TOAST_DURATION: float = 3.0
+const TOAST_FADE_TIME: float = 0.4
+const TOAST_SLIDE_TIME: float = 0.25
+
+# Filter out spammy info notifications - only show important ones
+const ALLOWED_INFO_MESSAGES: Array[String] = [
+	"game_saved", "game_loaded", "Game saved", "Game loaded",
+	"tier_unlocked", "building_unlocked", "milestone",
+	"Starting new city"
+]
 
 var toast_container: VBoxContainer
 var active_toasts: Array[Control] = []
@@ -72,6 +79,16 @@ func _exit_tree() -> void:
 
 
 func show_toast(message: String, type: String = "info") -> void:
+	# Filter out most info notifications to reduce spam
+	if type == "info":
+		var is_allowed = false
+		for allowed in ALLOWED_INFO_MESSAGES:
+			if message.contains(allowed):
+				is_allowed = true
+				break
+		if not is_allowed:
+			return
+
 	# Remove oldest toast if at max
 	if active_toasts.size() >= MAX_VISIBLE_TOASTS:
 		var oldest = active_toasts.pop_front()

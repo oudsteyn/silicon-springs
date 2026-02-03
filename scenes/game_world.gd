@@ -713,6 +713,12 @@ func _update_cell_highlight() -> void:
 	if not cell_highlight:
 		return
 
+	# Hide highlight when modal dialogs are open
+	if UIManager.is_modal_open():
+		cell_highlight.visible = false
+		return
+	cell_highlight.visible = true
+
 	# Update position
 	cell_highlight.set_cell(hovered_cell)
 

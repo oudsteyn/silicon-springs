@@ -60,6 +60,9 @@ func _show_difficulty_selector() -> void:
 	difficulty_selector.cancelled.connect(_on_difficulty_cancelled)
 	add_child(difficulty_selector)
 
+	# Register as modal to hide tooltips etc
+	UIManager.open_panel("difficulty")
+
 	# Show as modal
 	call_deferred("_position_difficulty_selector")
 
@@ -83,6 +86,7 @@ func _on_difficulty_selected(difficulty: GameConfigClass.Difficulty) -> void:
 	if difficulty_selector:
 		difficulty_selector.queue_free()
 		difficulty_selector = null
+	UIManager.close_panel("difficulty")
 
 	# Show terrain editor before starting game
 	_show_terrain_editor()
@@ -95,6 +99,7 @@ func _show_terrain_editor() -> void:
 		terrain_editor = editor_scene.instantiate()
 		terrain_editor.editor_closed.connect(_on_terrain_editor_closed)
 		add_child(terrain_editor)
+		UIManager.open_panel("terrain_editor")
 	else:
 		# Fallback: start game without terrain editor
 		_finish_game_start()
@@ -111,6 +116,7 @@ func _on_terrain_editor_closed(start_game: bool, terrain_sys: TerrainSystem) -> 
 			terrain_editor.remove_child(terrain_sys)
 		terrain_editor.queue_free()
 		terrain_editor = null
+	UIManager.close_panel("terrain_editor")
 
 	if start_game:
 		_finish_game_start()

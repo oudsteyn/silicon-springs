@@ -80,6 +80,12 @@ func _process(delta: float) -> void:
 	if not camera:
 		return
 
+	# Hide tooltip when modal dialogs are open
+	if UIManager.is_modal_open():
+		if _is_visible:
+			_hide_tooltip()
+		return
+
 	# Handle hover delay
 	if _current_cell != Vector2i(-1, -1) and not _is_visible:
 		_hover_timer += delta
@@ -114,6 +120,10 @@ func _on_cell_hovered(cell: Vector2i) -> void:
 
 func _show_tooltip() -> void:
 	if _current_cell == Vector2i(-1, -1):
+		return
+
+	# Don't show tooltip when modal dialogs are open
+	if UIManager.is_modal_open():
 		return
 
 	_build_tooltip_content()

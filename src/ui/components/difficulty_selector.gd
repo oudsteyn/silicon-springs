@@ -1,9 +1,11 @@
-extends PanelContainer
+extends CanvasLayer
 class_name DifficultySelector
 ## Modal panel for selecting game difficulty
 
 signal difficulty_selected(difficulty: GameConfigClass.Difficulty)
 signal cancelled()
+
+var _main_panel: PanelContainer
 
 const DIFFICULTY_INFO: Dictionary = {
 	GameConfigClass.Difficulty.EASY: {
@@ -68,23 +70,34 @@ var _details_label: RichTextLabel
 
 
 func _ready() -> void:
+	layer = 100  # Above game world elements
 	_setup_ui()
 	_select_difficulty(GameConfigClass.Difficulty.NORMAL)
 
 
 func _setup_ui() -> void:
-	# Panel styling
-	custom_minimum_size = Vector2(600, 500)
+	# Create centered container
+	var center_container = CenterContainer.new()
+	center_container.anchor_left = 0.0
+	center_container.anchor_right = 1.0
+	center_container.anchor_top = 0.0
+	center_container.anchor_bottom = 1.0
+	add_child(center_container)
+
+	# Create main panel
+	_main_panel = PanelContainer.new()
+	_main_panel.custom_minimum_size = Vector2(600, 500)
 
 	var style = UIManager.get_modal_style()
 	style.set_corner_radius_all(ThemeConstants.RADIUS_LARGE + 4)
 	style.set_content_margin_all(24)
-	add_theme_stylebox_override("panel", style)
+	_main_panel.add_theme_stylebox_override("panel", style)
+	center_container.add_child(_main_panel)
 
 	# Main layout
 	var vbox = VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 16)
-	add_child(vbox)
+	_main_panel.add_child(vbox)
 
 	# Title
 	var title = Label.new()
@@ -264,9 +277,7 @@ func _on_cancel_pressed() -> void:
 
 ## Show the selector as a modal
 func show_modal() -> void:
-	# Center on screen
-	var viewport_size = get_viewport().get_visible_rect().size
-	position = (viewport_size - custom_minimum_size) / 2
+	# Centering is handled by CenterContainer
 	visible = true
 	# Grab focus
 	_difficulty_buttons[_selected_difficulty].grab_focus()
