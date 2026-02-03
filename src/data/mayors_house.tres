@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="BuildingData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/resources/building_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "mayors_house"
+display_name = "Mayor's House"
+description = "Official residence of the mayor. A symbol of civic pride. Unlocked at 1,000 population."
+tooltip = "Reward building - boosts happiness."
+category = "landmark"
+building_type = "landmark"
+build_cost = 0
+monthly_maintenance = 50
+size = Vector2i(2, 2)
+power_production = 0.0
+power_consumption = 5.0
+water_production = 0.0
+water_consumption = 5.0
+coverage_radius = 10
+service_type = "none"
+population_capacity = 0
+jobs_provided = 10
+data_center_tier = 0
+score_value = 50
+requires_road_adjacent = true
+requires_power = true
+requires_water = true
+color = Color(0.9, 0.85, 0.7, 1)
+sprite_path = ""
+pollution_radius = 0
+happiness_modifier = 0.05

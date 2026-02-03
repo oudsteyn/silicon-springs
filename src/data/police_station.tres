@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="BuildingData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/resources/building_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "police_station"
+display_name = "Police Station"
+description = "Provides law enforcement coverage in a 15-tile radius. Prevents crime."
+tooltip = "Essential for safe neighborhoods."
+category = "service"
+building_type = "police"
+build_cost = 2000
+monthly_maintenance = 50
+size = Vector2i(2, 1)
+power_production = 0.0
+power_consumption = 5.0
+water_production = 0.0
+water_consumption = 10.0
+coverage_radius = 15
+service_type = "police"
+population_capacity = 0
+jobs_provided = 15
+skilled_jobs_ratio = 0.3
+data_center_tier = 0
+score_value = 0
+requires_road_adjacent = true
+requires_power = true
+requires_water = true
+color = Color(0.0, 0.0, 0.8, 1)
+sprite_path = ""
+pollution_radius = 0
+happiness_modifier = 0.05

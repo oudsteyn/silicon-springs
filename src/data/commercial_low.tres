@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="BuildingData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/resources/building_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "commercial_low"
+display_name = "Low Density Commercial"
+description = "Small shops and local businesses. Serves neighborhood needs."
+tooltip = "Corner stores and cafes."
+category = "zone"
+building_type = "commercial"
+build_cost = 300
+monthly_maintenance = 10
+size = Vector2i(1, 1)
+floors = 1
+power_production = 0.0
+power_consumption = 2.0
+water_production = 0.0
+water_consumption = 8.0
+coverage_radius = 0
+service_type = "none"
+population_capacity = 0
+jobs_provided = 5
+skilled_jobs_ratio = 0.3
+data_center_tier = 0
+score_value = 0
+requires_road_adjacent = true
+requires_power = true
+requires_water = true
+color = Color(0.6, 0.5, 0.8, 1)
+sprite_path = ""
+pollution_radius = 0
+happiness_modifier = 0.01
+parking_spaces_required = 8

@@ -1,0 +1,10 @@
+{
+	"name": "High Desert - Default",
+	"biome_id": "high_desert",
+	"seed": 42857,
+	"created": "2024-01-01T00:00:00",
+	"grid_size": [128, 128],
+	"elevation": {},
+	"water": {},
+	"features": {}
+}

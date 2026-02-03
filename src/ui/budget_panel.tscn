@@ -1,0 +1,108 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/ui/budget_panel.gd" id="1"]
+
+[node name="BudgetPanel" type="PanelContainer"]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -250.0
+offset_top = -200.0
+offset_right = 250.0
+offset_bottom = 200.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1")
+
+[node name="VBox" type="VBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Header" type="HBoxContainer" parent="VBox"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="VBox/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "City Budget"
+horizontal_alignment = 1
+
+[node name="CloseButton" type="Button" parent="VBox/Header"]
+custom_minimum_size = Vector2(30, 0)
+layout_mode = 2
+text = "X"
+
+[node name="Content" type="HBoxContainer" parent="VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 20
+
+[node name="IncomeSection" type="VBoxContainer" parent="VBox/Content"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="IncomeTitle" type="Label" parent="VBox/Content/IncomeSection"]
+layout_mode = 2
+text = "Income"
+horizontal_alignment = 1
+
+[node name="IncomeList" type="VBoxContainer" parent="VBox/Content/IncomeSection"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="TotalIncome" type="Label" parent="VBox/Content/IncomeSection"]
+layout_mode = 2
+text = "Total: $0/mo"
+horizontal_alignment = 1
+
+[node name="ExpenseSection" type="VBoxContainer" parent="VBox/Content"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ExpenseTitle" type="Label" parent="VBox/Content/ExpenseSection"]
+layout_mode = 2
+text = "Expenses"
+horizontal_alignment = 1
+
+[node name="ExpenseList" type="VBoxContainer" parent="VBox/Content/ExpenseSection"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="TotalExpense" type="Label" parent="VBox/Content/ExpenseSection"]
+layout_mode = 2
+text = "Total: $0/mo"
+horizontal_alignment = 1
+
+[node name="Controls" type="VBoxContainer" parent="VBox"]
+layout_mode = 2
+
+[node name="TaxSection" type="HBoxContainer" parent="VBox/Controls"]
+layout_mode = 2
+
+[node name="TaxLabel" type="Label" parent="VBox/Controls/TaxSection"]
+layout_mode = 2
+text = "Tax Rate:"
+
+[node name="TaxSlider" type="HSlider" parent="VBox/Controls/TaxSection"]
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 5.0
+max_value = 20.0
+value = 10.0
+
+[node name="TaxValue" type="Label" parent="VBox/Controls/TaxSection"]
+custom_minimum_size = Vector2(50, 0)
+layout_mode = 2
+text = "10%"
+horizontal_alignment = 2
+
+[node name="Summary" type="HBoxContainer" parent="VBox"]
+layout_mode = 2
+
+[node name="NetLabel" type="Label" parent="VBox/Summary"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Net: $0/mo"
+horizontal_alignment = 1

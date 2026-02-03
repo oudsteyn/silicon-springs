@@ -1,0 +1,151 @@
+[gd_scene load_steps=30 format=3]
+
+[ext_resource type="Script" path="res://scenes/game_world.gd" id="1_game_world"]
+[ext_resource type="Script" path="res://src/systems/grid_system.gd" id="2_grid_system"]
+[ext_resource type="Script" path="res://src/systems/terrain_system.gd" id="2_terrain_system"]
+[ext_resource type="Script" path="res://src/systems/terrain_renderer.gd" id="2_terrain_renderer"]
+[ext_resource type="Script" path="res://src/systems/weather_system.gd" id="2_weather_system"]
+[ext_resource type="Script" path="res://src/systems/power_system.gd" id="3_power_system"]
+[ext_resource type="Script" path="res://src/systems/water_system.gd" id="4_water_system"]
+[ext_resource type="Script" path="res://src/systems/service_coverage.gd" id="5_service_coverage"]
+[ext_resource type="Script" path="res://src/systems/coverage_visualizer.gd" id="6_coverage_vis"]
+[ext_resource type="Script" path="res://src/systems/pollution_system.gd" id="7_pollution_system"]
+[ext_resource type="Script" path="res://src/systems/land_value_system.gd" id="8_land_value_system"]
+[ext_resource type="Script" path="res://src/systems/grid_overlay.gd" id="9_grid_overlay"]
+[ext_resource type="Script" path="res://src/systems/traffic_system.gd" id="10_traffic_system"]
+[ext_resource type="Script" path="res://src/systems/building_renderer.gd" id="11_building_renderer"]
+[ext_resource type="Script" path="res://src/systems/disaster_system.gd" id="12_disaster_system"]
+[ext_resource type="Script" path="res://src/systems/day_night_system.gd" id="13_day_night_system"]
+[ext_resource type="Script" path="res://src/systems/zoning_system.gd" id="14_zoning_system"]
+[ext_resource type="Script" path="res://src/systems/zone_layer.gd" id="15_zone_layer"]
+[ext_resource type="Script" path="res://src/systems/traffic_visualizer.gd" id="16_traffic_vis"]
+[ext_resource type="Script" path="res://src/systems/parking_system.gd" id="17_parking_system"]
+[ext_resource type="Script" path="res://src/systems/economic_cluster_system.gd" id="18_cluster_system"]
+[ext_resource type="Script" path="res://src/systems/housing_system.gd" id="19_housing_system"]
+[ext_resource type="Script" path="res://src/systems/infrastructure_age_system.gd" id="20_infra_age"]
+[ext_resource type="Script" path="res://src/systems/growth_boundary_system.gd" id="21_growth_boundary"]
+[ext_resource type="Script" path="res://src/systems/commute_system.gd" id="22_commute_system"]
+[ext_resource type="Script" path="res://src/systems/environment_system.gd" id="23_environment_system"]
+[ext_resource type="Script" path="res://src/systems/district_system.gd" id="24_district_system"]
+[ext_resource type="Script" path="res://src/core/system_group.gd" id="25_system_group"]
+
+[node name="GameWorld" type="Node2D"]
+script = ExtResource("1_game_world")
+
+[node name="TerrainBackground" type="ColorRect" parent="."]
+offset_right = 8192.0
+offset_bottom = 8192.0
+color = Color(0.2, 0.35, 0.2, 1)
+
+[node name="GridLines" type="Node2D" parent="."]
+
+[node name="ZoneLayer" type="Node2D" parent="."]
+script = ExtResource("15_zone_layer")
+
+[node name="FineGrid" type="Node2D" parent="."]
+visible = false
+
+[node name="GhostPreview" type="ColorRect" parent="."]
+visible = false
+offset_right = 64.0
+offset_bottom = 64.0
+color = Color(1, 1, 1, 0.501961)
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position = Vector2(640, 360)
+zoom = Vector2(1, 1)
+
+[node name="DayNightSystem" type="CanvasModulate" parent="."]
+script = ExtResource("13_day_night_system")
+
+[node name="CoreSystems" type="Node" parent="."]
+script = ExtResource("25_system_group")
+group_name = "Core"
+
+[node name="GridSystem" type="Node2D" parent="CoreSystems"]
+script = ExtResource("2_grid_system")
+
+[node name="TerrainSystem" type="Node" parent="CoreSystems"]
+script = ExtResource("2_terrain_system")
+
+[node name="WeatherSystem" type="Node" parent="CoreSystems"]
+script = ExtResource("2_weather_system")
+
+[node name="UtilitySystems" type="Node" parent="."]
+script = ExtResource("25_system_group")
+group_name = "Utilities"
+
+[node name="PowerSystem" type="Node" parent="UtilitySystems"]
+script = ExtResource("3_power_system")
+
+[node name="WaterSystem" type="Node" parent="UtilitySystems"]
+script = ExtResource("4_water_system")
+
+[node name="PollutionSystem" type="Node" parent="UtilitySystems"]
+script = ExtResource("7_pollution_system")
+
+[node name="CitySystems" type="Node" parent="."]
+script = ExtResource("25_system_group")
+group_name = "City"
+
+[node name="ServiceCoverage" type="Node" parent="CitySystems"]
+script = ExtResource("5_service_coverage")
+
+[node name="TrafficSystem" type="Node" parent="CitySystems"]
+script = ExtResource("10_traffic_system")
+
+[node name="LandValueSystem" type="Node" parent="CitySystems"]
+script = ExtResource("8_land_value_system")
+
+[node name="ZoningSystem" type="Node" parent="CitySystems"]
+script = ExtResource("14_zoning_system")
+
+[node name="DisasterSystem" type="Node" parent="CitySystems"]
+script = ExtResource("12_disaster_system")
+
+[node name="ArchitectSystems" type="Node" parent="."]
+script = ExtResource("25_system_group")
+group_name = "Architect"
+
+[node name="ParkingSystem" type="Node" parent="ArchitectSystems"]
+script = ExtResource("17_parking_system")
+
+[node name="EconomicClusterSystem" type="Node" parent="ArchitectSystems"]
+script = ExtResource("18_cluster_system")
+
+[node name="HousingSystem" type="Node" parent="ArchitectSystems"]
+script = ExtResource("19_housing_system")
+
+[node name="InfrastructureAgeSystem" type="Node" parent="ArchitectSystems"]
+script = ExtResource("20_infra_age")
+
+[node name="GrowthBoundarySystem" type="Node" parent="ArchitectSystems"]
+script = ExtResource("21_growth_boundary")
+
+[node name="CommuteSystem" type="Node" parent="ArchitectSystems"]
+script = ExtResource("22_commute_system")
+
+[node name="EnvironmentSystem" type="Node" parent="ArchitectSystems"]
+script = ExtResource("23_environment_system")
+
+[node name="DistrictSystem" type="Node" parent="ArchitectSystems"]
+script = ExtResource("24_district_system")
+
+[node name="Renderers" type="Node" parent="."]
+script = ExtResource("25_system_group")
+group_name = "Renderers"
+
+[node name="TerrainRenderer" type="Node2D" parent="Renderers"]
+script = ExtResource("2_terrain_renderer")
+
+[node name="BuildingRenderer" type="Node" parent="Renderers"]
+script = ExtResource("11_building_renderer")
+
+[node name="TrafficVisualizer" type="Node2D" parent="Renderers"]
+script = ExtResource("16_traffic_vis")
+
+[node name="CoverageVisualizer" type="Node2D" parent="Renderers"]
+script = ExtResource("6_coverage_vis")
+
+[node name="GridOverlay" type="Node2D" parent="Renderers"]
+script = ExtResource("9_grid_overlay")

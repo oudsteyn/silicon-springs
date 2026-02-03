@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="BuildingData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/resources/building_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "school"
+display_name = "Elementary School"
+description = "Provides education in a 20-tile radius. Improves workforce quality."
+tooltip = "Educated population attracts better data centers."
+category = "service"
+building_type = "education"
+build_cost = 3000
+monthly_maintenance = 75
+size = Vector2i(2, 2)
+floors = 2
+power_production = 0.0
+power_consumption = 10.0
+water_production = 0.0
+water_consumption = 20.0
+coverage_radius = 20
+service_type = "education"
+population_capacity = 0
+jobs_provided = 20
+skilled_jobs_ratio = 0.9
+data_center_tier = 0
+score_value = 0
+requires_road_adjacent = true
+requires_power = true
+requires_water = true
+color = Color(0.0, 0.6, 0.3, 1)
+sprite_path = ""
+pollution_radius = 0
+happiness_modifier = 0.05
+parking_spaces_required = 30

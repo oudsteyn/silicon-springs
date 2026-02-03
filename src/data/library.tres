@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="BuildingData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/resources/building_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "library"
+display_name = "Library"
+description = "Boosts education rate in the area"
+tooltip = "Improves education and knowledge in the community."
+category = "service"
+building_type = "library"
+build_cost = 2000
+monthly_maintenance = 40
+size = Vector2i(2, 2)
+power_production = 0.0
+power_consumption = 5.0
+water_production = 0.0
+water_consumption = 0.0
+coverage_radius = 15
+service_type = "education"
+population_capacity = 0
+jobs_provided = 10
+skilled_jobs_ratio = 0.7
+data_center_tier = 0
+score_value = 0
+requires_road_adjacent = true
+requires_power = true
+requires_water = false
+color = Color(0.4, 0.2, 0.6, 1)
+sprite_path = ""
+pollution_radius = 0
+happiness_modifier = 0.02

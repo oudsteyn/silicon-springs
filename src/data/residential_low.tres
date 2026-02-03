@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="BuildingData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/resources/building_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "residential_low"
+display_name = "Low Density Residential"
+description = "Small single-family homes. Low population density but high land value appeal."
+tooltip = "Quiet suburban housing."
+category = "zone"
+building_type = "residential"
+build_cost = 200
+monthly_maintenance = 5
+size = Vector2i(1, 1)
+floors = 2
+power_production = 0.0
+power_consumption = 1.0
+water_production = 0.0
+water_consumption = 5.0
+coverage_radius = 0
+service_type = "none"
+population_capacity = 15
+jobs_provided = 0
+data_center_tier = 0
+score_value = 0
+requires_road_adjacent = true
+requires_power = true
+requires_water = true
+color = Color(0.5, 0.85, 0.5, 1)
+sprite_path = ""
+pollution_radius = 0
+happiness_modifier = 0.01

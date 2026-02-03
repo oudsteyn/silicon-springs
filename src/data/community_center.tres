@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="BuildingData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/resources/building_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "community_center"
+display_name = "Community Center"
+description = "Provides recreation and reduces crime in the area"
+tooltip = "A gathering place that brings the community together."
+category = "service"
+building_type = "community_center"
+build_cost = 1500
+monthly_maintenance = 30
+size = Vector2i(2, 2)
+power_production = 0.0
+power_consumption = 5.0
+water_production = 0.0
+water_consumption = 0.0
+coverage_radius = 12
+service_type = "recreation"
+population_capacity = 0
+jobs_provided = 8
+skilled_jobs_ratio = 0.3
+data_center_tier = 0
+score_value = 0
+requires_road_adjacent = true
+requires_power = true
+requires_water = false
+color = Color(0.9, 0.7, 0.2, 1)
+sprite_path = ""
+pollution_radius = 0
+happiness_modifier = 0.03

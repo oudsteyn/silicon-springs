@@ -1,0 +1,10 @@
+{
+	"name": "Tundra Plateau - Default",
+	"biome_id": "tundra_plateau",
+	"seed": 14142,
+	"created": "2024-01-01T00:00:00",
+	"grid_size": [128, 128],
+	"elevation": {},
+	"water": {},
+	"features": {}
+}

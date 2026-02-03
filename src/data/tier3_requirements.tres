@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="DataCenterTier" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/resources/data_center_tier.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+tier = 3
+display_name = "Medium Enterprise Data Center"
+description = "Large-scale data center for major enterprises and cloud providers."
+power_required = 100.0
+water_required = 2000.0
+population_required = 500
+education_rate_required = 0.4
+requires_fire_coverage = true
+requires_police_coverage = true
+requires_full_coverage = true
+requires_road_access = true
+score_value = 2000
+build_cost = 150000
+monthly_maintenance = 2000
+power_consumption = 100.0
+water_consumption = 500.0

@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="BuildingData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/resources/building_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "treatment_plant"
+display_name = "Water Treatment Plant"
+description = "Processes and distributes 2000 ML of water."
+tooltip = "Large-scale water supply for growing cities."
+category = "water"
+building_type = "water_source"
+build_cost = 6000
+monthly_maintenance = 75
+size = Vector2i(2, 2)
+power_production = 0.0
+power_consumption = 15.0
+water_production = 2000.0
+water_consumption = 0.0
+coverage_radius = 0
+service_type = "none"
+population_capacity = 0
+jobs_provided = 10
+data_center_tier = 0
+score_value = 0
+requires_road_adjacent = true
+requires_power = true
+requires_water = false
+color = Color(0.2, 0.4, 0.8, 1)
+sprite_path = ""
+pollution_radius = 0
+happiness_modifier = 0.0

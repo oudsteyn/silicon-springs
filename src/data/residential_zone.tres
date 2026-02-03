@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="BuildingData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/resources/building_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "residential_zone"
+display_name = "Residential Zone"
+description = "Housing for up to 50 citizens. Generates tax revenue."
+tooltip = "Build population to support data centers."
+category = "zone"
+building_type = "residential"
+build_cost = 500
+monthly_maintenance = 10
+size = Vector2i(2, 2)
+floors = 4
+power_production = 0.0
+power_consumption = 2.0
+water_production = 0.0
+water_consumption = 10.0
+coverage_radius = 0
+service_type = "none"
+population_capacity = 50
+jobs_provided = 0
+data_center_tier = 0
+score_value = 0
+requires_road_adjacent = true
+requires_power = true
+requires_water = true
+color = Color(0.4, 0.75, 0.4, 1)
+sprite_path = ""
+pollution_radius = 0
+happiness_modifier = 0.0

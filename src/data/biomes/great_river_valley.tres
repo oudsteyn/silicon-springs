@@ -1,0 +1,39 @@
+[gd_resource type="Resource" script_class="BiomePreset" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/data/biome_preset.gd" id="1_biome"]
+
+[resource]
+script = ExtResource("1_biome")
+id = "great_river_valley"
+display_name = "Great River Valley"
+description = "Fertile lowlands bisected by a major river. Rich soil and abundant water make this ideal for agriculture, but seasonal flooding poses a constant threat. Build bridges wisely."
+
+base_elevation = -1
+elevation_variation = 0.4
+water_coverage = 0.25
+tree_density = 0.25
+rock_density = 0.05
+
+ground_color = Color(0.3, 0.5, 0.25, 1)
+water_color = Color(0.2, 0.4, 0.6, 1)
+vegetation_tint = Color(0.2, 0.45, 0.2, 1)
+sky_tint = Color(1.0, 1.0, 1.0, 1)
+
+avg_temperature = 18.0
+temp_variation = 18.0
+precipitation = 0.6
+storm_chance = 0.12
+flood_risk = 0.25
+
+summer_daylight_hours = 15.0
+winter_daylight_hours = 9.5
+sun_intensity = 0.95
+
+heating_cost_mult = 1.1
+cooling_cost_mult = 1.0
+water_scarcity = 0.6
+construction_cost_mult = 0.9
+storm_damage_mult = 1.0
+
+starting_budget_modifier = 0
+starting_population_modifier = 50

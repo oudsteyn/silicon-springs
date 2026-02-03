@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="BuildingData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/resources/building_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "commercial_high"
+display_name = "High Density Commercial"
+description = "Office towers and shopping centers. Major employment hub."
+tooltip = "Downtown business district."
+category = "zone"
+building_type = "commercial"
+build_cost = 2000
+monthly_maintenance = 50
+size = Vector2i(3, 3)
+floors = 18
+power_production = 0.0
+power_consumption = 25.0
+water_production = 0.0
+water_consumption = 80.0
+coverage_radius = 0
+service_type = "none"
+population_capacity = 0
+jobs_provided = 50
+skilled_jobs_ratio = 0.5
+data_center_tier = 0
+score_value = 0
+requires_road_adjacent = true
+requires_power = true
+requires_water = true
+color = Color(0.4, 0.3, 0.6, 1)
+sprite_path = ""
+pollution_radius = 0
+happiness_modifier = 0.0
+parking_spaces_required = 35

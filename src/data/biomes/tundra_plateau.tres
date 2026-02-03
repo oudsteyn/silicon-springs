@@ -1,0 +1,39 @@
+[gd_resource type="Resource" script_class="BiomePreset" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/data/biome_preset.gd" id="1_biome"]
+
+[resource]
+script = ExtResource("1_biome")
+id = "tundra_plateau"
+display_name = "Tundra Plateau"
+description = "A frozen highland with permafrost and sparse vegetation. Extreme cold and short building seasons make development challenging, but pristine lakes and dramatic vistas await those who persevere."
+
+base_elevation = 2
+elevation_variation = 0.5
+water_coverage = 0.18
+tree_density = 0.02
+rock_density = 0.12
+
+ground_color = Color(0.45, 0.5, 0.52, 1)
+water_color = Color(0.35, 0.5, 0.6, 1)
+vegetation_tint = Color(0.3, 0.4, 0.35, 1)
+sky_tint = Color(0.95, 0.97, 1.05, 1)
+
+avg_temperature = -5.0
+temp_variation = 25.0
+precipitation = 0.25
+storm_chance = 0.1
+flood_risk = 0.08
+
+summer_daylight_hours = 20.0
+winter_daylight_hours = 6.0
+sun_intensity = 0.7
+
+heating_cost_mult = 2.0
+cooling_cost_mult = 0.5
+water_scarcity = 0.8
+construction_cost_mult = 1.4
+storm_damage_mult = 1.1
+
+starting_budget_modifier = 10000
+starting_population_modifier = 0

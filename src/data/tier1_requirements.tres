@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="DataCenterTier" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/resources/data_center_tier.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+tier = 1
+display_name = "Micro/Edge Data Center"
+description = "Entry-level data center for edge computing and small businesses."
+power_required = 5.0
+water_required = 100.0
+population_required = 10
+education_rate_required = 0.0
+requires_fire_coverage = true
+requires_police_coverage = false
+requires_full_coverage = false
+requires_road_access = true
+score_value = 100
+build_cost = 10000
+monthly_maintenance = 200
+power_consumption = 5.0
+water_consumption = 50.0

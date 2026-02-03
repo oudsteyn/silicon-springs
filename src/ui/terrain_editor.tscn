@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/ui/terrain_editor.gd" id="1_terrain_editor"]
+
+[node name="TerrainEditor" type="CanvasLayer"]
+layer = 100
+script = ExtResource("1_terrain_editor")

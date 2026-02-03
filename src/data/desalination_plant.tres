@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="BuildingData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/resources/building_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "desalination_plant"
+display_name = "Desalination Plant"
+description = "Converts seawater to fresh water. Expensive but unlimited supply potential."
+tooltip = "High-tech water solution - best placed near coast."
+category = "water"
+building_type = "water_source"
+build_cost = 15000
+monthly_maintenance = 200
+size = Vector2i(3, 2)
+power_production = 0.0
+power_consumption = 40.0
+water_production = 4000.0
+water_consumption = 0.0
+coverage_radius = 0
+service_type = "none"
+population_capacity = 0
+jobs_provided = 25
+data_center_tier = 0
+score_value = 0
+requires_road_adjacent = true
+requires_power = true
+requires_water = false
+color = Color(0.1, 0.3, 0.7, 1)
+sprite_path = ""
+pollution_radius = 1
+happiness_modifier = -0.02

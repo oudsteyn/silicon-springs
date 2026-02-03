@@ -1,0 +1,39 @@
+[gd_resource type="Resource" script_class="BiomePreset" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/data/biome_preset.gd" id="1_biome"]
+
+[resource]
+script = ExtResource("1_biome")
+id = "rust_belt_corridor"
+display_name = "Rust Belt Corridor"
+description = "Flat industrial lands with a legacy of heavy manufacturing. Few natural features remain, but the existing infrastructure and workforce provide a strong foundation. Overcast skies and cold winters are common."
+
+base_elevation = 0
+elevation_variation = 0.2
+water_coverage = 0.08
+tree_density = 0.05
+rock_density = 0.02
+
+ground_color = Color(0.35, 0.38, 0.32, 1)
+water_color = Color(0.25, 0.35, 0.45, 1)
+vegetation_tint = Color(0.3, 0.35, 0.25, 1)
+sky_tint = Color(0.9, 0.9, 0.95, 1)
+
+avg_temperature = 12.0
+temp_variation = 22.0
+precipitation = 0.45
+storm_chance = 0.08
+flood_risk = 0.05
+
+summer_daylight_hours = 15.5
+winter_daylight_hours = 9.0
+sun_intensity = 0.75
+
+heating_cost_mult = 1.4
+cooling_cost_mult = 0.7
+water_scarcity = 0.9
+construction_cost_mult = 0.85
+storm_damage_mult = 0.9
+
+starting_budget_modifier = 15000
+starting_population_modifier = 100

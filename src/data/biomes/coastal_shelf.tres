@@ -1,0 +1,39 @@
+[gd_resource type="Resource" script_class="BiomePreset" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/data/biome_preset.gd" id="1_biome"]
+
+[resource]
+script = ExtResource("1_biome")
+id = "coastal_shelf"
+display_name = "Coastal Shelf"
+description = "A narrow strip of buildable land between mountains and sea. Ocean access enables trade but limits expansion. Hurricanes and storms are a seasonal threat. Beautiful beaches attract tourism."
+
+base_elevation = 0
+elevation_variation = 0.7
+water_coverage = 0.30
+tree_density = 0.15
+rock_density = 0.08
+
+ground_color = Color(0.28, 0.45, 0.28, 1)
+water_color = Color(0.15, 0.35, 0.55, 1)
+vegetation_tint = Color(0.2, 0.4, 0.25, 1)
+sky_tint = Color(1.0, 1.02, 1.05, 1)
+
+avg_temperature = 22.0
+temp_variation = 12.0
+precipitation = 0.55
+storm_chance = 0.18
+flood_risk = 0.15
+
+summer_daylight_hours = 14.0
+winter_daylight_hours = 10.5
+sun_intensity = 1.05
+
+heating_cost_mult = 0.85
+cooling_cost_mult = 1.2
+water_scarcity = 0.7
+construction_cost_mult = 1.15
+storm_damage_mult = 1.5
+
+starting_budget_modifier = -5000
+starting_population_modifier = 25

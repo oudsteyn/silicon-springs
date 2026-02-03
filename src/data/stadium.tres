@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="BuildingData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/resources/building_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "stadium"
+display_name = "Stadium"
+description = "Large sports venue. Major happiness boost and tourism draw. Unlocked at 10,000 population."
+tooltip = "Reward building - major happiness boost."
+category = "landmark"
+building_type = "landmark"
+build_cost = 0
+monthly_maintenance = 300
+size = Vector2i(4, 4)
+power_production = 0.0
+power_consumption = 40.0
+water_production = 0.0
+water_consumption = 30.0
+coverage_radius = 20
+service_type = "none"
+population_capacity = 0
+jobs_provided = 100
+data_center_tier = 0
+score_value = 200
+requires_road_adjacent = true
+requires_power = true
+requires_water = true
+color = Color(0.6, 0.65, 0.7, 1)
+sprite_path = ""
+pollution_radius = 0
+happiness_modifier = 0.15

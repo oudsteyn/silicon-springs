@@ -1,0 +1,40 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://src/entities/building.gd" id="1_building"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_1"]
+size = Vector2(64, 64)
+
+[node name="Building" type="Node2D"]
+script = ExtResource("1_building")
+
+[node name="Sprite2D" type="TextureRect" parent="."]
+offset_right = 64.0
+offset_bottom = 64.0
+stretch_mode = 1
+
+[node name="ColorOverlay" type="ColorRect" parent="Sprite2D"]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0, 0.4)
+
+[node name="SelectionIndicator" type="Node2D" parent="."]
+visible = false
+
+[node name="SelectionRect" type="ColorRect" parent="SelectionIndicator"]
+offset_right = 64.0
+offset_bottom = 64.0
+color = Color(1, 1, 0, 0.3)
+
+[node name="StatusIcons" type="Node2D" parent="."]
+
+[node name="ClickArea" type="Area2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ClickArea"]
+position = Vector2(32, 32)
+shape = SubResource("RectangleShape2D_1")
+
+[connection signal="mouse_entered" from="ClickArea" to="." method="_on_mouse_entered"]
+[connection signal="mouse_exited" from="ClickArea" to="." method="_on_mouse_exited"]

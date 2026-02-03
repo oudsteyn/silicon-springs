@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="BuildingData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/resources/building_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "oil_plant"
+display_name = "Oil Power Plant"
+description = "Generates 220 MW of power. High output but causes moderate pollution. Good balance of cost and power."
+tooltip = "High output fossil fuel plant. Moderate pollution."
+category = "power"
+building_type = "generator"
+build_cost = 5000
+monthly_maintenance = 125
+size = Vector2i(4, 4)
+power_production = 220.0
+power_consumption = 0.0
+water_production = 0.0
+water_consumption = 80.0
+coverage_radius = 0
+service_type = "none"
+population_capacity = 0
+jobs_provided = 40
+data_center_tier = 0
+score_value = 0
+requires_road_adjacent = true
+requires_power = false
+requires_water = false
+color = Color(0.2, 0.2, 0.25, 1)
+sprite_path = ""
+pollution_radius = 10
+happiness_modifier = -0.1
