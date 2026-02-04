@@ -285,7 +285,7 @@ func set_zone(cell: Vector2i, zone_type: int) -> bool:
 		zones[cell].type = zone_type
 		zones[cell].developed = false
 		zones[cell].development_level = 0
-		zone_changed.emit(cell, _get_zone_name(zone_type))
+		zone_changed.emit(cell, get_zone_name(zone_type))
 
 	return true
 

@@ -103,7 +103,7 @@ func _get_distance_from_developed_core(cell: Vector2i) -> float:
 	# Find distance to nearest developed cell
 	var min_distance = 999.0
 
-for developed_cell in grid_system.get_building_cells():
+	for developed_cell in grid_system.get_building_cells():
 		var dx = cell.x - developed_cell.x
 		var dy = cell.y - developed_cell.y
 		var distance = sqrt(dx * dx + dy * dy)

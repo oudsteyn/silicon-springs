@@ -101,10 +101,10 @@ func trigger_disaster(type: DisasterType, center: Vector2i = Vector2i(-1, -1)) -
 
 
 func _get_random_building_location() -> Vector2i:
-if not grid_system or grid_system.get_building_count() == 0:
+	if not grid_system or grid_system.get_building_count() == 0:
 		return Vector2i(-1, -1)
 
-var cells = grid_system.get_building_cells()
+	var cells = grid_system.get_building_cells()
 	return cells[randi() % cells.size()]
 
 

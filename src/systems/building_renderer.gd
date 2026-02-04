@@ -5,14 +5,10 @@ class_name BuildingRenderer
 ## This renderer creates procedural textures for all building types including
 ## roads, utilities, and structures. Textures are cached with LRU eviction.
 
-# Cached textures
-var texture_cache: Dictionary = {}
-
 # Cache management
 const MAX_CACHE_SIZE: int = 500  # Maximum textures to cache
-var _cache_access_order: Array[String] = []  # LRU tracking
-var _cache_hits: int = 0
-var _cache_misses: int = 0
+const TextureCache = preload("res://src/systems/texture_cache.gd")
+var _texture_cache: TextureCache = TextureCache.new(MAX_CACHE_SIZE)
 
 # Reference to grid system for neighbor checks
 var grid_system: Node = null
@@ -30,51 +26,14 @@ func set_grid_system(system: Node) -> void:
 	grid_system = system
 
 
-## Cache a texture with LRU eviction
-func _cache_texture(cache_key: String, texture: ImageTexture) -> void:
-	# Evict oldest entry if cache is full
-	if texture_cache.size() >= MAX_CACHE_SIZE:
-		if _cache_access_order.size() > 0:
-			var oldest_key = _cache_access_order.pop_front()
-			texture_cache.erase(oldest_key)
-
-	texture_cache[cache_key] = texture
-	_cache_access_order.append(cache_key)
-
-
-## Get texture from cache, updating LRU order
-func _get_cached_texture(cache_key: String) -> ImageTexture:
-	if texture_cache.has(cache_key):
-		_cache_hits += 1
-		# Move to end of access order (most recently used)
-		_cache_access_order.erase(cache_key)
-		_cache_access_order.append(cache_key)
-		return texture_cache[cache_key]
-	_cache_misses += 1
-	return null
-
-
 ## Get cache statistics including hit rate
 func get_cache_stats() -> Dictionary:
-	var total_requests = _cache_hits + _cache_misses
-	var hit_rate = 0.0
-	if total_requests > 0:
-		hit_rate = float(_cache_hits) / float(total_requests)
-	return {
-		"size": texture_cache.size(),
-		"max_size": MAX_CACHE_SIZE,
-		"hits": _cache_hits,
-		"misses": _cache_misses,
-		"hit_rate": hit_rate
-	}
+	return _texture_cache.get_stats()
 
 
 ## Clear the texture cache
 func clear_cache() -> void:
-	texture_cache.clear()
-	_cache_access_order.clear()
-	_cache_hits = 0
-	_cache_misses = 0
+	_texture_cache.clear()
 
 
 ## Get or generate a texture for a building
@@ -107,13 +66,13 @@ func get_building_texture(building_data: Resource, development_level: int = 1, g
 		cache_key = "%s_%d" % [building_data.id, development_level]
 
 	# Check cache first (with LRU update)
-	var cached = _get_cached_texture(cache_key)
+	var cached = _texture_cache.fetch(cache_key)
 	if cached:
 		return cached
 
 	# Generate and cache the texture
 	var texture = _generate_texture(building_data, development_level, neighbors)
-	_cache_texture(cache_key, texture)
+	_texture_cache.put(cache_key, texture)
 	return texture
 
 
@@ -141,7 +100,7 @@ func _get_road_neighbors(cell: Vector2i) -> Dictionary:
 		return {"north": 0, "south": 0, "east": 0, "west": 0}
 
 	# Use GridConstants utility for simple cell set lookup
-return GridConstants.get_directional_neighbors(cell, [grid_system.get_road_cell_map()])
+	return GridConstants.get_directional_neighbors(cell, [grid_system.get_road_cell_map()])
 
 
 ## Get water pipe neighbors (roads, water infrastructure, buildings with water)

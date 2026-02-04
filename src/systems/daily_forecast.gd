@@ -197,7 +197,7 @@ func to_dict() -> Dictionary:
 
 
 static func from_dict(data: Dictionary) -> DailyForecast:
-	var f = DailyForecast.new()
+	var f = (load("res://src/systems/daily_forecast.gd") as Script).new()
 	f.day_index = data.get("day_index", 0)
 	f.high_temp = data.get("high_temp", 20.0)
 	f.low_temp = data.get("low_temp", 15.0)
