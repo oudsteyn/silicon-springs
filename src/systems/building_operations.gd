@@ -7,6 +7,7 @@ extends RefCounted
 
 ## Refund percentage when demolishing buildings
 const REFUND_PERCENTAGE: float = 0.5
+const OverlayOperations = preload("res://src/systems/overlay_operations.gd")
 
 
 static func _get_events() -> Node:
@@ -203,7 +204,7 @@ static func _register_building(
 		if is_utility and buildings.has(occupied_cell):
 			var existing = buildings[occupied_cell]
 			if existing.building_data and GridConstants.is_road_type(existing.building_data.building_type):
-				_add_overlay(occupied_cell, building, utility_overlays)
+				OverlayOperations.add_overlay(occupied_cell, building, utility_overlays)
 				is_overlay = true
 				continue
 
@@ -218,14 +219,6 @@ static func _register_building(
 		spatial_index.insert_multi(building.get_instance_id(), registered_cells, building)
 
 	return {"is_overlay": is_overlay, "registered_cells": registered_cells}
-
-
-static func _add_overlay(
-	cell: Vector2i,
-	overlay: Node2D,
-	utility_overlays: Dictionary
-) -> void:
-	utility_overlays[cell] = overlay
 
 
 ## Emit network change events for building placement
@@ -269,7 +262,15 @@ static func remove_building(
 
 	# First check for utility overlay (remove overlay first)
 	if utility_overlays.has(cell):
-		return _remove_overlay(cell, utility_overlays, unique_buildings)
+		var overlay_result = OverlayOperations.remove_overlay_at(
+			cell,
+			utility_overlays,
+			unique_buildings,
+			REFUND_PERCENTAGE
+		)
+		if overlay_result.success:
+			return RemovalResult.succeeded(overlay_result.refund, true)
+		return RemovalResult.failed(overlay_result.error)
 
 	# Check if building exists
 	if not buildings.has(cell):
@@ -323,66 +324,6 @@ static func remove_building(
 
 
 ## Remove a utility overlay
-static func _remove_overlay(
-	cell: Vector2i,
-	utility_overlays: Dictionary,
-	unique_buildings: Dictionary
-) -> RemovalResult:
-	var overlay = utility_overlays[cell]
-
-	if not is_instance_valid(overlay):
-		utility_overlays.erase(cell)
-		return RemovalResult.failed("Invalid overlay reference")
-
-	return _remove_overlay_instance(overlay, utility_overlays, unique_buildings)
-
-
-static func _remove_overlay_instance(
-	overlay: Node2D,
-	utility_overlays: Dictionary,
-	unique_buildings: Dictionary
-) -> RemovalResult:
-	if not is_instance_valid(overlay):
-		return RemovalResult.failed("Invalid overlay reference")
-
-	var overlay_data = overlay.building_data
-	var overlay_origin = overlay.grid_cell
-
-	# Remove overlay from all its cells
-	for occupied_cell in GridConstants.get_building_cells(overlay_origin, overlay_data.size):
-		if utility_overlays.get(occupied_cell) == overlay:
-			utility_overlays.erase(occupied_cell)
-
-	# Emit network change events
-	var overlay_type = overlay_data.building_type if overlay_data.get("building_type") else ""
-	if GridConstants.is_water_type(overlay_type):
-		var events = _get_events()
-		if events:
-			events.water_pipe_network_changed.emit(overlay_origin, false)
-	elif GridConstants.is_power_type(overlay_type):
-		var events = _get_events()
-		if events:
-			events.power_line_network_changed.emit(overlay_origin, false)
-
-	# Calculate and apply refund
-	var refund = int(overlay_data.build_cost * REFUND_PERCENTAGE)
-	var game_state = _get_game_state()
-	if game_state:
-		game_state.earn(refund)
-		game_state.decrement_building_count(overlay_data.id)
-
-	# Remove from unique buildings cache
-	unique_buildings.erase(overlay.get_instance_id())
-
-	# Emit event and cleanup
-	var events = _get_events()
-	if events:
-		events.building_removed.emit(overlay_origin, overlay)
-	overlay.queue_free()
-
-	return RemovalResult.succeeded(refund, true)
-
-
 ## Deregister a building from all its cells
 static func _deregister_building(
 	origin_cell: Vector2i,
@@ -404,7 +345,12 @@ static func _deregister_building(
 			var overlay = utility_overlays[occupied_cell]
 			if overlay and not removed_overlays.has(overlay.get_instance_id()):
 				removed_overlays[overlay.get_instance_id()] = true
-				_remove_overlay_instance(overlay, utility_overlays, unique_buildings)
+				OverlayOperations.remove_overlay_instance(
+					overlay,
+					utility_overlays,
+					unique_buildings,
+					REFUND_PERCENTAGE
+				)
 
 	# Remove from unique buildings cache
 	unique_buildings.erase(building.get_instance_id())

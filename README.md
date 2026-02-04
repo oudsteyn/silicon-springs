@@ -100,6 +100,12 @@ Run the full test suite headless:
 godot --headless -s tests/run_headless.gd
 ```
 
+For verbose runs without the resource-load spam:
+
+```bash
+scripts/run_tests_verbose.sh
+```
+
 ## License
 
 MIT

@@ -2,14 +2,13 @@ extends TestBase
 ## Tests for SaveBuildingCodec serialization and restoration
 
 const SaveBuildingCodec = preload("res://src/systems/save_building_codec.gd")
+const TestHelpers = preload("res://tests/helpers.gd")
 
 var grid_system: GridSystem
 
 
 func before_each() -> void:
-	grid_system = GridSystem.new()
-	grid_system._building_registry.load_registry()
-	add_child(grid_system)
+	grid_system = TestHelpers.create_grid_system(self)
 
 
 func after_each() -> void:

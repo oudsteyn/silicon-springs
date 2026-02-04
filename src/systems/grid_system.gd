@@ -312,19 +312,8 @@ func _check_far_compliance(cell: Vector2i, building_data: Resource) -> Dictionar
 	if zoning_system and zoning_system.has_method("is_far_compliant"):
 		return zoning_system.is_far_compliant(cell, building_data)
 
-	# Fallback to group lookup
-	var tree = get_tree()
-	if not tree:
-		return {"compliant": true, "reason": ""}
-	var game_world = tree.get_first_node_in_group("game_world")
-	if not game_world or not game_world.get("zoning_system"):
-		return {"compliant": true, "reason": ""}
-
-	var resolved_zoning = game_world.zoning_system
-	if not resolved_zoning or not resolved_zoning.has_method("is_far_compliant"):
-		return {"compliant": true, "reason": ""}
-
-	return resolved_zoning.is_far_compliant(cell, building_data)
+	# No injected zoning system; default to compliant.
+	return {"compliant": true, "reason": ""}
 
 
 # =============================================================================

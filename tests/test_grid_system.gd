@@ -2,11 +2,11 @@ extends TestBase
 ## Unit tests for GridSystem
 
 var grid_system: GridSystem
+const TestHelpers = preload("res://tests/helpers.gd")
 
 
 func before_each() -> void:
-	grid_system = GridSystem.new()
-	add_child(grid_system)
+	grid_system = TestHelpers.create_grid_system(self)
 
 
 func after_each() -> void:

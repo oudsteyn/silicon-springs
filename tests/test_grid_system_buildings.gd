@@ -2,13 +2,12 @@ extends TestBase
 ## Building placement/removal behavior tests for GridSystem
 
 var grid_system: GridSystem
+const TestHelpers = preload("res://tests/helpers.gd")
 
 
 func before_each() -> void:
 	GameState.reset_game()
-	grid_system = GridSystem.new()
-	grid_system._building_registry.load_registry()
-	add_child(grid_system)
+	grid_system = TestHelpers.create_grid_system(self)
 
 
 func after_each() -> void:

@@ -25,6 +25,9 @@ func test_save_system_uses_get_save_data_for_power() -> void:
 	assert_true(power.saved)
 	assert_eq(data.marker, 1)
 
+	save_system.free()
+	power.free()
+
 
 func test_save_system_uses_get_save_data_for_water() -> void:
 	var save_system = SaveSystem.new()
@@ -34,6 +37,9 @@ func test_save_system_uses_get_save_data_for_water() -> void:
 	var data = save_system._serialize_water_system()
 	assert_true(water.saved)
 	assert_eq(data.marker, 1)
+
+	save_system.free()
+	water.free()
 
 
 func test_save_system_uses_get_save_data_for_pollution() -> void:
@@ -45,6 +51,9 @@ func test_save_system_uses_get_save_data_for_pollution() -> void:
 	assert_true(pollution.saved)
 	assert_eq(data.marker, 1)
 
+	save_system.free()
+	pollution.free()
+
 
 func test_save_system_uses_get_save_data_for_infrastructure_age() -> void:
 	var save_system = SaveSystem.new()
@@ -54,6 +63,9 @@ func test_save_system_uses_get_save_data_for_infrastructure_age() -> void:
 	var data = save_system._serialize_infrastructure_age()
 	assert_true(infra.saved)
 	assert_eq(data.marker, 1)
+
+	save_system.free()
+	infra.free()
 
 
 func test_save_system_uses_load_save_data_for_power() -> void:
@@ -65,6 +77,9 @@ func test_save_system_uses_load_save_data_for_power() -> void:
 	assert_true(power.loaded)
 	assert_eq(power.loaded_data.marker, 2)
 
+	save_system.free()
+	power.free()
+
 
 func test_save_system_uses_load_save_data_for_water() -> void:
 	var save_system = SaveSystem.new()
@@ -74,6 +89,9 @@ func test_save_system_uses_load_save_data_for_water() -> void:
 	save_system._restore_water_system({"marker": 2})
 	assert_true(water.loaded)
 	assert_eq(water.loaded_data.marker, 2)
+
+	save_system.free()
+	water.free()
 
 
 func test_save_system_uses_load_save_data_for_pollution() -> void:
@@ -85,6 +103,9 @@ func test_save_system_uses_load_save_data_for_pollution() -> void:
 	assert_true(pollution.loaded)
 	assert_eq(pollution.loaded_data.marker, 2)
 
+	save_system.free()
+	pollution.free()
+
 
 func test_save_system_uses_load_save_data_for_infrastructure_age() -> void:
 	var save_system = SaveSystem.new()
@@ -94,3 +115,6 @@ func test_save_system_uses_load_save_data_for_infrastructure_age() -> void:
 	save_system._restore_infrastructure_age({"marker": 2})
 	assert_true(infra.loaded)
 	assert_eq(infra.loaded_data.marker, 2)
+
+	save_system.free()
+	infra.free()
