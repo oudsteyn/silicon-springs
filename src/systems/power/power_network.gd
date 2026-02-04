@@ -25,7 +25,7 @@ func update_network(power_sources: Array[Node2D], storage_buildings: Array[Node2
 	if not grid_system:
 		return
 
-	road_cells = grid_system.road_cells.duplicate()
+	road_cells = grid_system.get_road_cell_map()
 
 	# Flood fill from power sources
 	for source in power_sources:
@@ -56,8 +56,8 @@ func _flood_fill_power(start_cell: Vector2i, grid_system) -> void:
 		if not distance_from_source.has(cell) or distance < distance_from_source[cell]:
 			distance_from_source[cell] = distance
 
-		if grid_system and grid_system.buildings.has(cell):
-			var building = grid_system.buildings[cell]
+		if grid_system and grid_system.has_building_at(cell):
+			var building = grid_system.get_building_at(cell)
 			if is_instance_valid(building) and building.building_data:
 				var building_size = building.building_data.size
 				var origin = building.grid_cell
@@ -90,11 +90,11 @@ func _flood_fill_power(start_cell: Vector2i, grid_system) -> void:
 				continue
 
 			if grid_system:
-				if grid_system.buildings.has(neighbor):
+				if grid_system.has_building_at(neighbor):
 					to_visit.append([neighbor, distance + 1])
 					continue
-				if grid_system.utility_overlays.has(neighbor):
-					var overlay = grid_system.utility_overlays[neighbor]
+				if grid_system.has_overlay_at(neighbor):
+					var overlay = grid_system.get_overlay_at(neighbor)
 					if is_instance_valid(overlay) and overlay.building_data:
 						if GridConstants.is_power_type(overlay.building_data.building_type):
 							to_visit.append([neighbor, distance + 1])
@@ -146,8 +146,8 @@ func get_total_efficiency_loss(grid_system) -> float:
 	var total_loss = 0.0
 	var counted = {}
 
-	for cell in grid_system.buildings:
-		var building = grid_system.buildings[cell]
+	for cell in grid_system.get_building_cells():
+		var building = grid_system.get_building_at(cell)
 		if not is_instance_valid(building) or counted.has(building):
 			continue
 		counted[building] = true

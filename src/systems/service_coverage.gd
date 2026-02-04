@@ -177,8 +177,8 @@ func get_average_coverage() -> float:
 	var total_coverage = 0.0
 	var cell_count = 0
 
-	for cell in grid_system.buildings:
-		var building = grid_system.buildings[cell]
+	for cell in grid_system.get_building_cells():
+		var building = grid_system.get_building_at(cell)
 		if not is_instance_valid(building):
 			continue
 
@@ -207,8 +207,8 @@ func get_educated_population_estimate() -> int:
 	var covered_residential = 0
 	var total_residential = 0
 
-	for cell in grid_system.buildings:
-		var building = grid_system.buildings[cell]
+	for cell in grid_system.get_building_cells():
+		var building = grid_system.get_building_at(cell)
 		if not is_instance_valid(building):
 			continue
 
@@ -241,7 +241,7 @@ func get_cells_without_fire_coverage() -> Array[Vector2i]:
 	if not grid_system:
 		return result
 
-	for cell in grid_system.buildings:
+	for cell in grid_system.get_building_cells():
 		if not has_fire_coverage(cell):
 			result.append(cell)
 	return result
@@ -252,7 +252,7 @@ func get_cells_without_police_coverage() -> Array[Vector2i]:
 	if not grid_system:
 		return result
 
-	for cell in grid_system.buildings:
+	for cell in grid_system.get_building_cells():
 		if not has_police_coverage(cell):
 			result.append(cell)
 	return result

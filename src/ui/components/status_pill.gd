@@ -27,6 +27,7 @@ var weather_label: Label
 var _is_hovered: bool = false
 var _expanded_tooltip: Control = null
 var _tooltip_tween: Tween = null
+var _events: Node = null
 
 # Alert icons
 var _alert_icons: Dictionary = {}  # alert_type: TextureRect/Label
@@ -37,6 +38,19 @@ func _ready() -> void:
 	_setup_ui()
 	_connect_signals()
 	_update_display()
+
+
+func set_events(events: Node) -> void:
+	_events = events
+
+
+func _get_events() -> Node:
+	if _events:
+		return _events
+	var tree = get_tree()
+	if tree:
+		return tree.root.get_node_or_null("Events")
+	return null
 
 
 func _exit_tree() -> void:
@@ -236,25 +250,28 @@ func _create_alert_icons() -> void:
 
 
 func _connect_signals() -> void:
-	Events.budget_updated.connect(_on_budget_updated)
-	Events.population_changed.connect(_on_population_changed)
-	Events.month_tick.connect(_on_month_tick)
-	Events.simulation_speed_changed.connect(_on_speed_changed)
-	Events.simulation_paused.connect(_on_paused_changed)
+	var events = _get_events()
+	if events:
+		events.budget_updated.connect(_on_budget_updated)
+		events.population_changed.connect(_on_population_changed)
+		events.month_tick.connect(_on_month_tick)
+		events.simulation_speed_changed.connect(_on_speed_changed)
+		events.simulation_paused.connect(_on_paused_changed)
 	UIManager.alert_state_changed.connect(_on_alert_changed)
-	Events.weather_changed.connect(_on_weather_changed)
-	Events.storm_started.connect(_on_storm_started)
-	Events.storm_ended.connect(_on_storm_ended)
-	Events.flood_started.connect(_on_flood_started)
-	Events.flood_ended.connect(_on_flood_ended)
-	Events.heat_wave_started.connect(_on_heat_wave_started)
-	Events.heat_wave_ended.connect(_on_heat_wave_ended)
-	Events.cold_snap_started.connect(_on_cold_snap_started)
-	Events.cold_snap_ended.connect(_on_cold_snap_ended)
+	if events:
+		events.weather_changed.connect(_on_weather_changed)
+		events.storm_started.connect(_on_storm_started)
+		events.storm_ended.connect(_on_storm_ended)
+		events.flood_started.connect(_on_flood_started)
+		events.flood_ended.connect(_on_flood_ended)
+		events.heat_wave_started.connect(_on_heat_wave_started)
+		events.heat_wave_ended.connect(_on_heat_wave_ended)
+		events.cold_snap_started.connect(_on_cold_snap_started)
+		events.cold_snap_ended.connect(_on_cold_snap_ended)
 
-	# Domain events (rich aggregated events)
-	Events.power_state_changed.connect(_on_power_state_changed)
-	Events.storm_outage_changed.connect(_on_storm_outage_changed)
+		# Domain events (rich aggregated events)
+		events.power_state_changed.connect(_on_power_state_changed)
+		events.storm_outage_changed.connect(_on_storm_outage_changed)
 
 
 func _update_display() -> void:

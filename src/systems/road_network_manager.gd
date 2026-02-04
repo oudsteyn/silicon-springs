@@ -151,7 +151,7 @@ func get_road_distance(from: Vector2i, to: Vector2i) -> int:
 
 
 ## Get all road cells
-func get_road_cells() -> Dictionary:
+func get_road_cell_list() -> Dictionary:
 	return road_cells
 
 

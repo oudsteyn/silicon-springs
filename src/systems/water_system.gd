@@ -57,6 +57,20 @@ func _ready() -> void:
 	Events.building_removed.connect(_on_building_removed)
 
 
+func get_save_data() -> Dictionary:
+	return {
+		"system_pressure": system_pressure,
+		"pressure_ratio": pressure_ratio,
+		"pressure_boost": pressure_boost
+	}
+
+
+func load_save_data(data: Dictionary) -> void:
+	system_pressure = data.get("system_pressure", 1.0)
+	pressure_ratio = data.get("pressure_ratio", 1.0)
+	pressure_boost = data.get("pressure_boost", 0.0)
+
+
 func set_grid_system(system) -> void:
 	grid_system = system
 
@@ -327,7 +341,7 @@ func _update_water_network() -> void:
 		return
 
 	# Sync road cells from grid system
-	road_cells = grid_system.road_cells.duplicate()
+	road_cells = grid_system.get_road_cell_map()
 
 	# Start from each water source and flood-fill through water pipes
 	for source in water_sources:
@@ -356,8 +370,8 @@ func _flood_fill_water(start_cell: Vector2i) -> void:
 
 		# If this cell has a building, mark ALL cells of that building as watered
 		# and add them to visit queue so water spreads through buildings
-		if grid_system and grid_system.buildings.has(cell):
-			var building = grid_system.buildings[cell]
+		if grid_system and grid_system.has_building_at(cell):
+			var building = grid_system.get_building_at(cell)
 			if is_instance_valid(building) and building.building_data:
 				var building_size = building.building_data.size
 				var origin = building.grid_cell
@@ -394,12 +408,12 @@ func _flood_fill_water(start_cell: Vector2i) -> void:
 
 			# Water flows through ANY adjacent building (SimCity-style)
 			if grid_system:
-				if grid_system.buildings.has(neighbor):
+				if grid_system.has_building_at(neighbor):
 					to_visit.append([neighbor, distance + 1])
 					continue
 				# Also check utility overlays (power lines/water pipes on roads)
-				if grid_system.utility_overlays.has(neighbor):
-					var overlay = grid_system.utility_overlays[neighbor]
+				if grid_system.has_overlay_at(neighbor):
+					var overlay = grid_system.get_overlay_at(neighbor)
 					if is_instance_valid(overlay) and overlay.building_data:
 						# Water flows through water pipes on roads
 						if GridConstants.is_water_type(overlay.building_data.building_type):
@@ -412,8 +426,8 @@ func _update_building_water_status() -> void:
 	# Update ALL buildings, not just tracked consumers
 	if grid_system:
 		var updated_buildings = {}
-		for cell in grid_system.buildings:
-			var building = grid_system.buildings[cell]
+		for cell in grid_system.get_building_cells():
+			var building = grid_system.get_building_at(cell)
 			if not is_instance_valid(building) or updated_buildings.has(building):
 				continue
 			updated_buildings[building] = true
@@ -595,8 +609,8 @@ func get_total_efficiency_loss() -> float:
 	var total_loss = 0.0
 	var counted = {}
 
-	for cell in grid_system.buildings:
-		var building = grid_system.buildings[cell]
+	for cell in grid_system.get_building_cells():
+		var building = grid_system.get_building_at(cell)
 		if not is_instance_valid(building) or counted.has(building):
 			continue
 		counted[building] = true

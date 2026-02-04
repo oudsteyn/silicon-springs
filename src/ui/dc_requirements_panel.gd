@@ -6,6 +6,7 @@ class_name DCRequirementsPanel
 @onready var requirements_container: VBoxContainer = $VBox/RequirementsContainer
 
 var current_tier: int = 0
+var _events: Node = null
 
 # Requirement thresholds per tier
 const REQUIREMENTS = {
@@ -19,11 +20,26 @@ func _ready() -> void:
 	visible = false
 
 	# Update when resources change
-	Events.power_updated.connect(_on_resources_updated)
-	Events.water_updated.connect(_on_resources_updated)
-	Events.population_changed.connect(_on_resources_updated)
-	Events.education_changed.connect(_on_resources_updated)
-	Events.coverage_updated.connect(_on_resources_updated)
+	var events = _get_events()
+	if events:
+		events.power_updated.connect(_on_resources_updated)
+		events.water_updated.connect(_on_resources_updated)
+		events.population_changed.connect(_on_resources_updated)
+		events.education_changed.connect(_on_resources_updated)
+		events.coverage_updated.connect(_on_resources_updated)
+
+
+func set_events(events: Node) -> void:
+	_events = events
+
+
+func _get_events() -> Node:
+	if _events:
+		return _events
+	var tree = get_tree()
+	if tree:
+		return tree.root.get_node_or_null("Events")
+	return null
 
 
 func show_requirements(tier: int, at_cell: Vector2i = Vector2i(-1, -1)) -> void:

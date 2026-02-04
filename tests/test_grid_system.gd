@@ -87,7 +87,7 @@ func test_has_road_at_empty() -> void:
 
 
 func test_road_cells_start_empty() -> void:
-	assert_empty(grid_system.road_cells)
+	assert_empty(grid_system.get_road_cell_list())
 
 
 # =============================================================================

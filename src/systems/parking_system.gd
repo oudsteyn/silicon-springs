@@ -112,8 +112,8 @@ func _update_parking_requirements() -> void:
 		return
 
 	var counted = {}
-	for cell in grid_system.buildings:
-		var building = grid_system.buildings[cell]
+	for cell in grid_system.get_building_cells():
+		var building = grid_system.get_building_at(cell)
 		if not is_instance_valid(building) or counted.has(building):
 			continue
 		counted[building] = true

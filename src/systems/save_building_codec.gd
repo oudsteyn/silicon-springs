@@ -7,8 +7,8 @@ static func serialize_buildings(grid_system: Node) -> Array:
 	var buildings_data: Array = []
 	var serialized_buildings: Dictionary = {}  # Track already serialized buildings
 
-	for cell in grid_system.buildings:
-		var building = grid_system.buildings[cell]
+	for cell in grid_system.get_building_cells():
+		var building = grid_system.get_building_at(cell)
 		if not is_instance_valid(building):
 			continue
 
@@ -31,8 +31,8 @@ static func serialize_buildings(grid_system: Node) -> Array:
 		buildings_data.append(building_dict)
 
 	# Also serialize utility overlays
-	for cell in grid_system.utility_overlays:
-		var overlay = grid_system.utility_overlays[cell]
+	for cell in grid_system.get_overlay_cells():
+		var overlay = grid_system.get_overlay_at(cell)
 		if not is_instance_valid(overlay):
 			continue
 
@@ -54,7 +54,7 @@ static func serialize_buildings(grid_system: Node) -> Array:
 	return buildings_data
 
 
-static func restore_building(grid_system: GridSystem, data: Dictionary) -> void:
+static func restore_building(grid_system: Node, data: Dictionary) -> void:
 	if not grid_system:
 		return
 
@@ -74,7 +74,7 @@ static func restore_building(grid_system: GridSystem, data: Dictionary) -> void:
 	var is_overlay = data.get("is_overlay", false)
 	if is_overlay:
 		for occupied_cell in GridConstants.get_building_cells(cell, building_data.size):
-			if not grid_system.road_cells.has(occupied_cell):
+			if not grid_system.has_road_at(occupied_cell):
 				return
 
 	var building = grid_system.place_building_for_load(cell, building_data, is_overlay)

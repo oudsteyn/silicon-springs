@@ -55,6 +55,7 @@ const DURATIONS: Dictionary = {
 
 # Active effects
 var _effects: Array[Dictionary] = []  # {type, pos, time, duration, data, particles}
+var _events: Node = null
 
 # Particle structure: {pos: Vector2, vel: Vector2, life: float, size: float, color: Color}
 
@@ -63,9 +64,24 @@ func _ready() -> void:
 	z_index = 50  # Above buildings, below UI
 
 	# Connect to game events
-	Events.building_placed.connect(_on_building_placed)
-	Events.building_removed.connect(_on_building_removed)
-	Events.simulation_event.connect(_on_simulation_event)
+	var events = _get_events()
+	if events:
+		events.building_placed.connect(_on_building_placed)
+		events.building_removed.connect(_on_building_removed)
+		events.simulation_event.connect(_on_simulation_event)
+
+
+func set_events(events: Node) -> void:
+	_events = events
+
+
+func _get_events() -> Node:
+	if _events:
+		return _events
+	var tree = get_tree()
+	if tree:
+		return tree.root.get_node_or_null("Events")
+	return null
 
 
 func _process(delta: float) -> void:

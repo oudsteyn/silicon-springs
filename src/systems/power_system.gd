@@ -304,8 +304,8 @@ func _update_building_power_status() -> void:
 
 	if grid_system:
 		var updated_buildings = {}
-		for cell in grid_system.buildings:
-			var building = grid_system.buildings[cell]
+		for cell in grid_system.get_building_cells():
+			var building = grid_system.get_building_at(cell)
 			if not is_instance_valid(building) or updated_buildings.has(building):
 				continue
 			updated_buildings[building] = true
@@ -388,6 +388,58 @@ func is_grid_stable() -> bool:
 
 func get_brownout_info() -> Dictionary:
 	return _stability.get_brownout_info()
+
+
+func get_save_data() -> Dictionary:
+	var damaged_cells_data: Dictionary = {}
+	for cell in storm_damaged_cells:
+		damaged_cells_data["%d,%d" % [cell.x, cell.y]] = storm_damaged_cells[cell]
+
+	var storage_data: Dictionary = {}
+	if storage_state:
+		for id in storage_state:
+			storage_data[str(id)] = storage_state[id].duplicate()
+
+	return {
+		"storm_outage_active": storm_outage_active,
+		"storm_outage_severity": storm_outage_severity,
+		"storm_repair_rate": storm_repair_rate,
+		"outage_restoration_progress": outage_restoration_progress,
+		"storm_damaged_cells": damaged_cells_data,
+		"grid_stability": grid_stability,
+		"is_brownout": is_brownout,
+		"brownout_severity": brownout_severity,
+		"storage_state": storage_data,
+		"total_stored_energy": total_stored_energy
+	}
+
+
+func load_save_data(data: Dictionary) -> void:
+	storm_outage_active = data.get("storm_outage_active", false)
+	storm_outage_severity = data.get("storm_outage_severity", 0.0)
+	storm_repair_rate = data.get("storm_repair_rate", 0.0)
+	outage_restoration_progress = data.get("outage_restoration_progress", 0.0)
+
+	storm_damaged_cells.clear()
+	var damaged_cells_data = data.get("storm_damaged_cells", {})
+	for key in damaged_cells_data:
+		var parts = key.split(",")
+		if parts.size() == 2:
+			var cell = Vector2i(int(parts[0]), int(parts[1]))
+			storm_damaged_cells[cell] = damaged_cells_data[key]
+
+	grid_stability = data.get("grid_stability", 1.0)
+	is_brownout = data.get("is_brownout", false)
+	brownout_severity = data.get("brownout_severity", 0.0)
+
+	total_stored_energy = data.get("total_stored_energy", 0.0)
+	var storage_data = data.get("storage_state", {})
+	for id_str in storage_data:
+		var id = int(id_str)
+		if storage_state.has(id):
+			var saved = storage_data[id_str]
+			storage_state[id].charge = saved.get("charge", 0.0)
+			storage_state[id].cycles = saved.get("cycles", 0)
 
 
 func get_grid_info() -> Dictionary:

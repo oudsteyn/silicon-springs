@@ -416,14 +416,6 @@ func clear_all_buildings_state() -> void:
 # BUILDING QUERIES (Some delegated to BuildingQueries static class)
 # =============================================================================
 
-func get_building_at(cell: Vector2i) -> Node2D:
-	return BuildingQueries.get_building_at(cell, buildings)
-
-
-func get_all_buildings() -> Dictionary:
-	return buildings
-
-
 ## Get all unique buildings (O(1) - uses cache)
 func get_all_unique_buildings() -> Array[Node2D]:
 	return BuildingQueries.get_all_unique_buildings(_unique_buildings)
@@ -437,6 +429,50 @@ func get_buildings_of_type(building_type: String) -> Array[Node2D]:
 ## Get total maintenance cost for all buildings (delegated to BuildingQueries)
 func get_total_maintenance(traffic_system: Node = null) -> int:
 	return BuildingQueries.get_total_maintenance(_unique_buildings, traffic_system)
+
+
+# =============================================================================
+# BUILDING/OVERLAY/ROAD ACCESSORS
+# =============================================================================
+
+func get_building_at(cell: Vector2i) -> Node2D:
+	return buildings.get(cell)
+
+
+func has_building_at(cell: Vector2i) -> bool:
+	return buildings.has(cell)
+
+
+func get_building_cells() -> Array:
+	return buildings.keys()
+
+
+func get_building_count() -> int:
+	return buildings.size()
+
+
+func get_overlay_at(cell: Vector2i) -> Node2D:
+	return utility_overlays.get(cell)
+
+
+func has_overlay_at(cell: Vector2i) -> bool:
+	return utility_overlays.has(cell)
+
+
+func get_overlay_cells() -> Array:
+	return utility_overlays.keys()
+
+
+func get_overlay_count() -> int:
+	return utility_overlays.size()
+
+
+func get_road_cell_list() -> Array:
+	return road_cells.keys()
+
+
+func get_road_cell_map() -> Dictionary:
+	return road_cells.duplicate()
 
 
 # =============================================================================

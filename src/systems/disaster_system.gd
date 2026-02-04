@@ -101,10 +101,10 @@ func trigger_disaster(type: DisasterType, center: Vector2i = Vector2i(-1, -1)) -
 
 
 func _get_random_building_location() -> Vector2i:
-	if not grid_system or grid_system.buildings.is_empty():
+if not grid_system or grid_system.get_building_count() == 0:
 		return Vector2i(-1, -1)
 
-	var cells = grid_system.buildings.keys()
+var cells = grid_system.get_building_cells()
 	return cells[randi() % cells.size()]
 
 
@@ -118,14 +118,14 @@ func _start_fire_disaster(center: Vector2i) -> void:
 	for x in range(-2, 3):
 		for y in range(-2, 3):
 			var cell = center + Vector2i(x, y)
-			if grid_system.buildings.has(cell):
+			if grid_system.has_building_at(cell):
 				if randf() < 0.6:  # 60% chance to catch fire
 					fire_cells.append(cell)
 					Events.fire_started.emit(cell)
 
 	# Damage buildings
 	for cell in fire_cells:
-		var building = grid_system.buildings.get(cell)
+		var building = grid_system.get_building_at(cell)
 		if building and is_instance_valid(building):
 			if building.has_method("take_damage"):
 				building.take_damage(30 + randi() % 40)  # 30-70 damage
@@ -140,11 +140,11 @@ func _start_earthquake(center: Vector2i) -> void:
 	# Damage buildings in radius (use GameConfig damage chance)
 	var damage_chance = _get_earthquake_damage_chance()
 	var damaged_count = 0
-	for cell in grid_system.buildings:
+	for cell in grid_system.get_building_cells():
 		var distance = (Vector2(cell) - Vector2(center)).length()
 		if distance <= radius:
 			if randf() < damage_chance:
-				var building = grid_system.buildings[cell]
+				var building = grid_system.get_building_at(cell)
 				if building and is_instance_valid(building):
 					if building.building_data and building.building_data.category != "infrastructure":
 						if building.has_method("take_damage"):
@@ -179,8 +179,8 @@ func _start_tornado(center: Vector2i) -> void:
 		for x in range(-2, 3):
 			for y in range(-2, 3):
 				var cell = current_pos + Vector2i(x, y)
-				if grid_system.buildings.has(cell):
-					var building = grid_system.buildings[cell]
+				if grid_system.has_building_at(cell):
+					var building = grid_system.get_building_at(cell)
 					if building and is_instance_valid(building):
 						if building.has_method("take_damage"):
 							building.take_damage(20 + randi() % 30)
@@ -200,10 +200,10 @@ func _start_flood(center: Vector2i) -> void:
 
 	# Floods don't destroy but make buildings non-operational temporarily
 	var flooded_buildings: Array[Node] = []
-	for cell in grid_system.buildings:
+	for cell in grid_system.get_building_cells():
 		var distance = (Vector2(cell) - Vector2(center)).length()
 		if distance <= radius:
-			var building = grid_system.buildings[cell]
+			var building = grid_system.get_building_at(cell)
 			if building and is_instance_valid(building):
 				flooded_buildings.append(building)
 				# Flood damage is mostly to operations
@@ -230,8 +230,8 @@ func _start_meteor(center: Vector2i) -> void:
 			var cell = center + Vector2i(x, y)
 			var distance = (Vector2(cell) - Vector2(center)).length()
 			if distance <= radius:
-				if grid_system.buildings.has(cell):
-					var building = grid_system.buildings[cell]
+				if grid_system.has_building_at(cell):
+					var building = grid_system.get_building_at(cell)
 					if building and is_instance_valid(building):
 						# Central impact destroys, outer ring damages
 						if distance <= 1:
@@ -253,8 +253,8 @@ func _start_monster_attack(center: Vector2i) -> void:
 		for x in range(-1, 2):
 			for y in range(-1, 2):
 				var cell = current_pos + Vector2i(x, y)
-				if grid_system.buildings.has(cell):
-					var building = grid_system.buildings[cell]
+				if grid_system.has_building_at(cell):
+					var building = grid_system.get_building_at(cell)
 					if building and is_instance_valid(building):
 						if randf() < 0.5:  # 50% chance to destroy
 							grid_system.remove_building(cell)
@@ -269,7 +269,7 @@ func _start_monster_attack(center: Vector2i) -> void:
 			var count = 0
 			for cx in range(-2, 3):
 				for cy in range(-2, 3):
-					if grid_system.buildings.has(check_pos + Vector2i(cx, cy)):
+					if grid_system.has_building_at(check_pos + Vector2i(cx, cy)):
 						count += 1
 			if count > best_count:
 				best_count = count
@@ -326,8 +326,8 @@ func _apply_storm_damage(severity: float) -> void:
 	var damaged_count = 0
 
 	var checked_buildings: Dictionary = {}
-	for cell in grid_system.buildings:
-		var building = grid_system.buildings[cell]
+	for cell in grid_system.get_building_cells():
+		var building = grid_system.get_building_at(cell)
 		if not is_instance_valid(building) or checked_buildings.has(building):
 			continue
 		checked_buildings[building] = true
@@ -356,8 +356,8 @@ func _apply_flood_damage() -> void:
 	var checked_buildings: Dictionary = {}
 	var flooded_cells: Array[Vector2i] = []
 
-	for cell in grid_system.buildings:
-		var building = grid_system.buildings[cell]
+	for cell in grid_system.get_building_cells():
+		var building = grid_system.get_building_at(cell)
 		if not is_instance_valid(building) or checked_buildings.has(building):
 			continue
 		checked_buildings[building] = true

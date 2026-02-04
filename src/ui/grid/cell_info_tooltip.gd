@@ -47,6 +47,7 @@ var _alpha: float = 0.0
 var _tooltip_content: Array[Dictionary] = []  # [{type, label, value, color}]
 var _tooltip_height: float = 0.0
 var _building_at_cell = null
+var _events: Node = null
 
 
 
@@ -57,7 +58,22 @@ func _ready() -> void:
 	visible = false
 
 	# Connect to cell hover events
-	Events.cell_hovered.connect(_on_cell_hovered)
+	var events = _get_events()
+	if events:
+		events.cell_hovered.connect(_on_cell_hovered)
+
+
+func set_events(events: Node) -> void:
+	_events = events
+
+
+func _get_events() -> Node:
+	if _events:
+		return _events
+	var tree = get_tree()
+	if tree:
+		return tree.root.get_node_or_null("Events")
+	return null
 
 
 func set_camera(cam: Camera2D) -> void:

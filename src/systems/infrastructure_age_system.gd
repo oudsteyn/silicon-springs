@@ -274,8 +274,8 @@ func get_total_deferred_maintenance() -> int:
 		if data["condition"] < good_threshold:
 			# Find the building
 			var cell = data["cell"]
-			if grid_system.buildings.has(cell):
-				var building = grid_system.buildings[cell]
+			if grid_system.has_building_at(cell):
+				var building = grid_system.get_building_at(cell)
 				if is_instance_valid(building):
 					total += get_repair_cost(building)
 
@@ -335,9 +335,23 @@ func get_all_tracked_buildings() -> Array[Node2D]:
 	for building_id in infrastructure_age:
 		var data = infrastructure_age[building_id]
 		var cell = data["cell"]
-		if grid_system.buildings.has(cell):
-			var building = grid_system.buildings[cell]
+		if grid_system.has_building_at(cell):
+			var building = grid_system.get_building_at(cell)
 			if is_instance_valid(building):
 				buildings.append(building)
 
 	return buildings
+
+
+func get_save_data() -> Dictionary:
+	var data: Dictionary = {}
+	for id in infrastructure_age:
+		data[str(id)] = infrastructure_age[id].duplicate()
+	return {"infrastructure_age": data}
+
+
+func load_save_data(data: Dictionary) -> void:
+	infrastructure_age.clear()
+	var age_data = data.get("infrastructure_age", {})
+	for id_str in age_data:
+		infrastructure_age[int(id_str)] = age_data[id_str].duplicate()

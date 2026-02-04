@@ -69,8 +69,8 @@ func _update_housing_capacity() -> void:
 		return
 
 	var counted = {}
-	for cell in grid_system.buildings:
-		var building = grid_system.buildings[cell]
+	for cell in grid_system.get_building_cells():
+		var building = grid_system.get_building_at(cell)
 		if not is_instance_valid(building) or counted.has(building):
 			continue
 		counted[building] = true
@@ -137,8 +137,8 @@ func _process_gentrification() -> void:
 
 	# Check for rising land values displacing low-income residents
 	var counted = {}
-	for cell in grid_system.buildings:
-		var building = grid_system.buildings[cell]
+	for cell in grid_system.get_building_cells():
+		var building = grid_system.get_building_at(cell)
 		if not is_instance_valid(building) or counted.has(building):
 			continue
 		counted[building] = true

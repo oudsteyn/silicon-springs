@@ -57,6 +57,7 @@ var zoning_system = null
 # Interaction
 var _is_dragging: bool = false
 var _show_zones: bool = false
+var _events: Node = null
 
 
 func _ready() -> void:
@@ -77,11 +78,26 @@ func _ready() -> void:
 	_scale = _minimap_size / Vector2(GridConstants.GRID_WIDTH * GridConstants.CELL_SIZE, GridConstants.GRID_HEIGHT * GridConstants.CELL_SIZE)
 
 	# Connect to events
-	Events.building_placed.connect(_on_building_changed)
-	Events.building_removed.connect(_on_building_changed)
-	Events.terrain_changed.connect(_on_terrain_changed)
+	var events = _get_events()
+	if events:
+		events.building_placed.connect(_on_building_changed)
+		events.building_removed.connect(_on_building_changed)
+		events.terrain_changed.connect(_on_terrain_changed)
 
 	mouse_filter = Control.MOUSE_FILTER_STOP
+
+
+func set_events(events: Node) -> void:
+	_events = events
+
+
+func _get_events() -> Node:
+	if _events:
+		return _events
+	var tree = get_tree()
+	if tree:
+		return tree.root.get_node_or_null("Events")
+	return null
 
 
 func set_camera(cam: Camera2D) -> void:
@@ -166,8 +182,8 @@ func _rebuild_building_markers() -> void:
 
 	var counted: Dictionary = {}
 
-	for cell in grid_system.buildings:
-		var building = grid_system.buildings[cell]
+	for cell in grid_system.get_building_cells():
+		var building = grid_system.get_building_at(cell)
 		if not is_instance_valid(building) or counted.has(building):
 			continue
 		counted[building] = true

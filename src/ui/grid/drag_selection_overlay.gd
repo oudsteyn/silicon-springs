@@ -170,14 +170,14 @@ func _is_cell_valid(cell: Vector2i) -> bool:
 	match _operation_type:
 		"zone":
 			# Check if zone can be placed (no buildings, has road access)
-			if grid_system.buildings.has(cell):
-				var building = grid_system.buildings[cell]
+			if grid_system.has_building_at(cell):
+				var building = grid_system.get_building_at(cell)
 				if building and building.building_data and building.building_data.category != "zone":
 					return false
 			return true
 		"demolish":
 			# Check if there's something to demolish
-			return grid_system.buildings.has(cell)
+			return grid_system.has_building_at(cell)
 		_:
 			return true
 

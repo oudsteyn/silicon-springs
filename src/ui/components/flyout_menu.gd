@@ -30,6 +30,7 @@ var _hover_timer: Timer = null
 var _hovered_item_id: String = ""
 var _parent_flyout: FlyoutMenu = null
 var _animation_tween: Tween = null
+var _events: Node = null
 
 # Position
 var spawn_position: Vector2 = Vector2.ZERO
@@ -44,6 +45,19 @@ func _ready() -> void:
 	_spawn_time = Time.get_ticks_msec()
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_setup_hover_timer()
+
+
+func set_events(events: Node) -> void:
+	_events = events
+
+
+func _get_events() -> Node:
+	if _events:
+		return _events
+	var tree = get_tree()
+	if tree:
+		return tree.root.get_node_or_null("Events")
+	return null
 
 
 func _exit_tree() -> void:
@@ -214,9 +228,11 @@ func _on_item_pressed(item_id: String, item: Dictionary) -> void:
 		var unlock_pop = item.get("unlock_population", 0)
 		var current_pop = GameState.population if GameState else 0
 		var remaining = unlock_pop - current_pop
-		Events.simulation_event.emit("generic_info", {
-			"message": "Need %d more residents to unlock %s" % [remaining, item.get("label", "this")]
-		})
+		var events = _get_events()
+		if events:
+			events.simulation_event.emit("generic_info", {
+				"message": "Need %d more residents to unlock %s" % [remaining, item.get("label", "this")]
+			})
 		return  # Don't close menu, just show message
 
 	# Otherwise, emit selection and close

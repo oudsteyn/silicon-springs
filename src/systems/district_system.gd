@@ -134,10 +134,10 @@ func _update_district_metrics(district: DistrictData) -> void:
 
 	var counted = {}
 	for cell in district.cells:
-		if not grid_system.buildings.has(cell):
+		if not grid_system.has_building_at(cell):
 			continue
 
-		var building = grid_system.buildings[cell]
+		var building = grid_system.get_building_at(cell)
 		if not is_instance_valid(building) or counted.has(building):
 			continue
 		counted[building] = true

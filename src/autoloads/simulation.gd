@@ -208,8 +208,8 @@ func _update_employment() -> void:
 
 	# Count jobs from all buildings
 	var counted_buildings = {}
-	for cell in grid_system.buildings:
-		var building = grid_system.buildings[cell]
+	for cell in grid_system.get_building_cells():
+		var building = grid_system.get_building_at(cell)
 		if not is_instance_valid(building) or counted_buildings.has(building):
 			continue
 		counted_buildings[building] = true
@@ -244,11 +244,10 @@ func _process_random_events() -> void:
 	if not grid_system or not service_coverage:
 		return
 
-	var buildings = grid_system.get_all_buildings()
 	var checked_buildings = {}  # Avoid checking same building multiple times
 
-	for cell in buildings:
-		var building = buildings[cell]
+	for cell in grid_system.get_building_cells():
+		var building = grid_system.get_building_at(cell)
 		if not is_instance_valid(building):
 			continue
 
@@ -478,8 +477,8 @@ func _calculate_max_population() -> int:
 	var total_capacity = 0
 	var counted = {}
 
-	for cell in grid_system.buildings:
-		var building = grid_system.buildings[cell]
+	for cell in grid_system.get_building_cells():
+		var building = grid_system.get_building_at(cell)
 		if not is_instance_valid(building) or counted.has(building):
 			continue
 		counted[building] = true
@@ -620,8 +619,8 @@ func _process_construction() -> void:
 		return
 
 	var counted = {}
-	for cell in grid_system.buildings:
-		var building = grid_system.buildings[cell]
+	for cell in grid_system.get_building_cells():
+		var building = grid_system.get_building_at(cell)
 		if not is_instance_valid(building) or counted.has(building):
 			continue
 		counted[building] = true
@@ -669,8 +668,8 @@ func _process_zone_development() -> void:
 		return
 
 	var counted = {}
-	for cell in grid_system.buildings:
-		var building = grid_system.buildings[cell]
+	for cell in grid_system.get_building_cells():
+		var building = grid_system.get_building_at(cell)
 		if not is_instance_valid(building) or counted.has(building):
 			continue
 		counted[building] = true
@@ -769,8 +768,8 @@ func _calculate_park_bonus() -> float:
 	var total_bonus = 0.0
 	var counted = {}
 
-	for cell in grid_system.buildings:
-		var building = grid_system.buildings[cell]
+	for cell in grid_system.get_building_cells():
+		var building = grid_system.get_building_at(cell)
 		if not is_instance_valid(building) or counted.has(building):
 			continue
 		counted[building] = true
@@ -793,8 +792,8 @@ func _calculate_natural_environment_score() -> float:
 	var residential_count = 0
 
 	var counted = {}
-	for cell in grid_system.buildings:
-		var building = grid_system.buildings[cell]
+	for cell in grid_system.get_building_cells():
+		var building = grid_system.get_building_at(cell)
 		if not is_instance_valid(building) or counted.has(building):
 			continue
 		counted[building] = true
@@ -976,8 +975,8 @@ func _count_operational_zones(zone_type: String) -> int:
 
 	var count = 0
 	var counted = {}
-	for cell in grid_system.buildings:
-		var building = grid_system.buildings[cell]
+	for cell in grid_system.get_building_cells():
+		var building = grid_system.get_building_at(cell)
 		if not is_instance_valid(building) or counted.has(building):
 			continue
 		counted[building] = true
@@ -1018,8 +1017,8 @@ func _process_abandonment() -> void:
 		return
 
 	var counted = {}
-	for cell in grid_system.buildings:
-		var building = grid_system.buildings[cell]
+	for cell in grid_system.get_building_cells():
+		var building = grid_system.get_building_at(cell)
 		if not is_instance_valid(building) or counted.has(building):
 			continue
 		counted[building] = true

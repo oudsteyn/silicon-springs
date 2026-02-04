@@ -77,7 +77,7 @@ func is_infill_location(cell: Vector2i) -> bool:
 		return false
 
 	# Infill = vacant cell surrounded by developed cells
-	if grid_system.buildings.has(cell):
+	if grid_system.has_building_at(cell):
 		return false  # Already developed
 
 	var developed_neighbors = 0
@@ -90,7 +90,7 @@ func is_infill_location(cell: Vector2i) -> bool:
 
 	for offset in offsets:
 		var neighbor = cell + offset
-		if grid_system.buildings.has(neighbor):
+		if grid_system.has_building_at(neighbor):
 			developed_neighbors += 1
 
 	return developed_neighbors >= 4  # At least half surrounded
@@ -103,7 +103,7 @@ func _get_distance_from_developed_core(cell: Vector2i) -> float:
 	# Find distance to nearest developed cell
 	var min_distance = 999.0
 
-	for developed_cell in grid_system.buildings:
+for developed_cell in grid_system.get_building_cells():
 		var dx = cell.x - developed_cell.x
 		var dy = cell.y - developed_cell.y
 		var distance = sqrt(dx * dx + dy * dy)
@@ -161,7 +161,7 @@ func designate_greenbelt(center: Vector2i, radius: int) -> int:
 				var cell = center + Vector2i(x, y)
 
 				# Can't protect already developed areas
-				if grid_system and grid_system.buildings.has(cell):
+				if grid_system and grid_system.has_building_at(cell):
 					continue
 
 				if not greenbelt_cells.has(cell):
@@ -214,7 +214,7 @@ func get_developed_ratio() -> float:
 
 	var developed = 0
 	for cell in boundary_cells:
-		if grid_system.buildings.has(cell):
+		if grid_system.has_building_at(cell):
 			developed += 1
 
 	return float(developed) / float(boundary_cells.size())
@@ -230,8 +230,8 @@ func get_sprawl_index() -> float:
 	var center = Vector2i(50, 50)
 
 	var counted = {}
-	for cell in grid_system.buildings:
-		var building = grid_system.buildings[cell]
+	for cell in grid_system.get_building_cells():
+		var building = grid_system.get_building_at(cell)
 		if counted.has(building):
 			continue
 		counted[building] = true

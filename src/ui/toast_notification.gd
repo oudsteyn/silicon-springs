@@ -17,6 +17,20 @@ const ALLOWED_INFO_MESSAGES: Array[String] = [
 var toast_container: VBoxContainer
 var active_toasts: Array[Control] = []
 var _toast_timers: Dictionary = {}  # toast: Timer
+var _events: Node = null
+
+
+func set_events(events: Node) -> void:
+	_events = events
+
+
+func _get_events() -> Node:
+	if _events:
+		return _events
+	var tree = get_tree()
+	if tree:
+		return tree.root.get_node_or_null("Events")
+	return null
 
 # Toast types with styling
 const TOAST_STYLES = {
@@ -66,7 +80,9 @@ func _ready() -> void:
 	add_child(toast_container)
 
 	# Connect to notification events
-	Events.notification_requested.connect(show_toast)
+	var events = _get_events()
+	if events:
+		events.notification_requested.connect(show_toast)
 
 
 func _exit_tree() -> void:

@@ -56,16 +56,32 @@ var _terrain_cache_dirty: bool = true
 var _last_camera_pos: Vector2 = Vector2.ZERO
 var _last_camera_zoom: float = 1.0
 var _needs_redraw: bool = true
+var _events: Node = null
 
 
 func _ready() -> void:
 	z_index = ZLayers.GRID_LINES  # Above terrain, below buildings
 
 	# Connect to terrain changes
-	Events.terrain_changed.connect(_on_terrain_changed)
-	Events.build_mode_entered.connect(_on_build_mode_entered)
-	Events.build_mode_exited.connect(_on_build_mode_exited)
-	Events.cell_hovered.connect(_on_cell_hovered)
+	var events = _get_events()
+	if events:
+		events.terrain_changed.connect(_on_terrain_changed)
+		events.build_mode_entered.connect(_on_build_mode_entered)
+		events.build_mode_exited.connect(_on_build_mode_exited)
+		events.cell_hovered.connect(_on_cell_hovered)
+
+
+func set_events(events: Node) -> void:
+	_events = events
+
+
+func _get_events() -> Node:
+	if _events:
+		return _events
+	var tree = get_tree()
+	if tree:
+		return tree.root.get_node_or_null("Events")
+	return null
 
 
 func set_camera(cam: Camera2D) -> void:

@@ -19,18 +19,35 @@ var _pending_building_info: Node2D = null
 # Animation state
 var _slide_tween: Tween = null
 var _is_visible: bool = false
+var _events: Node = null
+
+
+func set_events(events: Node) -> void:
+	_events = events
+
+
+func _get_events() -> Node:
+	if _events:
+		return _events
+	var tree = get_tree()
+	if tree:
+		return tree.root.get_node_or_null("Events")
+	return null
 
 
 func _ready() -> void:
 	visible = false
 	_setup_modern_style()
 	close_button.pressed.connect(_on_close_pressed)
-	Events.building_selected.connect(_on_building_selected)
-	Events.building_deselected.connect(_on_building_deselected)
+	var events = _get_events()
+	if events:
+		events.building_selected.connect(_on_building_selected)
+		events.building_deselected.connect(_on_building_deselected)
 
 	# Connect to query response signals (decoupled from systems)
-	Events.building_info_ready.connect(_on_building_info_ready)
-	Events.cell_info_ready.connect(_on_cell_info_ready)
+	if events:
+		events.building_info_ready.connect(_on_building_info_ready)
+		events.cell_info_ready.connect(_on_cell_info_ready)
 
 	# Position panel off-screen to the right
 	_set_offscreen_position()
@@ -89,7 +106,9 @@ func _on_building_selected(building: Node2D) -> void:
 		current_building = building
 		_pending_building_info = building
 		# Request info via signal - GameWorld will aggregate and respond
-		Events.building_info_requested.emit(building)
+		var events = _get_events()
+		if events:
+			events.building_info_requested.emit(building)
 		_slide_in()
 
 
@@ -316,12 +335,16 @@ func _add_diagnostic(problem: String, solution: String) -> void:
 func _on_close_pressed() -> void:
 	if current_building:
 		current_building.set_selected(false)
-	Events.building_deselected.emit()
+	var events = _get_events()
+	if events:
+		events.building_deselected.emit()
 
 
 func show_cell_info(cell: Vector2i) -> void:
 	# Request cell info via signal - GameWorld will aggregate and respond
-	Events.cell_info_requested.emit(cell)
+	var events = _get_events()
+	if events:
+		events.cell_info_requested.emit(cell)
 	_slide_in()
 
 

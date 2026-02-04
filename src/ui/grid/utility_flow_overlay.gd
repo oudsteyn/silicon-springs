@@ -41,6 +41,7 @@ const MAX_FLOW_LINES: int = 100
 var _power_segments: Array = []  # [{start: Vector2i, end: Vector2i, active: bool, damaged: bool}]
 var _water_segments: Array = []
 var _segments_dirty: bool = true
+var _events: Node = null
 
 
 func _ready() -> void:
@@ -48,9 +49,24 @@ func _ready() -> void:
 	_init_flow_line_pools()
 
 	# Connect to building events
-	Events.building_placed.connect(_on_building_changed)
-	Events.building_removed.connect(_on_building_changed)
-	Events.month_tick.connect(_on_month_tick)
+	var events = _get_events()
+	if events:
+		events.building_placed.connect(_on_building_changed)
+		events.building_removed.connect(_on_building_changed)
+		events.month_tick.connect(_on_month_tick)
+
+
+func set_events(events: Node) -> void:
+	_events = events
+
+
+func _get_events() -> Node:
+	if _events:
+		return _events
+	var tree = get_tree()
+	if tree:
+		return tree.root.get_node_or_null("Events")
+	return null
 
 
 func _init_flow_line_pools() -> void:
@@ -109,9 +125,9 @@ func _rebuild_utility_cache() -> void:
 		return
 
 	# Scan utility overlays for power lines and water pipes
-	if grid_system.utility_overlays:
-		for cell in grid_system.utility_overlays:
-			var building = grid_system.utility_overlays[cell]
+	if grid_system.get_overlay_count() > 0:
+		for cell in grid_system.get_overlay_cells():
+			var building = grid_system.get_overlay_at(cell)
 			if is_instance_valid(building) and building.building_data:
 				match building.building_data.building_type:
 					"power_line":

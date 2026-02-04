@@ -15,6 +15,20 @@ signal closed()
 
 # Cached expense breakdown (received via Events)
 var _expense_breakdown: Dictionary = {}
+var _events: Node = null
+
+
+func set_events(events: Node) -> void:
+	_events = events
+
+
+func _get_events() -> Node:
+	if _events:
+		return _events
+	var tree = get_tree()
+	if tree:
+		return tree.root.get_node_or_null("Events")
+	return null
 
 
 func _ready() -> void:
@@ -26,8 +40,10 @@ func _ready() -> void:
 	tax_rate_slider.value = GameState.BASE_TAX_RATE * 100
 
 	# Connect to events
-	Events.month_tick.connect(_on_month_tick)
-	Events.expense_breakdown_ready.connect(_on_expense_breakdown_ready)
+	var events = _get_events()
+	if events:
+		events.month_tick.connect(_on_month_tick)
+		events.expense_breakdown_ready.connect(_on_expense_breakdown_ready)
 
 	# Apply consistent styling
 	_apply_styling()
@@ -53,7 +69,9 @@ func _on_month_tick() -> void:
 
 
 func _request_expense_breakdown() -> void:
-	Events.expense_breakdown_requested.emit()
+	var events = _get_events()
+	if events:
+		events.expense_breakdown_requested.emit()
 
 
 func _on_expense_breakdown_ready(breakdown: Dictionary) -> void:

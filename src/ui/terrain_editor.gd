@@ -26,6 +26,7 @@ var current_tool: TerrainTool = TerrainTool.RAISE
 var current_biome_id: String = ""
 var current_seed: int = 12345
 var is_painting: bool = false
+var _events: Node = null
 
 # Biome presets loaded from resources
 var biome_presets: Dictionary = {}  # id -> BiomePreset
@@ -37,6 +38,19 @@ func _ready() -> void:
 	_create_terrain_systems()
 	_create_ui()
 	_generate_terrain()
+
+
+func set_events(events: Node) -> void:
+	_events = events
+
+
+func _get_events() -> Node:
+	if _events:
+		return _events
+	var tree = get_tree()
+	if tree:
+		return tree.root.get_node_or_null("Events")
+	return null
 
 
 func _load_biomes() -> void:
@@ -482,9 +496,13 @@ func _on_save_template_pressed() -> void:
 
 	# Save
 	if TerrainTemplate.save_to_file(template, filename):
-		Events.simulation_event.emit("template_saved", {"name": "Custom Map"})
+		var events = _get_events()
+		if events:
+			events.simulation_event.emit("template_saved", {"name": "Custom Map"})
 	else:
-		Events.simulation_event.emit("generic_error", {"message": "Failed to save template"})
+		var events = _get_events()
+		if events:
+			events.simulation_event.emit("generic_error", {"message": "Failed to save template"})
 
 
 func _on_load_template_pressed() -> void:
@@ -492,7 +510,9 @@ func _on_load_template_pressed() -> void:
 	var templates = TerrainTemplate.list_saved_templates()
 
 	if templates.is_empty():
-		Events.simulation_event.emit("generic_info", {"message": "No saved templates found"})
+		var events = _get_events()
+		if events:
+			events.simulation_event.emit("generic_info", {"message": "No saved templates found"})
 		return
 
 	_show_template_selection_dialog(templates)
@@ -625,7 +645,9 @@ func _load_selected_template(path: String) -> void:
 				break
 
 		_update_biome_info()
-		Events.simulation_event.emit("template_loaded", {"name": template.name})
+		var events = _get_events()
+		if events:
+			events.simulation_event.emit("template_loaded", {"name": template.name})
 
 
 func _close_template_selection_dialog() -> void:

@@ -237,8 +237,8 @@ func _update_minimap() -> void:
 
 	# Draw buildings
 	var drawn = {}
-	for cell in grid_system.buildings:
-		var building = grid_system.buildings[cell]
+	for cell in grid_system.get_building_cells():
+		var building = grid_system.get_building_at(cell)
 		if not is_instance_valid(building) or drawn.has(building):
 			continue
 		drawn[building] = true

@@ -89,7 +89,7 @@ func test_load_overlay_requires_road_presence() -> void:
 	var ok = save_system._apply_save_data(save_data)
 	assert_true(ok)
 
-	assert_false(grid_system.utility_overlays.has(cell), "Overlay should be skipped without underlying roads.")
+	assert_false(grid_system.has_overlay_at(cell), "Overlay should be skipped without underlying roads.")
 	assert_null(grid_system.get_building_at(cell), "No building should be placed for invalid overlay.")
 
 
@@ -119,5 +119,5 @@ func test_load_orders_roads_before_overlays() -> void:
 	var ok = save_system._apply_save_data(save_data)
 	assert_true(ok)
 
-	assert_true(grid_system.road_cells.has(cell), "Road should be restored before overlay placement.")
-	assert_true(grid_system.utility_overlays.has(cell), "Overlay should restore once road is present.")
+	assert_true(grid_system.has_road_at(cell), "Road should be restored before overlay placement.")
+	assert_true(grid_system.has_overlay_at(cell), "Overlay should restore once road is present.")

@@ -109,6 +109,7 @@ var grid_system = null
 # Legend state
 var _show_legend: bool = true
 var _legend_position: Vector2 = Vector2.ZERO  # Calculated based on viewport
+var _events: Node = null
 
 
 func _ready() -> void:
@@ -116,11 +117,26 @@ func _ready() -> void:
 	visible = false
 
 	# Connect to update events
-	Events.power_updated.connect(_on_data_updated)
-	Events.water_updated.connect(_on_data_updated)
-	Events.pollution_updated.connect(_on_data_updated)
-	Events.coverage_updated.connect(_on_coverage_updated)
-	Events.month_tick.connect(_on_month_tick)
+	var events = _get_events()
+	if events:
+		events.power_updated.connect(_on_data_updated)
+		events.water_updated.connect(_on_data_updated)
+		events.pollution_updated.connect(_on_data_updated)
+		events.coverage_updated.connect(_on_coverage_updated)
+		events.month_tick.connect(_on_month_tick)
+
+
+func set_events(events: Node) -> void:
+	_events = events
+
+
+func _get_events() -> Node:
+	if _events:
+		return _events
+	var tree = get_tree()
+	if tree:
+		return tree.root.get_node_or_null("Events")
+	return null
 
 
 func set_camera(cam: Camera2D) -> void:
@@ -582,7 +598,9 @@ func set_overlay_mode(mode: OverlayMode) -> void:
 		# Toggle off
 		_target_mode = OverlayMode.NONE
 		_transition_progress = 0.0
-		Events.simulation_event.emit("overlay_changed", {"mode": "Off"})
+		var events = _get_events()
+		if events:
+			events.simulation_event.emit("overlay_changed", {"mode": "Off"})
 		return
 
 	_target_mode = mode
@@ -593,7 +611,9 @@ func set_overlay_mode(mode: OverlayMode) -> void:
 		current_mode = mode
 		_data_dirty = true
 
-	Events.simulation_event.emit("overlay_changed", {"mode": _get_mode_name(mode)})
+	var events = _get_events()
+	if events:
+		events.simulation_event.emit("overlay_changed", {"mode": _get_mode_name(mode)})
 
 
 func get_current_mode() -> OverlayMode:

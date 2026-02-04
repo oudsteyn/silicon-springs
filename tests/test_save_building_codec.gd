@@ -63,5 +63,5 @@ func test_serialize_and_restore_buildings_with_overlay() -> void:
 	SaveBuildingCodec.restore_building(grid_system, road_entry)
 	SaveBuildingCodec.restore_building(grid_system, overlay_entry)
 
-	assert_true(grid_system.road_cells.has(cell))
-	assert_true(grid_system.utility_overlays.has(cell))
+	assert_true(grid_system.has_road_at(cell))
+	assert_true(grid_system.has_overlay_at(cell))

@@ -31,6 +31,7 @@ var _points: Array[Vector2i] = []
 var _preview_point: Vector2i = Vector2i(-1, -1)
 var _camera: Camera2D = null
 var _animation_time: float = 0.0
+var _events: Node = null
 
 # Calculated values
 var _total_distance: float = 0.0
@@ -41,6 +42,19 @@ var _bounding_rect: Rect2i = Rect2i()
 func _ready() -> void:
 	z_index = 25  # Above most game elements but below tooltip
 	visible = false
+
+
+func set_events(events: Node) -> void:
+	_events = events
+
+
+func _get_events() -> Node:
+	if _events:
+		return _events
+	var tree = get_tree()
+	if tree:
+		return tree.root.get_node_or_null("Events")
+	return null
 
 
 func set_camera(cam: Camera2D) -> void:
@@ -93,7 +107,9 @@ func activate(mode: MeasureMode = MeasureMode.DISTANCE) -> void:
 	_total_distance = 0.0
 	_area_cells = 0
 	visible = true
-	Events.simulation_event.emit("measurement_started", {"mode": "distance" if mode == MeasureMode.DISTANCE else "area"})
+	var events = _get_events()
+	if events:
+		events.simulation_event.emit("measurement_started", {"mode": "distance" if mode == MeasureMode.DISTANCE else "area"})
 
 
 func deactivate() -> void:
@@ -102,7 +118,9 @@ func deactivate() -> void:
 	_points.clear()
 	_preview_point = Vector2i(-1, -1)
 	visible = false
-	Events.simulation_event.emit("measurement_ended", {})
+	var events = _get_events()
+	if events:
+		events.simulation_event.emit("measurement_ended", {})
 
 
 func is_active() -> bool:
@@ -126,9 +144,11 @@ func _toggle_mode() -> void:
 		_mode = MeasureMode.DISTANCE
 		_points.clear()
 		_area_cells = 0
-	Events.simulation_event.emit("measurement_mode_changed", {
-		"mode": "distance" if _mode == MeasureMode.DISTANCE else "area"
-	})
+	var events = _get_events()
+	if events:
+		events.simulation_event.emit("measurement_mode_changed", {
+			"mode": "distance" if _mode == MeasureMode.DISTANCE else "area"
+		})
 
 
 func _add_point(cell: Vector2i) -> void:

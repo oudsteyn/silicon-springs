@@ -23,6 +23,20 @@ var tabs: Dictionary = {}
 
 # Modular tab components cache
 var _tab_components: Dictionary = {}  # {tab_index: DashboardTabBase}
+var _events: Node = null
+
+
+func set_events(events: Node) -> void:
+	_events = events
+
+
+func _get_events() -> Node:
+	if _events:
+		return _events
+	var tree = get_tree()
+	if tree:
+		return tree.root.get_node_or_null("Events")
+	return null
 
 
 func _ready() -> void:
@@ -190,9 +204,12 @@ func _get_or_create_tab(index: int) -> DashboardTabBase:
 
 
 func _connect_signals() -> void:
-	Events.month_tick.connect(_on_data_changed)
-	Events.budget_updated.connect(func(_a, _b, _c): _on_data_changed())
-	Events.population_changed.connect(func(_a, _b): _on_data_changed())
+	var events = _get_events()
+	if not events:
+		return
+	events.month_tick.connect(_on_data_changed)
+	events.budget_updated.connect(func(_a, _b, _c): _on_data_changed())
+	events.population_changed.connect(func(_a, _b): _on_data_changed())
 
 
 func _on_data_changed() -> void:

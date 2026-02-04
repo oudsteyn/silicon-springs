@@ -237,6 +237,8 @@ func _serialize_weather() -> Dictionary:
 func _serialize_power_system() -> Dictionary:
 	if not power_system:
 		return {}
+	if power_system.has_method("get_save_data"):
+		return power_system.get_save_data()
 
 	# Serialize storm outage state
 	var storm_damaged_cells_data: Dictionary = {}
@@ -268,6 +270,8 @@ func _serialize_power_system() -> Dictionary:
 func _serialize_water_system() -> Dictionary:
 	if not water_system:
 		return {}
+	if water_system.has_method("get_save_data"):
+		return water_system.get_save_data()
 
 	return {
 		"system_pressure": water_system.system_pressure if water_system.get("system_pressure") != null else 1.0,
@@ -428,6 +432,9 @@ func _restore_weather(data: Dictionary) -> void:
 func _restore_power_system(data: Dictionary) -> void:
 	if not power_system:
 		return
+	if power_system.has_method("load_save_data"):
+		power_system.load_save_data(data)
+		return
 
 	# Restore storm outage state
 	power_system.storm_outage_active = data.get("storm_outage_active", false)
@@ -462,6 +469,9 @@ func _restore_power_system(data: Dictionary) -> void:
 
 func _restore_water_system(data: Dictionary) -> void:
 	if not water_system:
+		return
+	if water_system.has_method("load_save_data"):
+		water_system.load_save_data(data)
 		return
 
 	water_system.system_pressure = data.get("system_pressure", 1.0)
@@ -499,14 +509,14 @@ func _clear_all_buildings() -> void:
 	# Get all unique buildings
 	var to_remove: Array = []
 	var seen: Dictionary = {}
-	for cell in grid_system.buildings:
-		var building = grid_system.buildings[cell]
+	for cell in grid_system.get_building_cells():
+		var building = grid_system.get_building_at(cell)
 		if is_instance_valid(building) and not seen.has(building):
 			seen[building] = true
 			to_remove.append(building)
 
-	for cell in grid_system.utility_overlays:
-		var overlay = grid_system.utility_overlays[cell]
+	for cell in grid_system.get_overlay_cells():
+		var overlay = grid_system.get_overlay_at(cell)
 		if is_instance_valid(overlay) and not seen.has(overlay):
 			seen[overlay] = true
 			to_remove.append(overlay)

@@ -64,8 +64,8 @@ func _update_heat_island() -> void:
 		return
 
 	var counted = {}
-	for cell in grid_system.buildings:
-		var building = grid_system.buildings[cell]
+	for cell in grid_system.get_building_cells():
+		var building = grid_system.get_building_at(cell)
 		if not is_instance_valid(building) or counted.has(building):
 			continue
 		counted[building] = true
@@ -113,8 +113,8 @@ func _update_tree_coverage() -> void:
 		return
 
 	var counted = {}
-	for cell in grid_system.buildings:
-		var building = grid_system.buildings[cell]
+	for cell in grid_system.get_building_cells():
+		var building = grid_system.get_building_at(cell)
 		if not is_instance_valid(building) or counted.has(building):
 			continue
 		counted[building] = true
@@ -187,7 +187,7 @@ func get_tree_coverage_ratio() -> float:
 		return 0.0
 
 	var covered = tree_coverage_map.size()
-	var total = grid_system.buildings.size()
+	var total = grid_system.get_building_count()
 
 	if total == 0:
 		return 0.0
@@ -201,8 +201,8 @@ func get_green_building_ratio() -> float:
 
 	var total_buildings = 0
 	var counted = {}
-	for cell in grid_system.buildings:
-		var building = grid_system.buildings[cell]
+	for cell in grid_system.get_building_cells():
+		var building = grid_system.get_building_at(cell)
 		if counted.has(building):
 			continue
 		counted[building] = true
@@ -258,10 +258,10 @@ func get_watershed_pollution_penalty(cell: Vector2i) -> float:
 	if not watershed_zones.has(cell):
 		return 0.0
 
-	if not grid_system or not grid_system.buildings.has(cell):
+	if not grid_system or not grid_system.has_building_at(cell):
 		return 0.0
 
-	var building = grid_system.buildings[cell]
+	var building = grid_system.get_building_at(cell)
 	if not building or not building.building_data:
 		return 0.0
 

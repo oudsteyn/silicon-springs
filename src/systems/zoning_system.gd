@@ -257,8 +257,8 @@ func set_zone(cell: Vector2i, zone_type: int) -> bool:
 		return false
 
 	# Can't zone on existing buildings (except other zones)
-	if grid_system.buildings.has(cell):
-		var existing = grid_system.buildings[cell]
+	if grid_system.has_building_at(cell):
+		var existing = grid_system.get_building_at(cell)
 		if existing and existing.building_data:
 			# Allow rezoning existing zones
 			if existing.building_data.category != "zone":
@@ -275,7 +275,7 @@ func set_zone(cell: Vector2i, zone_type: int) -> bool:
 			var zone_data = zones[cell]
 			if zone_data.developed:
 				_update_zone_counts(zone_data.type, -1)
-				if grid_system.buildings.has(cell):
+				if grid_system.has_building_at(cell):
 					grid_system.remove_building(cell)
 			zones.erase(cell)
 			zone_changed.emit(cell, "none")
@@ -437,9 +437,9 @@ func _upgrade_building(cell: Vector2i, zone_data: ZoneData) -> void:
 	var new_building_id = _get_building_for_zone(zone_data.type, zone_data.development_level)
 
 	# Remove old building and place new one
-	if grid_system.buildings.has(cell):
+	if grid_system.has_building_at(cell):
 		# Store old data (for potential future use)
-		var _old_building = grid_system.buildings[cell]
+		var _old_building = grid_system.get_building_at(cell)
 		grid_system.remove_building(cell)
 
 		# Place upgraded building
@@ -676,8 +676,8 @@ func get_incompatibility_happiness_penalty() -> float:
 	# Get penalty value from GameConfig
 	var base_penalty = _get_incompatibility_penalty()
 
-	for cell in grid_system.buildings:
-		var building = grid_system.buildings[cell]
+	for cell in grid_system.get_building_cells():
+		var building = grid_system.get_building_at(cell)
 		if not is_instance_valid(building) or counted.has(building):
 			continue
 		counted[building] = true

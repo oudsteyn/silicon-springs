@@ -127,8 +127,8 @@ func _find_cluster_centers(cluster_def: Dictionary) -> Array[Vector2i]:
 	var counted = {}
 
 	# Find potential cluster centers (buildings of required type)
-	for cell in grid_system.buildings:
-		var building = grid_system.buildings[cell]
+	for cell in grid_system.get_building_cells():
+		var building = grid_system.get_building_at(cell)
 		if not is_instance_valid(building) or counted.has(building):
 			continue
 		counted[building] = true
@@ -158,10 +158,10 @@ func _count_nearby_types(center: Vector2i, types: Array, radius: int) -> int:
 				continue
 
 			var cell = center + Vector2i(x, y)
-			if not grid_system.buildings.has(cell):
+			if not grid_system.has_building_at(cell):
 				continue
 
-			var building = grid_system.buildings[cell]
+			var building = grid_system.get_building_at(cell)
 			if not is_instance_valid(building) or counted.has(building):
 				continue
 			counted[building] = true

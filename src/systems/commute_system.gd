@@ -58,8 +58,8 @@ func _calculate_commute_distances() -> void:
 	var counted = {}
 
 	# Collect residential and job locations
-	for cell in grid_system.buildings:
-		var building = grid_system.buildings[cell]
+	for cell in grid_system.get_building_cells():
+		var building = grid_system.get_building_at(cell)
 		if not is_instance_valid(building) or counted.has(building):
 			continue
 		counted[building] = true
@@ -101,8 +101,8 @@ func _calculate_mode_split() -> void:
 	var car_count = 0
 	var counted = {}
 
-	for cell in grid_system.buildings:
-		var building = grid_system.buildings[cell]
+	for cell in grid_system.get_building_cells():
+		var building = grid_system.get_building_at(cell)
 		if not is_instance_valid(building) or counted.has(building):
 			continue
 		counted[building] = true
@@ -148,8 +148,8 @@ func _calculate_jobs_housing_balance() -> void:
 	}
 
 	var counted = {}
-	for cell in grid_system.buildings:
-		var building = grid_system.buildings[cell]
+	for cell in grid_system.get_building_cells():
+		var building = grid_system.get_building_at(cell)
 		if not is_instance_valid(building) or counted.has(building):
 			continue
 		counted[building] = true
@@ -190,8 +190,8 @@ func _calculate_walkability() -> void:
 		return
 
 	var counted = {}
-	for cell in grid_system.buildings:
-		var building = grid_system.buildings[cell]
+	for cell in grid_system.get_building_cells():
+		var building = grid_system.get_building_at(cell)
 		if not is_instance_valid(building) or counted.has(building):
 			continue
 		counted[building] = true
@@ -221,10 +221,10 @@ func _calculate_cell_walkability(cell: Vector2i) -> float:
 				continue
 
 			var check_cell = cell + Vector2i(x, y)
-			if not grid_system.buildings.has(check_cell):
+			if not grid_system.has_building_at(check_cell):
 				continue
 
-			var building = grid_system.buildings[check_cell]
+			var building = grid_system.get_building_at(check_cell)
 			if not is_instance_valid(building) or not building.building_data:
 				continue
 

@@ -127,8 +127,8 @@ func _remove_park_boost(_center: Vector2i, _radius: int) -> void:
 
 	# Re-add boosts from all remaining parks
 	var counted = {}
-	for cell in grid_system.buildings:
-		var building = grid_system.buildings[cell]
+	for cell in grid_system.get_building_cells():
+		var building = grid_system.get_building_at(cell)
 		if counted.has(building) or not is_instance_valid(building):
 			continue
 		counted[building] = true
@@ -163,8 +163,8 @@ func _remove_transit_premium(_center: Vector2i, _building_data: Resource) -> voi
 
 	# Re-add premiums from all remaining transit stations
 	var counted = {}
-	for cell in grid_system.buildings:
-		var building = grid_system.buildings[cell]
+	for cell in grid_system.get_building_cells():
+		var building = grid_system.get_building_at(cell)
 		if counted.has(building) or not is_instance_valid(building):
 			continue
 		counted[building] = true
@@ -183,7 +183,7 @@ func _update_land_values() -> void:
 		return
 
 	# Calculate land value for each cell with a building
-	for cell in grid_system.buildings:
+	for cell in grid_system.get_building_cells():
 		land_value_map[cell] = _calculate_cell_value(cell)
 
 

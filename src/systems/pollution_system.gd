@@ -160,7 +160,7 @@ func _update_traffic_pollution() -> void:
 	traffic_pollution_map.clear()
 
 	# Get all road cells and their congestion levels
-	for cell in grid_system.road_cells:
+	for cell in grid_system.get_road_cell_list():
 		var congestion = traffic_system.get_congestion_at(cell) if traffic_system.has_method("get_congestion_at") else 0.0
 
 		# Only significant traffic generates noticeable pollution
@@ -207,8 +207,8 @@ func _apply_green_infrastructure() -> void:
 
 	# Find all green infrastructure
 	var counted = {}
-	for cell in grid_system.buildings:
-		var building = grid_system.buildings[cell]
+	for cell in grid_system.get_building_cells():
+		var building = grid_system.get_building_at(cell)
 		if not is_instance_valid(building) or counted.has(building):
 			continue
 		counted[building] = true
@@ -292,8 +292,8 @@ func get_city_pollution_score() -> float:
 	var cell_count = 0
 
 	# Check pollution at residential and commercial zones
-	for cell in grid_system.buildings:
-		var building = grid_system.buildings[cell]
+	for cell in grid_system.get_building_cells():
+		var building = grid_system.get_building_at(cell)
 		if not is_instance_valid(building):
 			continue
 
@@ -322,8 +322,8 @@ func get_residential_pollution_score() -> float:
 	var residential_count = 0
 	var counted = {}
 
-	for cell in grid_system.buildings:
-		var building = grid_system.buildings[cell]
+	for cell in grid_system.get_building_cells():
+		var building = grid_system.get_building_at(cell)
 		if not is_instance_valid(building) or counted.has(building):
 			continue
 		counted[building] = true
@@ -348,8 +348,8 @@ func get_polluted_residential_count() -> int:
 	var count = 0
 	var counted = {}
 
-	for cell in grid_system.buildings:
-		var building = grid_system.buildings[cell]
+	for cell in grid_system.get_building_cells():
+		var building = grid_system.get_building_at(cell)
 		if not is_instance_valid(building) or counted.has(building):
 			continue
 		counted[building] = true

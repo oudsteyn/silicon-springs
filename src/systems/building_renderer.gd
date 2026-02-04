@@ -141,7 +141,7 @@ func _get_road_neighbors(cell: Vector2i) -> Dictionary:
 		return {"north": 0, "south": 0, "east": 0, "west": 0}
 
 	# Use GridConstants utility for simple cell set lookup
-	return GridConstants.get_directional_neighbors(cell, [grid_system.road_cells])
+return GridConstants.get_directional_neighbors(cell, [grid_system.get_road_cell_map()])
 
 
 ## Get water pipe neighbors (roads, water infrastructure, buildings with water)
@@ -154,7 +154,7 @@ func _get_water_pipe_neighbors(cell: Vector2i) -> Dictionary:
 		var neighbor_cell = cell + GridConstants.DIRECTIONS[dir_name]
 
 		# Check for roads (pipes run under roads)
-		if grid_system.road_cells.has(neighbor_cell):
+		if grid_system.has_road_at(neighbor_cell):
 			neighbors[dir_name] = 1
 			continue
 
@@ -172,10 +172,10 @@ func _get_water_pipe_neighbors(cell: Vector2i) -> Dictionary:
 
 ## Check if a building at cell can connect to water pipes
 func _is_water_connectable_building(cell: Vector2i) -> bool:
-	if not grid_system.buildings.has(cell):
+	if not grid_system.has_building_at(cell):
 		return false
 
-	var building = grid_system.buildings[cell]
+	var building = grid_system.get_building_at(cell)
 	if not is_instance_valid(building) or not building.building_data:
 		return false
 
@@ -192,10 +192,10 @@ func _is_water_connectable_building(cell: Vector2i) -> bool:
 
 ## Check if there's a water pipe overlay at cell
 func _is_water_pipe_overlay(cell: Vector2i) -> bool:
-	if not grid_system.utility_overlays.has(cell):
+	if not grid_system.has_overlay_at(cell):
 		return false
 
-	var overlay = grid_system.utility_overlays[cell]
+	var overlay = grid_system.get_overlay_at(cell)
 	if not is_instance_valid(overlay) or not overlay.building_data:
 		return false
 
