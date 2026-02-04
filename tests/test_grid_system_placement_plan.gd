@@ -11,8 +11,8 @@ class FakeZoningSystem extends Node:
 
 func before_each() -> void:
 	grid_system = GridSystem.new()
+	grid_system._building_registry.load_registry()
 	add_child(grid_system)
-	await get_tree().process_frame
 
 
 func after_each() -> void:
@@ -87,3 +87,4 @@ func test_plan_uses_injected_zoning_system() -> void:
 	var plan = grid_system.plan_building_placement(Vector2i(6, 6), building_data)
 	assert_false(plan.can_place)
 	assert_in("FAR exceeded", plan.reasons)
+	zoning.free()

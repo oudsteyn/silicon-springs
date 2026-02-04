@@ -8,11 +8,10 @@ var save_system: SaveSystem
 func before_each() -> void:
 	grid_system = GridSystem.new()
 	save_system = SaveSystem.new()
+	grid_system._building_registry.load_registry()
 	add_child(grid_system)
 	add_child(save_system)
 	save_system.set_grid_system(grid_system)
-	# Wait for _ready to complete (registry load, save dir setup)
-	await get_tree().process_frame
 
 
 func after_each() -> void:

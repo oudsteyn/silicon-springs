@@ -7,8 +7,6 @@ var grid_system: GridSystem
 func before_each() -> void:
 	grid_system = GridSystem.new()
 	add_child(grid_system)
-	# Wait for _ready to complete
-	await get_tree().process_frame
 
 
 func after_each() -> void:

@@ -41,7 +41,8 @@ func test_placement_preview_uses_plan_validity() -> void:
 	overlay.show_preview(Vector2i(1, 1), building_data, true)
 
 	assert_false(overlay.is_valid(), "Preview should be invalid when plan is not placeable.")
-	overlay.queue_free()
+	overlay.free()
+	grid.free()
 
 
 func test_path_preview_uses_plan_validity() -> void:
@@ -54,4 +55,5 @@ func test_path_preview_uses_plan_validity() -> void:
 	overlay.start_path(Vector2i(2, 2), building_data)
 
 	assert_false(overlay._cell_validity.get(Vector2i(2, 2), true))
-	overlay.queue_free()
+	overlay.free()
+	grid.free()

@@ -8,8 +8,8 @@ var grid_system: GridSystem
 
 func before_each() -> void:
 	grid_system = GridSystem.new()
+	grid_system._building_registry.load_registry()
 	add_child(grid_system)
-	await get_tree().process_frame
 
 
 func after_each() -> void:

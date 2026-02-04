@@ -6,6 +6,7 @@ class FakeGameWorld extends Node:
 	var camera: Camera2D = Camera2D.new()
 
 	func _init() -> void:
+		add_child(camera)
 		camera.position = Vector2(12, 34)
 		camera.zoom = Vector2(2, 2)
 
@@ -29,7 +30,8 @@ func test_tool_palette_uses_injected_game_world() -> void:
 	palette._on_flyout_item_selected("terrain_raise", {"terrain_tool": "raise"}, "terrain")
 	assert_eq(world.last_terrain_tool, "raise")
 
-	palette.queue_free()
+	palette.free()
+	world.free()
 
 
 func test_minimap_uses_injected_game_world() -> void:
@@ -42,7 +44,8 @@ func test_minimap_uses_injected_game_world() -> void:
 	minimap._process(0.0)
 	assert_eq(minimap._last_camera_pos, world.camera.position)
 
-	minimap.queue_free()
+	minimap.free()
+	world.free()
 
 
 func test_minimap_connects_injected_events() -> void:
@@ -60,7 +63,8 @@ func test_minimap_connects_injected_events() -> void:
 	assert_true(removed_connected)
 	assert_true(month_connected)
 
-	minimap.queue_free()
+	minimap.free()
+	events.free()
 
 
 func test_tool_palette_connects_injected_events() -> void:
@@ -73,4 +77,5 @@ func test_tool_palette_connects_injected_events() -> void:
 	var connected = events.building_catalog_ready.is_connected(Callable(palette, "_on_building_catalog_ready"))
 	assert_true(connected)
 
-	palette.queue_free()
+	palette.free()
+	events.free()
