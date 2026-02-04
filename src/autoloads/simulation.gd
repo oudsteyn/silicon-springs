@@ -4,10 +4,21 @@ extends Node
 # Speed settings (seconds per month)
 const SPEED_SETTINGS: Array[float] = [0.0, 10.0, 5.0, 2.0]  # Paused, Slow, Normal, Fast
 const SPEED_NAMES: Array[String] = ["Paused", "Slow", "Normal", "Fast"]
+const SimulationClock = preload("res://src/systems/simulation_clock.gd")
 
-var current_speed: int = 1  # Default to slow
-var is_paused: bool = false
-var tick_timer: float = 0.0
+var _clock: SimulationClock = SimulationClock.new(SPEED_SETTINGS, SPEED_NAMES, 1)
+
+var current_speed: int:
+	get: return _clock.current_speed
+	set(value): _clock.set_speed(value)
+
+var is_paused: bool:
+	get: return _clock.is_paused
+	set(value): _clock.is_paused = value
+
+var tick_timer: float:
+	get: return _clock.tick_timer
+	set(value): _clock.tick_timer = value
 
 # SystemManager reference for dependency-injected system access
 var _system_manager: Node = null
@@ -113,14 +124,7 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	if is_paused or current_speed == 0:
-		return
-
-	tick_timer += delta
-	var seconds_per_month = SPEED_SETTINGS[current_speed]
-
-	if tick_timer >= seconds_per_month:
-		tick_timer -= seconds_per_month
+	if _clock.advance(delta):
 		_process_monthly_tick()
 
 
@@ -988,28 +992,25 @@ func _count_operational_zones(zone_type: String) -> int:
 
 
 func set_speed(speed: int) -> void:
-	current_speed = clamp(speed, 0, SPEED_SETTINGS.size() - 1)
-	is_paused = (current_speed == 0)
-	Events.simulation_speed_changed.emit(current_speed)
+	_clock.set_speed(speed)
+	Events.simulation_speed_changed.emit(_clock.current_speed)
 
 
 func toggle_pause() -> void:
-	is_paused = not is_paused
-	Events.simulation_paused.emit(is_paused)
+	_clock.toggle_pause()
+	Events.simulation_paused.emit(_clock.is_paused)
 
 
 func get_speed_name() -> String:
-	if is_paused:
-		return "Paused"
-	return SPEED_NAMES[current_speed]
+	return _clock.get_speed_name()
 
 
 func _on_speed_changed(speed: int) -> void:
-	current_speed = speed
+	_clock.set_speed(speed)
 
 
 func _on_paused_changed(paused: bool) -> void:
-	is_paused = paused
+	_clock.is_paused = paused
 
 
 func _process_abandonment() -> void:
