@@ -26,6 +26,9 @@ var _game_world: Node = null
 var _last_camera_pos: Vector2 = Vector2.ZERO
 var _last_camera_zoom: float = 0.0
 
+# Optional injected references
+var _events: Node = null
+
 # Color mapping for building types
 const TYPE_COLORS = {
 	"road": Color(0.4, 0.4, 0.4),
@@ -114,15 +117,18 @@ func _update_container_position(size: int) -> void:
 
 
 func _connect_events() -> void:
-	Events.building_placed.connect(_on_building_changed)
-	Events.building_removed.connect(_on_building_changed)
-	Events.month_tick.connect(_update_minimap)
+	var events = _get_events()
+	if not events:
+		return
+	events.building_placed.connect(_on_building_changed)
+	events.building_removed.connect(_on_building_changed)
+	events.month_tick.connect(_update_minimap)
 
 
 func _process(_delta: float) -> void:
 	# Cache game_world reference
 	if not _game_world or not is_instance_valid(_game_world):
-		_game_world = get_tree().get_first_node_in_group("game_world")
+		_game_world = _get_game_world()
 		if not _game_world:
 			return
 
@@ -134,6 +140,30 @@ func _process(_delta: float) -> void:
 			_last_camera_pos = cam_pos
 			_last_camera_zoom = cam_zoom
 			_update_viewport_rect()
+
+
+func set_game_world(world: Node) -> void:
+	_game_world = world
+
+
+func set_events(events: Node) -> void:
+	_events = events
+
+
+func _get_game_world() -> Node:
+	var tree = get_tree()
+	if tree:
+		return tree.get_first_node_in_group("game_world")
+	return null
+
+
+func _get_events() -> Node:
+	if _events and is_instance_valid(_events):
+		return _events
+	var tree = get_tree()
+	if tree:
+		return tree.root.get_node_or_null("Events")
+	return null
 
 
 func _on_mouse_entered() -> void:

@@ -13,7 +13,7 @@ func before_each() -> void:
 
 func after_each() -> void:
 	if grid_system:
-		grid_system.queue_free()
+		grid_system.free()
 		grid_system = null
 
 

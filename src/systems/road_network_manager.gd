@@ -20,6 +20,47 @@ var _astar: AStar2D = AStar2D.new()
 ## Used to track which cells have AStar points
 var _astar_cells: Dictionary = {}
 
+var _batch_mode: bool = false
+var _batched_added: Dictionary = {}
+var _batched_removed: Dictionary = {}
+
+
+func _get_events() -> Node:
+	var loop = Engine.get_main_loop()
+	if loop and loop is SceneTree:
+		return loop.root.get_node_or_null("Events")
+	return null
+
+
+func begin_batch() -> void:
+	_batch_mode = true
+	_batched_added.clear()
+	_batched_removed.clear()
+
+
+func end_batch() -> void:
+	if not _batch_mode:
+		return
+	_batch_mode = false
+
+	# Emit only net changes, avoiding add/remove on same cell in one batch
+	for cell in _batched_added:
+		if not _batched_removed.has(cell) and road_cells.has(cell):
+			_emit_road_changed(cell, true)
+	for cell in _batched_removed:
+		if not _batched_added.has(cell) and not road_cells.has(cell):
+			_emit_road_changed(cell, false)
+
+	_batched_added.clear()
+	_batched_removed.clear()
+
+
+func _emit_road_changed(cell: Vector2i, added: bool) -> void:
+	road_changed.emit(cell, added)
+	var events = _get_events()
+	if events:
+		events.road_network_changed.emit(cell, added)
+
 
 ## Convert cell to AStar point ID (deterministic, based on position)
 func _cell_to_astar_id(cell: Vector2i) -> int:
@@ -46,8 +87,10 @@ func add_road(cell: Vector2i) -> void:
 				_astar.connect_points(point_id, neighbor_id)
 
 	# Emit local signal and global event
-	road_changed.emit(cell, true)
-	Events.road_network_changed.emit(cell, true)
+	if _batch_mode:
+		_batched_added[cell] = true
+	else:
+		_emit_road_changed(cell, true)
 
 
 ## Remove a road at the given cell
@@ -60,8 +103,10 @@ func remove_road(cell: Vector2i) -> void:
 		_astar_cells.erase(cell)
 
 	# Emit local signal and global event
-	road_changed.emit(cell, false)
-	Events.road_network_changed.emit(cell, false)
+	if _batch_mode:
+		_batched_removed[cell] = true
+	else:
+		_emit_road_changed(cell, false)
 
 
 ## Check if a cell has a road

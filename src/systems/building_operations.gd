@@ -9,22 +9,36 @@ extends RefCounted
 const REFUND_PERCENTAGE: float = 0.5
 
 
+static func _get_events() -> Node:
+	var loop = Engine.get_main_loop()
+	if loop and loop is SceneTree:
+		return loop.root.get_node_or_null("Events")
+	return null
+
+
+static func _get_game_state() -> Node:
+	var loop = Engine.get_main_loop()
+	if loop and loop is SceneTree:
+		return loop.root.get_node_or_null("GameState")
+	return null
+
+
 ## Result of a placement operation
-class PlacementResult:
+class BuildPlacementResult:
 	var success: bool = false
 	var building: Node2D = null
 	var error: String = ""
 	var cost: int = 0
 
-	static func succeeded(placed_building: Node2D, total_cost: int) -> PlacementResult:
-		var result = PlacementResult.new()
+	static func succeeded(placed_building: Node2D, total_cost: int) -> BuildPlacementResult:
+		var result = BuildPlacementResult.new()
 		result.success = true
 		result.building = placed_building
 		result.cost = total_cost
 		return result
 
-	static func failed(reason: String) -> PlacementResult:
-		var result = PlacementResult.new()
+	static func failed(reason: String) -> BuildPlacementResult:
+		var result = BuildPlacementResult.new()
 		result.success = false
 		result.error = reason
 		return result
@@ -64,20 +78,24 @@ static func place_building(
 	building_scene: PackedScene,
 	parent_node: Node2D,
 	weather_system: Node = null
-) -> PlacementResult:
+) -> BuildPlacementResult:
 
 	# Calculate effective cost with weather multiplier
 	var effective_cost = building_data.build_cost
 	if weather_system and weather_system.has_method("get_construction_cost_multiplier"):
 		effective_cost = int(effective_cost * weather_system.get_construction_cost_multiplier())
 
+	var game_state = _get_game_state()
 	# Check affordability
-	if not GameState.can_afford(effective_cost):
-		Events.simulation_event.emit("insufficient_funds", {"cost": effective_cost})
-		return PlacementResult.failed("Insufficient funds")
+	if game_state and not game_state.can_afford(effective_cost):
+		var events = _get_events()
+		if events:
+			events.simulation_event.emit("insufficient_funds", {"cost": effective_cost})
+		return BuildPlacementResult.failed("Insufficient funds")
 
 	# Spend the money
-	GameState.spend(effective_cost)
+	if game_state:
+		game_state.spend(effective_cost)
 
 	# Create and initialize building instance
 	var building = building_scene.instantiate()
@@ -94,19 +112,24 @@ static func place_building(
 	# Handle road network
 	var building_type = building_data.building_type if building_data.get("building_type") else ""
 	if GridConstants.is_road_type(building_type):
+		road_network.begin_batch()
 		for occupied_cell in GridConstants.get_building_cells(cell, building_data.size):
 			road_network.add_road(occupied_cell)
+		road_network.end_batch()
 
 	# Emit network change events
 	_emit_placement_network_events(cell, building_data)
 
 	# Update game state
-	GameState.increment_building_count(building_data.id)
+	if game_state:
+		game_state.increment_building_count(building_data.id)
 
 	# Emit building placed event
-	Events.building_placed.emit(cell, building)
+	var events = _get_events()
+	if events:
+		events.building_placed.emit(cell, building)
 
-	return PlacementResult.succeeded(building, effective_cost)
+	return BuildPlacementResult.succeeded(building, effective_cost)
 
 
 ## Place a building during load without validation or cost checks.
@@ -122,7 +145,7 @@ static func place_building_for_load(
 	building_scene: PackedScene,
 	parent_node: Node2D,
 	emit_events: bool = true
-) -> PlacementResult:
+) -> BuildPlacementResult:
 
 	# Create and initialize building instance
 	var building = building_scene.instantiate()
@@ -139,18 +162,24 @@ static func place_building_for_load(
 	# Handle road network
 	var building_type = building_data.building_type if building_data.get("building_type") else ""
 	if GridConstants.is_road_type(building_type):
+		road_network.begin_batch()
 		for occupied_cell in GridConstants.get_building_cells(cell, building_data.size):
 			road_network.add_road(occupied_cell)
+		road_network.end_batch()
 
 	# Update game state
-	GameState.increment_building_count(building_data.id)
+	var game_state = _get_game_state()
+	if game_state:
+		game_state.increment_building_count(building_data.id)
 
 	# Emit network change events and building placed event
 	if emit_events:
 		_emit_placement_network_events(cell, building_data)
-		Events.building_placed.emit(cell, building)
+		var events = _get_events()
+		if events:
+			events.building_placed.emit(cell, building)
 
-	return PlacementResult.succeeded(building, 0)
+	return BuildPlacementResult.succeeded(building, 0)
 
 
 ## Register a building in the grid data structures
@@ -174,7 +203,7 @@ static func _register_building(
 		if is_utility and buildings.has(occupied_cell):
 			var existing = buildings[occupied_cell]
 			if existing.building_data and GridConstants.is_road_type(existing.building_data.building_type):
-				utility_overlays[occupied_cell] = building
+				_add_overlay(occupied_cell, building, utility_overlays)
 				is_overlay = true
 				continue
 
@@ -191,24 +220,40 @@ static func _register_building(
 	return {"is_overlay": is_overlay, "registered_cells": registered_cells}
 
 
+static func _add_overlay(
+	cell: Vector2i,
+	overlay: Node2D,
+	utility_overlays: Dictionary
+) -> void:
+	utility_overlays[cell] = overlay
+
+
 ## Emit network change events for building placement
 static func _emit_placement_network_events(cell: Vector2i, building_data: Resource) -> void:
 	var building_type = building_data.building_type if building_data.get("building_type") else ""
 
 	# Infrastructure type events
 	if GridConstants.is_water_type(building_type):
-		Events.water_pipe_network_changed.emit(cell, true)
+		var events = _get_events()
+		if events:
+			events.water_pipe_network_changed.emit(cell, true)
 	elif GridConstants.is_power_type(building_type):
-		Events.power_line_network_changed.emit(cell, true)
+		var events = _get_events()
+		if events:
+			events.power_line_network_changed.emit(cell, true)
 
 	# Utility producer/consumer events (triggers adjacent pipe visual updates)
 	if building_data.water_production > 0 or building_data.water_consumption > 0:
 		for occupied_cell in GridConstants.get_building_cells(cell, building_data.size):
-			Events.water_pipe_network_changed.emit(occupied_cell, true)
+			var events = _get_events()
+			if events:
+				events.water_pipe_network_changed.emit(occupied_cell, true)
 
 	if building_data.power_production > 0 or building_data.power_consumption > 0:
 		for occupied_cell in GridConstants.get_building_cells(cell, building_data.size):
-			Events.power_line_network_changed.emit(occupied_cell, true)
+			var events = _get_events()
+			if events:
+				events.power_line_network_changed.emit(occupied_cell, true)
 
 
 ## Remove a building at the specified cell
@@ -244,25 +289,32 @@ static func remove_building(
 	# Handle road network
 	var building_type = building_data.building_type if building_data.get("building_type") else ""
 	if GridConstants.is_road_type(building_type):
+		road_network.begin_batch()
 		for occupied_cell in GridConstants.get_building_cells(origin_cell, building_data.size):
 			road_network.remove_road(occupied_cell)
+		road_network.end_batch()
 
 	# Emit network change events
 	_emit_removal_network_events(origin_cell, building_data)
 
 	# Calculate and apply refund
 	var refund = int(building_data.build_cost * REFUND_PERCENTAGE)
-	GameState.earn(refund)
+	var game_state = _get_game_state()
+	if game_state:
+		game_state.earn(refund)
 
 	# Update game state
-	GameState.decrement_building_count(building_data.id)
+	if game_state:
+		game_state.decrement_building_count(building_data.id)
 
 	# Remove from spatial index
 	if spatial_index:
 		spatial_index.remove(building.get_instance_id())
 
 	# Emit building removed event
-	Events.building_removed.emit(origin_cell, building)
+	var events = _get_events()
+	if events:
+		events.building_removed.emit(origin_cell, building)
 
 	# Queue building for deletion
 	building.queue_free()
@@ -282,30 +334,50 @@ static func _remove_overlay(
 		utility_overlays.erase(cell)
 		return RemovalResult.failed("Invalid overlay reference")
 
+	return _remove_overlay_instance(overlay, utility_overlays, unique_buildings)
+
+
+static func _remove_overlay_instance(
+	overlay: Node2D,
+	utility_overlays: Dictionary,
+	unique_buildings: Dictionary
+) -> RemovalResult:
+	if not is_instance_valid(overlay):
+		return RemovalResult.failed("Invalid overlay reference")
+
 	var overlay_data = overlay.building_data
 	var overlay_origin = overlay.grid_cell
 
 	# Remove overlay from all its cells
 	for occupied_cell in GridConstants.get_building_cells(overlay_origin, overlay_data.size):
-		utility_overlays.erase(occupied_cell)
+		if utility_overlays.get(occupied_cell) == overlay:
+			utility_overlays.erase(occupied_cell)
 
 	# Emit network change events
 	var overlay_type = overlay_data.building_type if overlay_data.get("building_type") else ""
 	if GridConstants.is_water_type(overlay_type):
-		Events.water_pipe_network_changed.emit(overlay_origin, false)
+		var events = _get_events()
+		if events:
+			events.water_pipe_network_changed.emit(overlay_origin, false)
 	elif GridConstants.is_power_type(overlay_type):
-		Events.power_line_network_changed.emit(overlay_origin, false)
+		var events = _get_events()
+		if events:
+			events.power_line_network_changed.emit(overlay_origin, false)
 
 	# Calculate and apply refund
 	var refund = int(overlay_data.build_cost * REFUND_PERCENTAGE)
-	GameState.earn(refund)
-	GameState.decrement_building_count(overlay_data.id)
+	var game_state = _get_game_state()
+	if game_state:
+		game_state.earn(refund)
+		game_state.decrement_building_count(overlay_data.id)
 
 	# Remove from unique buildings cache
 	unique_buildings.erase(overlay.get_instance_id())
 
 	# Emit event and cleanup
-	Events.building_removed.emit(overlay_origin, overlay)
+	var events = _get_events()
+	if events:
+		events.building_removed.emit(overlay_origin, overlay)
 	overlay.queue_free()
 
 	return RemovalResult.succeeded(refund, true)
@@ -332,7 +404,7 @@ static func _deregister_building(
 			var overlay = utility_overlays[occupied_cell]
 			if overlay and not removed_overlays.has(overlay.get_instance_id()):
 				removed_overlays[overlay.get_instance_id()] = true
-				_remove_overlay(occupied_cell, utility_overlays, unique_buildings)
+				_remove_overlay_instance(overlay, utility_overlays, unique_buildings)
 
 	# Remove from unique buildings cache
 	unique_buildings.erase(building.get_instance_id())
@@ -344,15 +416,23 @@ static func _emit_removal_network_events(origin_cell: Vector2i, building_data: R
 
 	# Infrastructure type events
 	if GridConstants.is_water_type(building_type):
-		Events.water_pipe_network_changed.emit(origin_cell, false)
+		var events = _get_events()
+		if events:
+			events.water_pipe_network_changed.emit(origin_cell, false)
 	elif GridConstants.is_power_type(building_type):
-		Events.power_line_network_changed.emit(origin_cell, false)
+		var events = _get_events()
+		if events:
+			events.power_line_network_changed.emit(origin_cell, false)
 
 	# Utility producer/consumer events
 	if building_data.water_production > 0 or building_data.water_consumption > 0:
 		for occupied_cell in GridConstants.get_building_cells(origin_cell, building_data.size):
-			Events.water_pipe_network_changed.emit(occupied_cell, false)
+			var events = _get_events()
+			if events:
+				events.water_pipe_network_changed.emit(occupied_cell, false)
 
 	if building_data.power_production > 0 or building_data.power_consumption > 0:
 		for occupied_cell in GridConstants.get_building_cells(origin_cell, building_data.size):
-			Events.power_line_network_changed.emit(occupied_cell, false)
+			var events = _get_events()
+			if events:
+				events.power_line_network_changed.emit(occupied_cell, false)

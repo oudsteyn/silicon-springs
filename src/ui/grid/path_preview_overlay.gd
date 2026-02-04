@@ -238,6 +238,9 @@ func _is_cell_valid(cell: Vector2i) -> bool:
 
 	# Check if building can be placed
 	if _building_data:
+		if grid_system.has_method("plan_building_placement"):
+			var plan = grid_system.plan_building_placement(cell, _building_data)
+			return plan.can_place
 		var check = grid_system.can_place_building(cell, _building_data)
 		return check.can_place
 

@@ -14,7 +14,7 @@ func before_each() -> void:
 
 func after_each() -> void:
 	if grid_system:
-		grid_system.queue_free()
+		grid_system.free()
 		grid_system = null
 
 
@@ -81,3 +81,38 @@ func test_removing_road_removes_overlays_and_updates_counts() -> void:
 
 	assert_false(grid_system.utility_overlays.has(origin), "Overlay should be removed when base road is removed.")
 	assert_eq(GameState.get_building_count(utility_data.id), 0, "Overlay removal should decrement building count.")
+
+
+func test_overlay_placement_registers_overlay_only() -> void:
+	var road_data = _find_road_building_with_size(Vector2i(1, 1))
+	var utility_data = _find_utility_building()
+	assert_not_null(road_data, "Expected a 1x1 road for overlay test.")
+	assert_not_null(utility_data, "Expected a 1x1 utility (overlay) for test.")
+
+	var origin = Vector2i(40, 40)
+	var road = grid_system.place_building(origin, road_data)
+	assert_not_null(road, "Road placement should succeed.")
+
+	var overlay = grid_system.place_building(origin, utility_data)
+	assert_not_null(overlay, "Overlay placement should succeed on road.")
+
+	assert_eq(grid_system.buildings.get(origin), road, "Base road should remain in buildings grid.")
+	assert_true(grid_system.utility_overlays.has(origin), "Overlay should be registered separately.")
+
+
+func test_remove_overlay_keeps_road() -> void:
+	var road_data = _find_road_building_with_size(Vector2i(1, 1))
+	var utility_data = _find_utility_building()
+	assert_not_null(road_data, "Expected a 1x1 road for overlay test.")
+	assert_not_null(utility_data, "Expected a 1x1 utility (overlay) for test.")
+
+	var origin = Vector2i(42, 42)
+	var road = grid_system.place_building(origin, road_data)
+	assert_not_null(road, "Road placement should succeed.")
+	var overlay = grid_system.place_building(origin, utility_data)
+	assert_not_null(overlay, "Overlay placement should succeed on road.")
+
+	var removed_overlay = grid_system.remove_building(origin)
+	assert_true(removed_overlay, "Removing at cell should remove overlay first.")
+	assert_eq(grid_system.buildings.get(origin), road, "Road should remain after overlay removal.")
+	assert_false(grid_system.utility_overlays.has(origin), "Overlay should be removed.")

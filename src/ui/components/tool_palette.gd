@@ -94,6 +94,10 @@ var _style_active: StyleBoxFlat
 var _current_tool_id: String = "select"
 var _closing_flyout: bool = false  # Prevent double-close race condition
 
+# Optional injected references
+var _game_world: Node = null
+var _events: Node = null
+
 
 func _ready() -> void:
 	layer = 95
@@ -125,7 +129,9 @@ func _create_shared_styles() -> void:
 
 
 func _request_building_catalog() -> void:
-	Events.building_catalog_requested.emit()
+	var events = _get_events()
+	if events:
+		events.building_catalog_requested.emit()
 
 
 func _on_building_catalog_ready(catalog: Dictionary) -> void:
@@ -214,7 +220,9 @@ func _create_tool_button(tool_def: Dictionary) -> Button:
 
 func _connect_signals() -> void:
 	UIManager.tool_changed.connect(_on_ui_tool_changed)
-	Events.building_catalog_ready.connect(_on_building_catalog_ready)
+	var events = _get_events()
+	if events:
+		events.building_catalog_ready.connect(_on_building_catalog_ready)
 
 
 func _on_tool_pressed(tool_id: String) -> void:
@@ -321,7 +329,7 @@ func _on_flyout_item_selected(_item_id: String, item_data: Dictionary, tool_id: 
 				_current_tool_id = "zone"
 		"terrain":
 			if item_data.has("terrain_tool"):
-				var game_world = get_tree().get_first_node_in_group("game_world")
+				var game_world = _get_game_world()
 				if game_world and game_world.has_method("set_terrain_tool"):
 					game_world.set_terrain_tool(item_data.terrain_tool)
 				UIManager.set_tool(UIManagerClass.Tool.TERRAIN)
@@ -336,6 +344,32 @@ func _on_flyout_item_selected(_item_id: String, item_data: Dictionary, tool_id: 
 				_handle_setting_action(item_data.action)
 
 	_close_flyout()
+
+
+func set_game_world(world: Node) -> void:
+	_game_world = world
+
+
+func set_events(events: Node) -> void:
+	_events = events
+
+
+func _get_game_world() -> Node:
+	if _game_world and is_instance_valid(_game_world):
+		return _game_world
+	var tree = get_tree()
+	if tree:
+		return tree.get_first_node_in_group("game_world")
+	return null
+
+
+func _get_events() -> Node:
+	if _events and is_instance_valid(_events):
+		return _events
+	var tree = get_tree()
+	if tree:
+		return tree.root.get_node_or_null("Events")
+	return null
 
 
 func _handle_setting_action(action: String) -> void:

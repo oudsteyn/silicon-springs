@@ -33,7 +33,9 @@ var tax_rate: float = 0.1:
 var budget: int = STARTING_BUDGET:
 	set(value):
 		budget = value
-		_emit_or_queue(func(): Events.budget_updated.emit(budget, monthly_income, monthly_expenses))
+		var events = _get_events()
+		if events:
+			_emit_or_queue(func(): events.budget_updated.emit(budget, monthly_income, monthly_expenses))
 
 var monthly_income: int = 0
 var monthly_expenses: int = 0
@@ -44,21 +46,27 @@ var population: int = STARTING_POPULATION:
 		var delta = value - population
 		population = max(0, value)
 		var pop = population  # Capture for closure
-		_emit_or_queue(func(): Events.population_changed.emit(pop, delta))
+		var events = _get_events()
+		if events:
+			_emit_or_queue(func(): events.population_changed.emit(pop, delta))
 
 var educated_population: int = 0
 var education_rate: float = 0.0:
 	set(value):
 		education_rate = clamp(value, 0.0, 1.0)
 		var rate = education_rate  # Capture for closure
-		_emit_or_queue(func(): Events.education_changed.emit(rate))
+		var events = _get_events()
+		if events:
+			_emit_or_queue(func(): events.education_changed.emit(rate))
 
 # Happiness (0.0 to 1.0)
 var happiness: float = 0.5:
 	set(value):
 		happiness = clamp(value, 0.0, 1.0)
 		var h = happiness  # Capture for closure
-		_emit_or_queue(func(): Events.happiness_changed.emit(h))
+		var events = _get_events()
+		if events:
+			_emit_or_queue(func(): events.happiness_changed.emit(h))
 
 # Resources
 var power_supply: float = 0.0
@@ -77,7 +85,9 @@ var score: int = 0:
 		var delta = value - score
 		score = max(0, value)
 		var s = score  # Capture for closure
-		_emit_or_queue(func(): Events.score_updated.emit(s, delta))
+		var events = _get_events()
+		if events:
+			_emit_or_queue(func(): events.score_updated.emit(s, delta))
 
 # Data centers placed
 var data_centers_by_tier: Dictionary = {1: 0, 2: 0, 3: 0}
@@ -161,6 +171,13 @@ func _emit_or_queue(signal_callable: Callable) -> void:
 		signal_callable.call()
 
 
+func _get_events() -> Node:
+	var loop = Engine.get_main_loop()
+	if loop and loop is SceneTree:
+		return loop.root.get_node_or_null("Events")
+	return null
+
+
 func reset_game() -> void:
 	budget = get_starting_budget()
 	monthly_income = 0
@@ -200,8 +217,12 @@ func advance_month() -> void:
 	if current_month > 12:
 		current_month = 1
 		current_year += 1
-		Events.year_tick.emit()
-	Events.month_tick.emit()
+		var events = _get_events()
+		if events:
+			events.year_tick.emit()
+	var events = _get_events()
+	if events:
+		events.month_tick.emit()
 
 
 func get_date_string() -> String:
@@ -228,13 +249,17 @@ func earn(amount: int) -> void:
 func update_power(supply: float, demand: float) -> void:
 	power_supply = supply
 	power_demand = demand
-	Events.power_updated.emit(supply, demand)
+	var events = _get_events()
+	if events:
+		events.power_updated.emit(supply, demand)
 
 
 func update_water(supply: float, demand: float) -> void:
 	water_supply = supply
 	water_demand = demand
-	Events.water_updated.emit(supply, demand)
+	var events = _get_events()
+	if events:
+		events.water_updated.emit(supply, demand)
 
 
 func get_power_ratio() -> float:
@@ -316,7 +341,9 @@ func update_employment(total_jobs: int, skilled: int = 0, unskilled: int = 0) ->
 	else:
 		unemployment_rate = 0.0
 
-	Events.employment_updated.emit(jobs_available, employed_population, unemployment_rate)
+	var events = _get_events()
+	if events:
+		events.employment_updated.emit(jobs_available, employed_population, unemployment_rate)
 
 
 func update_demand() -> void:
@@ -337,7 +364,9 @@ func update_demand() -> void:
 	commercial_demand = demand.commercial
 	industrial_demand = demand.industrial
 
-	Events.demand_updated.emit(residential_demand, commercial_demand, industrial_demand)
+	var events = _get_events()
+	if events:
+		events.demand_updated.emit(residential_demand, commercial_demand, industrial_demand)
 
 
 func get_employment_ratio() -> float:
@@ -352,7 +381,9 @@ func check_landmark_unlocks() -> void:
 			var required_pop = LANDMARK_UNLOCKS[landmark_id]
 			if population >= required_pop:
 				unlocked_landmarks[landmark_id] = true
-				Events.landmark_unlocked.emit(landmark_id, required_pop)
+				var events = _get_events()
+				if events:
+					events.landmark_unlocked.emit(landmark_id, required_pop)
 
 
 func is_landmark_unlocked(landmark_id: String) -> bool:
@@ -370,7 +401,9 @@ func set_biome(biome: Resource) -> void:
 	current_biome = biome
 	if biome and biome.get("id"):
 		current_biome_id = biome.id
-		Events.biome_selected.emit(biome.id)
+		var events = _get_events()
+		if events:
+			events.biome_selected.emit(biome.id)
 	else:
 		current_biome_id = ""
 

@@ -17,15 +17,19 @@ const COLOR_BOLD = "\u001b[1m"
 
 var test_classes: Array[Script] = []
 var verbose: bool = true
+var _has_run: bool = false
 
 
 func _ready() -> void:
 	# If running as main scene, auto-run tests
-	if get_tree().current_scene == self:
+	if not _has_run and (get_tree().current_scene == self or get_tree().current_scene == null):
 		_run_from_command_line()
 
 
 func _run_from_command_line() -> void:
+	if _has_run:
+		return
+	_has_run = true
 	print("\n" + COLOR_BOLD + "=== Test Runner ===" + COLOR_RESET + "\n")
 
 	# Auto-discover and load test classes
@@ -108,7 +112,7 @@ func run_all() -> Dictionary:
 			"results": results
 		})
 
-		test_instance.queue_free()
+		test_instance.free()
 
 	return {
 		"passed": total_passed,

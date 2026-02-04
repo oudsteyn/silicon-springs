@@ -17,10 +17,10 @@ func before_each() -> void:
 
 func after_each() -> void:
 	if save_system:
-		save_system.queue_free()
+		save_system.free()
 		save_system = null
 	if grid_system:
-		grid_system.queue_free()
+		grid_system.free()
 		grid_system = null
 
 

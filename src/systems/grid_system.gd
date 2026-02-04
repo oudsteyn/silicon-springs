@@ -68,6 +68,9 @@ var terrain_system: Node = null
 ## Weather system reference for construction cost multiplier
 var weather_system: Node = null
 
+## Zoning system reference for FAR compliance (optional injection)
+var zoning_system: Node = null
+
 
 # =============================================================================
 # BACKWARD COMPATIBILITY: Building registry exposed via BuildingRegistry
@@ -88,8 +91,17 @@ var building_registry: Dictionary:
 
 func _ready() -> void:
 	_building_registry.load_registry()
-	Events.building_placed.connect(_on_building_placed)
-	Events.building_removed.connect(_on_building_removed)
+	var events = _get_events()
+	if events:
+		events.building_placed.connect(_on_building_placed)
+		events.building_removed.connect(_on_building_removed)
+
+
+func _get_events() -> Node:
+	var loop = Engine.get_main_loop()
+	if loop and loop is SceneTree:
+		return loop.root.get_node_or_null("Events")
+	return null
 
 
 # =============================================================================
@@ -123,6 +135,10 @@ func set_weather_system(ws: Node) -> void:
 	weather_system = ws
 
 
+func set_zoning_system(zs: Node) -> void:
+	zoning_system = zs
+
+
 # =============================================================================
 # COORDINATE CONVERSIONS (Delegated to GridConstants)
 # =============================================================================
@@ -150,10 +166,27 @@ func is_valid_cell(cell: Vector2i) -> bool:
 ## Check if a building can be placed at the specified cell.
 ## Returns Dictionary with "can_place": bool and "reasons": Array[String]
 func can_place_building(cell: Vector2i, building_data: Resource) -> Dictionary:
+	var plan = plan_building_placement(cell, building_data)
+	return {
+		"can_place": plan.can_place,
+		"reasons": plan.reasons
+	}
+
+
+## Build a placement plan with validation details and occupied/overlay cells.
+## Returns {can_place: bool, reasons: Array[String], occupied_cells: Array[Vector2i], overlay_cells: Array[Vector2i]}
+func plan_building_placement(cell: Vector2i, building_data: Resource) -> Dictionary:
 	var result: Dictionary = {
 		"can_place": true,
-		"reasons": [] as Array[String]
+		"reasons": [] as Array[String],
+		"occupied_cells": [] as Array[Vector2i],
+		"overlay_cells": [] as Array[Vector2i]
 	}
+
+	if not building_data:
+		result.can_place = false
+		result.reasons.append("Unknown building")
+		return result
 
 	# Check if cell is valid
 	if not is_valid_cell(cell):
@@ -170,6 +203,7 @@ func can_place_building(cell: Vector2i, building_data: Resource) -> Dictionary:
 	for x in range(building_data.size.x):
 		for y in range(building_data.size.y):
 			var check_cell = cell + Vector2i(x, y)
+			result.occupied_cells.append(check_cell)
 
 			if not is_valid_cell(check_cell):
 				result.can_place = false
@@ -195,6 +229,10 @@ func can_place_building(cell: Vector2i, building_data: Resource) -> Dictionary:
 					result.can_place = false
 					result.reasons.append("Cell already occupied")
 					return result
+
+				# Track overlay cells for utility-on-road placement
+				if is_utility and GridConstants.is_road_type(existing_type):
+					result.overlay_cells.append(check_cell)
 
 			# Check terrain constraints
 			if terrain_system and terrain_system.has_method("is_buildable"):
@@ -270,16 +308,23 @@ func _check_far_compliance(cell: Vector2i, building_data: Resource) -> Dictionar
 	if building_data.get("category") == "infrastructure":
 		return {"compliant": true, "reason": ""}
 
-	# Get zoning system reference
-	var game_world = get_tree().get_first_node_in_group("game_world")
+	# Prefer injected zoning system
+	if zoning_system and zoning_system.has_method("is_far_compliant"):
+		return zoning_system.is_far_compliant(cell, building_data)
+
+	# Fallback to group lookup
+	var tree = get_tree()
+	if not tree:
+		return {"compliant": true, "reason": ""}
+	var game_world = tree.get_first_node_in_group("game_world")
 	if not game_world or not game_world.get("zoning_system"):
 		return {"compliant": true, "reason": ""}
 
-	var zoning_system = game_world.zoning_system
-	if not zoning_system or not zoning_system.has_method("is_far_compliant"):
+	var resolved_zoning = game_world.zoning_system
+	if not resolved_zoning or not resolved_zoning.has_method("is_far_compliant"):
 		return {"compliant": true, "reason": ""}
 
-	return zoning_system.is_far_compliant(cell, building_data)
+	return resolved_zoning.is_far_compliant(cell, building_data)
 
 
 # =============================================================================
@@ -420,12 +465,16 @@ func _update_adjacent_road_visuals(_cell: Vector2i) -> void:
 
 ## Emit water pipe network change event
 func _emit_water_pipe_changed(cell: Vector2i, added: bool) -> void:
-	Events.water_pipe_network_changed.emit(cell, added)
+	var events = _get_events()
+	if events:
+		events.water_pipe_network_changed.emit(cell, added)
 
 
 ## Emit power line network change event
 func _emit_power_line_changed(cell: Vector2i, added: bool) -> void:
-	Events.power_line_network_changed.emit(cell, added)
+	var events = _get_events()
+	if events:
+		events.power_line_network_changed.emit(cell, added)
 
 
 ## Check if a cell has a road (delegated to RoadNetworkManager)

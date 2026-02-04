@@ -92,6 +92,14 @@ The game uses an event-driven architecture with clear separation between simulat
 
 - Godot 4.6+
 
+## Tests
+
+Run the full test suite headless:
+
+```bash
+godot --headless -s tests/run_headless.gd
+```
+
 ## License
 
 MIT

@@ -155,17 +155,27 @@ func _analyze_placement() -> void:
 	if not _building_data:
 		return
 
-	var size = _building_data.size if _building_data.get("size") else Vector2i(1, 1)
+	var occupied_cells: Array[Vector2i] = []
+	if grid_system and grid_system.has_method("plan_building_placement"):
+		var plan = grid_system.plan_building_placement(_cell, _building_data)
+		_overall_valid = plan.can_place
+		if plan.has("occupied_cells"):
+			for cell in plan.occupied_cells:
+				occupied_cells.append(cell)
+
+	if occupied_cells.is_empty():
+		var size = _building_data.size if _building_data.get("size") else Vector2i(1, 1)
+		for x in range(size.x):
+			for y in range(size.y):
+				occupied_cells.append(_cell + Vector2i(x, y))
 
 	# Analyze each cell in the footprint
-	for x in range(size.x):
-		for y in range(size.y):
-			var check_cell = _cell + Vector2i(x, y)
-			var state = _analyze_cell(check_cell)
-			_cell_states[check_cell] = state
+	for check_cell in occupied_cells:
+		var state = _analyze_cell(check_cell)
+		_cell_states[check_cell] = state
 
-			if not state.valid:
-				_overall_valid = false
+		if not state.valid:
+			_overall_valid = false
 
 	# Check infrastructure requirements
 	_needs_power = _building_data.power_consumption > 0 if _building_data.get("power_consumption") else false
