@@ -94,7 +94,8 @@ static func place_building(
 	# Handle road network
 	var building_type = building_data.building_type if building_data.get("building_type") else ""
 	if GridConstants.is_road_type(building_type):
-		road_network.add_road(cell)
+		for occupied_cell in GridConstants.get_building_cells(cell, building_data.size):
+			road_network.add_road(occupied_cell)
 
 	# Emit network change events
 	_emit_placement_network_events(cell, building_data)
@@ -106,6 +107,50 @@ static func place_building(
 	Events.building_placed.emit(cell, building)
 
 	return PlacementResult.succeeded(building, effective_cost)
+
+
+## Place a building during load without validation or cost checks.
+## Still registers, updates game state, and emits events by default.
+static func place_building_for_load(
+	cell: Vector2i,
+	building_data: Resource,
+	buildings: Dictionary,
+	unique_buildings: Dictionary,
+	utility_overlays: Dictionary,
+	spatial_index,
+	road_network: RoadNetworkManager,
+	building_scene: PackedScene,
+	parent_node: Node2D,
+	emit_events: bool = true
+) -> PlacementResult:
+
+	# Create and initialize building instance
+	var building = building_scene.instantiate()
+	building.position = GridConstants.grid_to_world(cell)
+	parent_node.add_child(building)
+	building.initialize(building_data, cell)
+
+	# Register building in grid
+	_register_building(
+		cell, building, building_data,
+		buildings, unique_buildings, utility_overlays, spatial_index
+	)
+
+	# Handle road network
+	var building_type = building_data.building_type if building_data.get("building_type") else ""
+	if GridConstants.is_road_type(building_type):
+		for occupied_cell in GridConstants.get_building_cells(cell, building_data.size):
+			road_network.add_road(occupied_cell)
+
+	# Update game state
+	GameState.increment_building_count(building_data.id)
+
+	# Emit network change events and building placed event
+	if emit_events:
+		_emit_placement_network_events(cell, building_data)
+		Events.building_placed.emit(cell, building)
+
+	return PlacementResult.succeeded(building, 0)
 
 
 ## Register a building in the grid data structures
@@ -199,7 +244,8 @@ static func remove_building(
 	# Handle road network
 	var building_type = building_data.building_type if building_data.get("building_type") else ""
 	if GridConstants.is_road_type(building_type):
-		road_network.remove_road(origin_cell)
+		for occupied_cell in GridConstants.get_building_cells(origin_cell, building_data.size):
+			road_network.remove_road(occupied_cell)
 
 	# Emit network change events
 	_emit_removal_network_events(origin_cell, building_data)
@@ -277,16 +323,16 @@ static func _deregister_building(
 	if not building:
 		return
 
+	var removed_overlays: Dictionary = {}
 	for occupied_cell in GridConstants.get_building_cells(origin_cell, building_data.size):
 		buildings.erase(occupied_cell)
 
 		# Also remove any overlays on this building
 		if utility_overlays.has(occupied_cell):
 			var overlay = utility_overlays[occupied_cell]
-			if is_instance_valid(overlay):
-				unique_buildings.erase(overlay.get_instance_id())
-				overlay.queue_free()
-			utility_overlays.erase(occupied_cell)
+			if overlay and not removed_overlays.has(overlay.get_instance_id()):
+				removed_overlays[overlay.get_instance_id()] = true
+				_remove_overlay(occupied_cell, utility_overlays, unique_buildings)
 
 	# Remove from unique buildings cache
 	unique_buildings.erase(building.get_instance_id())

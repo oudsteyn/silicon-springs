@@ -409,8 +409,31 @@ func _apply_save_data(data: Dictionary) -> bool:
 
 	# Rebuild buildings
 	var buildings = data.get("buildings", [])
-	for building_data in buildings:
-		_restore_building(building_data)
+	var road_entries: Array = []
+	var utility_entries: Array = []
+	var other_entries: Array = []
+
+	for building_entry in buildings:
+		var building_id = building_entry.get("id", "")
+		var building_data = grid_system.get_building_data(building_id)
+		if not building_data:
+			continue
+
+		var building_type = building_data.building_type if building_data.get("building_type") else ""
+		if GridConstants.is_road_type(building_type):
+			road_entries.append(building_entry)
+		elif GridConstants.is_utility_type(building_type):
+			utility_entries.append(building_entry)
+		else:
+			other_entries.append(building_entry)
+
+	# Load roads first, then utilities (including overlays), then everything else
+	for building_entry in road_entries:
+		_restore_building(building_entry)
+	for building_entry in utility_entries:
+		_restore_building(building_entry)
+	for building_entry in other_entries:
+		_restore_building(building_entry)
 
 	return true
 
@@ -526,13 +549,8 @@ func _clear_all_buildings() -> void:
 	for building in to_remove:
 		building.queue_free()
 
-	# Clear dictionaries
-	grid_system.buildings.clear()
-	grid_system.utility_overlays.clear()
-	grid_system.road_cells.clear()
-	grid_system.astar = AStar2D.new()
-	grid_system.astar_point_ids.clear()
-	grid_system.next_astar_id = 0
+	# Clear dictionaries and internal caches
+	grid_system.clear_all_buildings_state()
 
 
 func _restore_building(data: Dictionary) -> void:
@@ -546,14 +564,19 @@ func _restore_building(data: Dictionary) -> void:
 	if not building_data:
 		return
 
-	# Don't charge for loading - temporarily set cost to 0
-	var original_cost = building_data.build_cost
-	building_data.build_cost = 0
+	# Hard safety: ensure all occupied cells are within bounds
+	for occupied_cell in GridConstants.get_building_cells(cell, building_data.size):
+		if not grid_system.is_valid_cell(occupied_cell):
+			return
 
-	var building = grid_system.place_building(cell, building_data)
+	# Respect overlays: only restore if underlying roads exist
+	var is_overlay = data.get("is_overlay", false)
+	if is_overlay:
+		for occupied_cell in GridConstants.get_building_cells(cell, building_data.size):
+			if not grid_system.road_cells.has(occupied_cell):
+				return
 
-	# Restore original cost
-	building_data.build_cost = original_cost
+	var building = grid_system.place_building_for_load(cell, building_data, is_overlay)
 
 	if building and is_instance_valid(building):
 		# Restore building state

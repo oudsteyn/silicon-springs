@@ -310,6 +310,36 @@ func place_building(cell: Vector2i, building_data: Resource) -> Node2D:
 	return result.building if result.success else null
 
 
+## Place a building during load without validation or cost checks.
+## Returns the Building node or null if skipped.
+func place_building_for_load(cell: Vector2i, building_data: Resource, is_overlay: bool = false) -> Node2D:
+	# Hard safety check: all occupied cells must be within bounds
+	for occupied_cell in GridConstants.get_building_cells(cell, building_data.size):
+		if not is_valid_cell(occupied_cell):
+			return null
+
+	# Overlays must sit on existing roads
+	if is_overlay:
+		for occupied_cell in GridConstants.get_building_cells(cell, building_data.size):
+			if not road_cells.has(occupied_cell):
+				return null
+
+	# Delegate to BuildingOperations (no validation/cost)
+	var result = BuildingOperations.place_building_for_load(
+		cell,
+		building_data,
+		buildings,
+		_unique_buildings,
+		utility_overlays,
+		_building_spatial_index,
+		_road_network,
+		_building_registry.get_building_scene(),
+		self
+	)
+
+	return result.building if result.success else null
+
+
 # =============================================================================
 # BUILDING REMOVAL (Delegated to BuildingOperations)
 # =============================================================================
@@ -326,6 +356,15 @@ func remove_building(cell: Vector2i) -> bool:
 	)
 
 	return result.success
+
+
+## Clear all building state and caches (for loading/reset)
+func clear_all_buildings_state() -> void:
+	buildings.clear()
+	utility_overlays.clear()
+	_unique_buildings.clear()
+	_building_spatial_index.clear()
+	_road_network.clear()
 
 
 # =============================================================================
