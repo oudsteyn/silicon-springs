@@ -52,3 +52,13 @@ func test_building_selected_creates_payload() -> void:
 	assert_eq(_selected_payload.get("workers", 0), 15)
 	assert_eq(_selected_payload.get("workers_capacity", 0), 20)
 	assert_approx(float(_selected_payload.get("efficiency", 0.0)), 0.75, 0.0001)
+
+	building.free()
+
+func test_category_mapping_defaults_are_valid() -> void:
+	var bus = CityEventBusScript.new()
+	assert_eq(bus._map_build_mode_to_building_id("roads"), "road")
+	assert_eq(bus._map_build_mode_to_building_id("zoning"), "residential_zone")
+	assert_eq(bus._map_build_mode_to_building_id("utilities"), "power_line")
+	assert_eq(bus._map_build_mode_to_building_id("services"), "police_station")
+	assert_eq(bus._map_build_mode_to_building_id("road"), "road")

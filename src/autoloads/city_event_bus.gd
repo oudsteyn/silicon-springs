@@ -14,6 +14,9 @@ signal building_stats_changed(building_id: String, payload: Dictionary)
 
 
 func _ready() -> void:
+	if not build_mode_changed.is_connected(_process_build_mode_request):
+		build_mode_changed.connect(_process_build_mode_request)
+
 	var events = get_node_or_null("/root/Events")
 	if events == null:
 		return
@@ -51,6 +54,16 @@ func _on_build_mode_entered(mode_id: String) -> void:
 	build_mode_changed.emit(mode_id)
 
 
+func _process_build_mode_request(mode_id: String) -> void:
+	var events = get_node_or_null("/root/Events")
+	if events == null:
+		return
+
+	var mapped_id = _map_build_mode_to_building_id(mode_id)
+	if mapped_id != "":
+		events.build_mode_entered.emit(mapped_id)
+
+
 func _on_building_selected(building: Node2D) -> void:
 	if building == null:
 		return
@@ -82,3 +95,17 @@ func _make_payload(building: Node2D) -> Dictionary:
 	payload["workers_capacity"] = building.get("workers_required") if building.get("workers_required") != null else 0
 	payload["efficiency"] = building.get("efficiency") if building.get("efficiency") != null else 0.0
 	return payload
+
+
+func _map_build_mode_to_building_id(mode_id: String) -> String:
+	match mode_id:
+		"roads":
+			return "road"
+		"zoning":
+			return "residential_zone"
+		"utilities":
+			return "power_line"
+		"services":
+			return "police_station"
+		_:
+			return mode_id

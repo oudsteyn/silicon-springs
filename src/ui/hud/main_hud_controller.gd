@@ -3,16 +3,16 @@ extends CanvasLayer
 @onready var money_label: Label = $Root/StatsPanel/Margin/Grid/MoneyValue
 @onready var pop_label: Label = $Root/StatsPanel/Margin/Grid/PopulationValue
 @onready var happ_label: Label = $Root/StatsPanel/Margin/Grid/HappinessValue
-@onready var info_popup: Control = %BuildingInfoPopup
+@onready var info_popup: Control = $Root/BuildingInfoPopup
 @onready var build_menu: PanelContainer = $Root/BuildMenu
 @onready var roads_button: Button = $Root/BuildMenu/Margin/Row/Roads
 @onready var zoning_button: Button = $Root/BuildMenu/Margin/Row/Zoning
 @onready var utilities_button: Button = $Root/BuildMenu/Margin/Row/Utilities
 @onready var services_button: Button = $Root/BuildMenu/Margin/Row/Services
-@onready var finance_panel: PanelContainer = %FinancePanel
-@onready var finance_balance: Label = %FinanceBalance
-@onready var finance_income: Label = %FinanceIncome
-@onready var finance_expenses: Label = %FinanceExpenses
+@onready var finance_panel: PanelContainer = $Root/FinancePanel
+@onready var finance_balance: Label = $Root/FinancePanel/FinanceMargin/FinanceGrid/FinanceBalance
+@onready var finance_income: Label = $Root/FinancePanel/FinanceMargin/FinanceGrid/FinanceIncome
+@onready var finance_expenses: Label = $Root/FinancePanel/FinanceMargin/FinanceGrid/FinanceExpenses
 
 var _event_bus: Node = null
 
