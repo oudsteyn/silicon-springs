@@ -1,0 +1,70 @@
+[gd_scene load_steps=4 format=3 uid="uid://building_info_popup"]
+
+[ext_resource type="Script" path="res://src/ui/hud/building_info_popup.gd" id="1_script"]
+[ext_resource type="Shader" path="res://src/graphics/shaders/ui_glass_blur.gdshader" id="2_blur_shader"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_glass"]
+shader = ExtResource("2_blur_shader")
+shader_parameter/blur_px = 4.0
+shader_parameter/tint = Color(0.08, 0.1, 0.13, 0.66)
+
+[node name="BuildingInfoPopup" type="PanelContainer"]
+visible = false
+custom_minimum_size = Vector2(360, 220)
+script = ExtResource("1_script")
+material = SubResource("ShaderMaterial_glass")
+
+[node name="BackBufferCopy" type="BackBufferCopy" parent="."]
+copy_mode = 1
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 10
+
+[node name="VBox" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Title" type="Label" parent="Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Building"
+
+[node name="Status" type="Label" parent="Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Operational"
+
+[node name="Workers" type="Label" parent="Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "0 / 0"
+
+[node name="Efficiency" type="Label" parent="Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "0%"
+
+[node name="Upkeep" type="Label" parent="Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "$0 / mo"
+
+[node name="Actions" type="HBoxContainer" parent="Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="UpgradeButton" type="Button" parent="Margin/VBox/Actions"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Upgrade"
+
+[node name="DemolishButton" type="Button" parent="Margin/VBox/Actions"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Demolish"

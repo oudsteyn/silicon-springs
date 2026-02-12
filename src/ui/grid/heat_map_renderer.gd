@@ -594,11 +594,11 @@ func _get_mode_name(mode: OverlayMode) -> String:
 
 # Public API
 func set_overlay_mode(mode: OverlayMode) -> void:
+	var events = _get_events()
 	if current_mode == mode:
 		# Toggle off
 		_target_mode = OverlayMode.NONE
 		_transition_progress = 0.0
-		var events = _get_events()
 		if events:
 			events.simulation_event.emit("overlay_changed", {"mode": "Off"})
 		return
@@ -611,7 +611,6 @@ func set_overlay_mode(mode: OverlayMode) -> void:
 		current_mode = mode
 		_data_dirty = true
 
-	var events = _get_events()
 	if events:
 		events.simulation_event.emit("overlay_changed", {"mode": _get_mode_name(mode)})
 

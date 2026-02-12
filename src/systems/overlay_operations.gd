@@ -44,6 +44,7 @@ static func remove_overlay_instance(
 	if not is_instance_valid(overlay):
 		return {"success": false, "refund": 0, "was_overlay": true, "error": "Invalid overlay reference"}
 
+	var events = _get_events()
 	var overlay_data = overlay.building_data
 	var overlay_origin = overlay.grid_cell
 
@@ -55,11 +56,9 @@ static func remove_overlay_instance(
 	# Emit network change events
 	var overlay_type = overlay_data.building_type if overlay_data.get("building_type") else ""
 	if GridConstants.is_water_type(overlay_type):
-		var events = _get_events()
 		if events:
 			events.water_pipe_network_changed.emit(overlay_origin, false)
 	elif GridConstants.is_power_type(overlay_type):
-		var events = _get_events()
 		if events:
 			events.power_line_network_changed.emit(overlay_origin, false)
 
@@ -74,7 +73,6 @@ static func remove_overlay_instance(
 	unique_buildings.erase(overlay.get_instance_id())
 
 	# Emit event and cleanup
-	var events = _get_events()
 	if events:
 		events.building_removed.emit(overlay_origin, overlay)
 	overlay.queue_free()

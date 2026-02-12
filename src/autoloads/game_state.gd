@@ -214,13 +214,12 @@ func reset_game() -> void:
 func advance_month() -> void:
 	current_month += 1
 	total_months += 1
+	var events = _get_events()
 	if current_month > 12:
 		current_month = 1
 		current_year += 1
-		var events = _get_events()
 		if events:
 			events.year_tick.emit()
-	var events = _get_events()
 	if events:
 		events.month_tick.emit()
 

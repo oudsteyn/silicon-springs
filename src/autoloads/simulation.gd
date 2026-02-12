@@ -4,9 +4,9 @@ extends Node
 # Speed settings (seconds per month)
 const SPEED_SETTINGS: Array[float] = [0.0, 10.0, 5.0, 2.0]  # Paused, Slow, Normal, Fast
 const SPEED_NAMES: Array[String] = ["Paused", "Slow", "Normal", "Fast"]
-const SimulationClock = preload("res://src/systems/simulation_clock.gd")
+const SimulationClockScript = preload("res://src/systems/simulation_clock.gd")
 
-var _clock: SimulationClock = SimulationClock.new(SPEED_SETTINGS, SPEED_NAMES, 1)
+var _clock: SimulationClock = SimulationClockScript.new(SPEED_SETTINGS, SPEED_NAMES, 1)
 
 var current_speed: int:
 	get: return _clock.current_speed

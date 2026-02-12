@@ -1,15 +1,12 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scenes/main.gd" id="1_main"]
 [ext_resource type="PackedScene" path="res://scenes/game_world.tscn" id="2_game_world"]
-[ext_resource type="PackedScene" path="res://src/ui/info_panel.tscn" id="5_info_panel"]
-[ext_resource type="PackedScene" path="res://src/ui/budget_panel.tscn" id="6_budget_panel"]
+[ext_resource type="PackedScene" path="res://src/ui/hud/main_hud.tscn" id="7_main_hud"]
 
 [node name="Main" type="Node"]
 script = ExtResource("1_main")
 
 [node name="GameWorld" parent="." instance=ExtResource("2_game_world")]
 
-[node name="InfoPanel" parent="." instance=ExtResource("5_info_panel")]
-
-[node name="BudgetPanel" parent="." instance=ExtResource("6_budget_panel")]
+[node name="MainHUD" parent="." instance=ExtResource("7_main_hud")]

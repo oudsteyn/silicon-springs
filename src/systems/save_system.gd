@@ -2,7 +2,7 @@ extends Node
 class_name SaveSystem
 ## Handles saving and loading game state
 
-const SaveBuildingCodec = preload("res://src/systems/save_building_codec.gd")
+const SaveBuildingCodecScript = preload("res://src/systems/save_building_codec.gd")
 
 signal save_completed(success: bool, message: String)
 signal load_completed(success: bool, message: String)
@@ -303,7 +303,7 @@ func _serialize_infrastructure_age() -> Dictionary:
 
 
 func _serialize_buildings() -> Array:
-	return SaveBuildingCodec.serialize_buildings(grid_system)
+	return SaveBuildingCodecScript.serialize_buildings(grid_system)
 
 
 func _apply_save_data(data: Dictionary) -> bool:
@@ -530,7 +530,7 @@ func _clear_all_buildings() -> void:
 
 
 func _restore_building(data: Dictionary) -> void:
-	SaveBuildingCodec.restore_building(grid_system, data)
+	SaveBuildingCodecScript.restore_building(grid_system, data)
 
 
 func delete_save(file_path: String) -> bool:

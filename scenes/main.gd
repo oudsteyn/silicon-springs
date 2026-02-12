@@ -2,8 +2,6 @@ extends Node
 ## Main game controller - coordinates new minimalist UI with game world
 
 @onready var game_world = $GameWorld
-@onready var info_panel = $InfoPanel
-@onready var budget_panel = $BudgetPanel
 
 # New minimalist UI components
 var status_pill: StatusPill
@@ -239,7 +237,7 @@ func _create_modal_panels() -> void:
 
 func _setup_grid_system() -> void:
 	# Set grid system references
-	# Note: ToolPalette and BudgetPanel now use event-driven queries
+	# Note: ToolPalette uses event-driven queries
 	SaveManager.set_grid_system(game_world.grid_system)
 	SaveManager.set_terrain_system(game_world.terrain_system)
 	SaveManager.set_weather_system(game_world.weather_system)
@@ -383,8 +381,8 @@ func _on_panel_opened(panel_name: String) -> void:
 			elif not dashboard_panel.is_visible:
 				dashboard_panel.toggle()
 		"budget":
-			if not budget_panel.visible:
-				budget_panel.show_budget()
+			# Legacy budget panel retired. Keep event route for compatibility.
+			pass
 		"advisors":
 			if advisor_panel and not advisor_panel.visible:
 				advisor_panel.show_panel()
@@ -410,8 +408,8 @@ func _on_panel_closed(panel_name: String) -> void:
 			elif dashboard_panel.is_visible:
 				dashboard_panel.toggle()
 		"budget":
-			if budget_panel.visible:
-				budget_panel.hide_budget()
+			# Legacy budget panel retired. Keep event route for compatibility.
+			pass
 		"advisors":
 			if advisor_panel and advisor_panel.visible:
 				advisor_panel.hide_panel()
@@ -430,8 +428,8 @@ func _on_panel_closed(panel_name: String) -> void:
 
 
 func _on_info_panel_requested(data: Dictionary) -> void:
-	if data.type == "cell":
-		info_panel.show_cell_info(data.cell)
+	# Legacy info panel retired; ignore request for now.
+	_ = data
 
 
 func _on_dashboard_panel_requested(panel_name: String) -> void:

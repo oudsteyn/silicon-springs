@@ -7,7 +7,7 @@ extends RefCounted
 
 ## Refund percentage when demolishing buildings
 const REFUND_PERCENTAGE: float = 0.5
-const OverlayOperations = preload("res://src/systems/overlay_operations.gd")
+const OverlayOperationsScript = preload("res://src/systems/overlay_operations.gd")
 
 
 static func _get_events() -> Node:
@@ -204,7 +204,7 @@ static func _register_building(
 		if is_utility and buildings.has(occupied_cell):
 			var existing = buildings[occupied_cell]
 			if existing.building_data and GridConstants.is_road_type(existing.building_data.building_type):
-				OverlayOperations.add_overlay(occupied_cell, building, utility_overlays)
+				OverlayOperationsScript.add_overlay(occupied_cell, building, utility_overlays)
 				is_overlay = true
 				continue
 
@@ -262,7 +262,7 @@ static func remove_building(
 
 	# First check for utility overlay (remove overlay first)
 	if utility_overlays.has(cell):
-		var overlay_result = OverlayOperations.remove_overlay_at(
+		var overlay_result = OverlayOperationsScript.remove_overlay_at(
 			cell,
 			utility_overlays,
 			unique_buildings,
@@ -345,7 +345,7 @@ static func _deregister_building(
 			var overlay = utility_overlays[occupied_cell]
 			if overlay and not removed_overlays.has(overlay.get_instance_id()):
 				removed_overlays[overlay.get_instance_id()] = true
-				OverlayOperations.remove_overlay_instance(
+				OverlayOperationsScript.remove_overlay_instance(
 					overlay,
 					utility_overlays,
 					unique_buildings,

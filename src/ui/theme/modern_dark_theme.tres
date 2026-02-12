@@ -1,0 +1,42 @@
+[gd_resource type="Theme" load_steps=3 format=3]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.07, 0.08, 0.1, 0.78)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.08)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+content_margin_left = 12.0
+content_margin_top = 10.0
+content_margin_right = 12.0
+content_margin_bottom = 10.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button"]
+bg_color = Color(0.12, 0.14, 0.18, 0.9)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.32, 0.64, 1, 0.5)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+content_margin_left = 10.0
+content_margin_top = 6.0
+content_margin_right = 10.0
+content_margin_bottom = 6.0
+
+[resource]
+default_font_size = 15
+PanelContainer/styles/panel = SubResource("StyleBoxFlat_panel")
+Button/styles/normal = SubResource("StyleBoxFlat_button")
+Button/styles/hover = SubResource("StyleBoxFlat_button")
+Button/styles/pressed = SubResource("StyleBoxFlat_button")
+Button/colors/font_color = Color(0.9, 0.94, 0.98, 1)
+Label/colors/font_color = Color(0.88, 0.92, 0.96, 1)

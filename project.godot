@@ -34,6 +34,8 @@ SaveManager="*res://src/systems/save_system.gd"
 BudgetHistory="*res://src/systems/budget_history.gd"
 NeighborDeals="*res://src/systems/neighbor_deals.gd"
 UIManager="*res://src/autoloads/ui_manager.gd"
+CityEventBus="*res://src/autoloads/city_event_bus.gd"
+GraphicsSettingsManager="*res://src/autoloads/graphics_settings_manager.gd"
 
 [display]
 
