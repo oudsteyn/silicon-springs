@@ -4,10 +4,12 @@ extends RefCounted
 const VisualRegressionHarnessScript = preload("res://src/graphics/visual_regression_harness.gd")
 const VisualAcceptanceGateScript = preload("res://src/graphics/visual_acceptance_gate.gd")
 const VisualParityReporterScript = preload("res://src/graphics/visual_parity_reporter.gd")
+const VisualParityFrameGateScript = preload("res://src/graphics/visual_parity_frame_gate.gd")
 
 var harness = VisualRegressionHarnessScript.new()
 var acceptance_gate = VisualAcceptanceGateScript.new()
 var reporter = VisualParityReporterScript.new()
+var frame_gate = VisualParityFrameGateScript.new()
 
 func run(
 	graphics_settings_manager,
@@ -55,20 +57,34 @@ func run(
 		}
 
 	var mismatches: Array = []
+	var profile_ids: Array = []
 	for key in signatures.keys():
+		profile_ids.append(str(key))
 		var cmp = harness.compare_against_baseline(str(key), str(signatures[key]), baseline)
 		if not bool(cmp.get("passed", false)):
 			mismatches.append(cmp)
+
+	var frame_gate_result := {"passed": true, "seeded": 0, "compared": 0, "mismatches": []}
+	var frame_gate_config: Dictionary = options.get("frame_gate", {})
+	if bool(frame_gate_config.get("enabled", false)):
+		profile_ids.sort()
+		frame_gate_result = frame_gate.verify_frames(
+			frame_gate_config.get("capture_provider", null),
+			str(frame_gate_config.get("baseline_dir", "user://visual_parity_frames")),
+			profile_ids,
+			frame_gate_config
+		)
 
 	var acceptance = _evaluate_day_acceptance(graphics_settings_manager, daylight_controller)
 	var quality_score = float(acceptance.get("quality_score", 0.0))
 	var threshold_ok = quality_score >= quality_score_threshold
 	return {
-		"passed": mismatches.is_empty() and bool(acceptance.get("passed", false)) and threshold_ok,
+		"passed": mismatches.is_empty() and bool(acceptance.get("passed", false)) and threshold_ok and bool(frame_gate_result.get("passed", true)),
 		"mode": mode,
 		"baseline_path": baseline_path,
 		"profile_count": signatures.size(),
 		"mismatches": mismatches,
+		"frame_gate": frame_gate_result,
 		"acceptance": acceptance,
 		"quality_score": quality_score,
 		"quality_score_threshold": quality_score_threshold

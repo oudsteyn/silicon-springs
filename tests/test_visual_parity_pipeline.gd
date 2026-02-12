@@ -40,8 +40,19 @@ class FakeDaylight:
 			"fog_density": 0.011 if _t > 0.3 and _t < 0.7 else 0.02
 		}
 
+class FakeFrameCaptureProvider:
+	var frames: Dictionary = {}
+	func capture_profile_frame(profile_id: String) -> Image:
+		return frames.get(profile_id, null)
+
+func _solid_frame(color: Color) -> Image:
+	var img = Image.create(4, 4, false, Image.FORMAT_RGBA8)
+	img.fill(color)
+	return img
+
 var _baseline_path := "user://visual_parity_pipeline_test.json"
 var _report_dir := "user://visual_parity_reports_test"
+var _frame_baseline_dir := "user://visual_parity_pipeline_frame_baselines"
 
 func after_each() -> void:
 	if FileAccess.file_exists(_baseline_path):
@@ -50,6 +61,17 @@ func after_each() -> void:
 		DirAccess.remove_absolute("%s/visual_parity_result.json" % _report_dir)
 		DirAccess.remove_absolute("%s/visual_parity_report.md" % _report_dir)
 		DirAccess.remove_absolute(_report_dir)
+	if DirAccess.dir_exists_absolute(_frame_baseline_dir):
+		var dir = DirAccess.open(_frame_baseline_dir)
+		if dir:
+			dir.list_dir_begin()
+			var n = dir.get_next()
+			while n != "":
+				if not dir.current_is_dir():
+					DirAccess.remove_absolute("%s/%s" % [_frame_baseline_dir, n])
+				n = dir.get_next()
+			dir.list_dir_end()
+		DirAccess.remove_absolute(_frame_baseline_dir)
 
 func test_record_then_verify_pipeline_passes() -> void:
 	var pipeline = VisualParityPipelineScript.new()
@@ -135,3 +157,37 @@ func test_verify_fails_when_quality_score_below_threshold() -> void:
 	assert_false(bool(result.get("passed", true)))
 	assert_true(result.has("quality_score_threshold"))
 	assert_true(float(result.get("quality_score", 0.0)) < 95.0)
+
+func test_verify_fails_when_frame_gate_detects_image_drift() -> void:
+	var pipeline = VisualParityPipelineScript.new()
+	var graphics = FakeGraphicsSettings.new()
+	var daylight = FakeDaylight.new()
+	var capture = FakeFrameCaptureProvider.new()
+	var keys = ["LOW_dawn", "LOW_noon", "LOW_dusk", "MEDIUM_dawn", "MEDIUM_noon", "MEDIUM_dusk", "HIGH_dawn", "HIGH_noon", "HIGH_dusk", "ULTRA_dawn", "ULTRA_noon", "ULTRA_dusk"]
+	for key in keys:
+		capture.frames[key] = _solid_frame(Color.BLACK)
+
+	pipeline.run(graphics, daylight, _baseline_path, "record")
+	var seeded = pipeline.run(graphics, daylight, _baseline_path, "verify", {
+		"frame_gate": {
+			"enabled": true,
+			"baseline_dir": _frame_baseline_dir,
+			"seed_missing": true,
+			"capture_provider": capture
+		}
+	})
+	assert_true(bool(seeded.get("passed", false)))
+
+	capture.frames["ULTRA_dusk"] = _solid_frame(Color.WHITE)
+	var result = pipeline.run(graphics, daylight, _baseline_path, "verify", {
+		"frame_gate": {
+			"enabled": true,
+			"baseline_dir": _frame_baseline_dir,
+			"capture_provider": capture,
+			"mse_threshold": 0.01,
+			"max_delta_threshold": 0.05
+		}
+	})
+	assert_false(bool(result.get("passed", true)))
+	assert_true(result.has("frame_gate"))
+	assert_false(bool(result.get("frame_gate", {}).get("passed", true)))

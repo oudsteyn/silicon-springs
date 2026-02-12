@@ -32,6 +32,16 @@ func generate_markdown(result: Dictionary) -> String:
 			for issue in phase_result.get("issues", []):
 				lines.append("  - %s" % str(issue))
 
+	var frame_gate: Dictionary = result.get("frame_gate", {})
+	if not frame_gate.is_empty():
+		lines.append("")
+		lines.append("## Frame Gate")
+		lines.append("Status: %s" % ("PASS" if bool(frame_gate.get("passed", false)) else "FAIL"))
+		lines.append("Compared: %d" % int(frame_gate.get("compared", 0)))
+		lines.append("Seeded: %d" % int(frame_gate.get("seeded", 0)))
+		for mismatch in frame_gate.get("mismatches", []):
+			lines.append("- %s" % str(mismatch.get("profile_id", "unknown_profile")))
+
 	return "\n".join(lines) + "\n"
 
 
