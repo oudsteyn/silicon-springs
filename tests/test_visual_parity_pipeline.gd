@@ -41,10 +41,15 @@ class FakeDaylight:
 		}
 
 var _baseline_path := "user://visual_parity_pipeline_test.json"
+var _report_dir := "user://visual_parity_reports_test"
 
 func after_each() -> void:
 	if FileAccess.file_exists(_baseline_path):
 		DirAccess.remove_absolute(_baseline_path)
+	if DirAccess.dir_exists_absolute(_report_dir):
+		DirAccess.remove_absolute("%s/visual_parity_result.json" % _report_dir)
+		DirAccess.remove_absolute("%s/visual_parity_report.md" % _report_dir)
+		DirAccess.remove_absolute(_report_dir)
 
 func test_record_then_verify_pipeline_passes() -> void:
 	var pipeline = VisualParityPipelineScript.new()
@@ -98,3 +103,24 @@ func test_verify_fails_when_dusk_profile_is_out_of_range() -> void:
 	var by_phase = verified.get("acceptance", {}).get("by_phase", {})
 	assert_true(by_phase.has("dusk"))
 	assert_false(bool(by_phase.get("dusk", {}).get("passed", true)))
+
+func test_verify_or_record_seeds_missing_baseline() -> void:
+	var pipeline = VisualParityPipelineScript.new()
+	var graphics = FakeGraphicsSettings.new()
+	var daylight = FakeDaylight.new()
+
+	var result = pipeline.run(graphics, daylight, _baseline_path, "verify_or_record")
+	assert_true(bool(result.get("passed", false)))
+	assert_true(bool(result.get("seeded_baseline", false)))
+	assert_true(FileAccess.file_exists(_baseline_path))
+
+func test_run_and_write_reports_outputs_markdown_and_json() -> void:
+	var pipeline = VisualParityPipelineScript.new()
+	var graphics = FakeGraphicsSettings.new()
+	var daylight = FakeDaylight.new()
+	pipeline.run(graphics, daylight, _baseline_path, "record")
+
+	var result = pipeline.run_and_write_reports(graphics, daylight, _baseline_path, _report_dir, "verify")
+	assert_true(bool(result.get("passed", false)))
+	assert_true(FileAccess.file_exists("%s/visual_parity_result.json" % _report_dir))
+	assert_true(FileAccess.file_exists("%s/visual_parity_report.md" % _report_dir))

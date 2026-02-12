@@ -3,9 +3,11 @@ extends RefCounted
 
 const VisualRegressionHarnessScript = preload("res://src/graphics/visual_regression_harness.gd")
 const VisualAcceptanceGateScript = preload("res://src/graphics/visual_acceptance_gate.gd")
+const VisualParityReporterScript = preload("res://src/graphics/visual_parity_reporter.gd")
 
 var harness = VisualRegressionHarnessScript.new()
 var acceptance_gate = VisualAcceptanceGateScript.new()
+var reporter = VisualParityReporterScript.new()
 
 func run(graphics_settings_manager, daylight_controller, baseline_path: String, mode: String = "verify") -> Dictionary:
 	var signatures = harness.generate_profile_signatures(graphics_settings_manager, daylight_controller)
@@ -20,6 +22,17 @@ func run(graphics_settings_manager, daylight_controller, baseline_path: String, 
 		}
 
 	var baseline = harness.load_baseline(baseline_path)
+	if mode == "verify_or_record" and baseline.is_empty():
+		var seeded = harness.save_baseline(baseline_path, signatures)
+		return {
+			"passed": seeded,
+			"seeded_baseline": seeded,
+			"mode": mode,
+			"baseline_path": baseline_path,
+			"profile_count": signatures.size(),
+			"mismatches": [],
+			"acceptance": {"passed": seeded, "by_phase": {}}
+		}
 	if baseline.is_empty():
 		return {
 			"passed": false,
@@ -44,6 +57,23 @@ func run(graphics_settings_manager, daylight_controller, baseline_path: String, 
 		"mismatches": mismatches,
 		"acceptance": acceptance
 	}
+
+func run_and_write_reports(
+	graphics_settings_manager,
+	daylight_controller,
+	baseline_path: String,
+	report_dir: String,
+	mode: String = "verify"
+) -> Dictionary:
+	var result = run(graphics_settings_manager, daylight_controller, baseline_path, mode)
+	var dir := DirAccess.open("user://")
+	if dir:
+		dir.make_dir_recursive_absolute(report_dir)
+	var json_path = "%s/visual_parity_result.json" % report_dir
+	var md_path = "%s/visual_parity_report.md" % report_dir
+	harness.save_baseline(json_path, result)
+	reporter.save_report(md_path, reporter.generate_markdown(result))
+	return result
 
 
 func _evaluate_day_acceptance(graphics_settings_manager, daylight_controller) -> Dictionary:
