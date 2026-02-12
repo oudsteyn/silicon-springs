@@ -17,9 +17,23 @@ class FakeGraphicsSettings:
 
 class FakeDaylight:
 	var _t := 0.5
+	var dusk_sun_energy := 0.35
+	var dusk_fog_density := 0.018
 	func set_time_normalized(v: float) -> void:
 		_t = v
 	func get_visual_state() -> Dictionary:
+		if _t >= 0.75:
+			return {
+				"day_factor": _t,
+				"sun_energy": dusk_sun_energy,
+				"fog_density": dusk_fog_density
+			}
+		if _t <= 0.25:
+			return {
+				"day_factor": _t,
+				"sun_energy": 0.1,
+				"fog_density": 0.022
+			}
 		return {
 			"day_factor": _t,
 			"sun_energy": 1.0 if _t > 0.3 and _t < 0.7 else 0.15,
@@ -43,6 +57,8 @@ func test_record_then_verify_pipeline_passes() -> void:
 	var verified = pipeline.run(graphics, daylight, _baseline_path, "verify")
 	assert_true(bool(verified.get("passed", false)))
 	assert_size(verified.get("mismatches", []), 0)
+	assert_true(bool(verified.get("acceptance", {}).get("passed", false)))
+	assert_true(verified.get("acceptance", {}).has("by_phase"))
 
 func test_verify_detects_signature_drift() -> void:
 	var pipeline = VisualParityPipelineScript.new()
@@ -67,3 +83,18 @@ func test_verify_fails_acceptance_gate_for_bad_day_profile() -> void:
 	assert_false(bool(verified.get("passed", true)))
 	assert_true(verified.has("acceptance"))
 	assert_false(bool(verified.get("acceptance", {}).get("passed", true)))
+
+func test_verify_fails_when_dusk_profile_is_out_of_range() -> void:
+	var pipeline = VisualParityPipelineScript.new()
+	var graphics = FakeGraphicsSettings.new()
+	var daylight = FakeDaylight.new()
+	pipeline.run(graphics, daylight, _baseline_path, "record")
+
+	daylight.dusk_sun_energy = 0.9
+	var verified = pipeline.run(graphics, daylight, _baseline_path, "verify")
+
+	assert_false(bool(verified.get("passed", true)))
+	assert_false(bool(verified.get("acceptance", {}).get("passed", true)))
+	var by_phase = verified.get("acceptance", {}).get("by_phase", {})
+	assert_true(by_phase.has("dusk"))
+	assert_false(bool(by_phase.get("dusk", {}).get("passed", true)))
