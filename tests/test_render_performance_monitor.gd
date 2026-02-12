@@ -1,0 +1,45 @@
+extends TestBase
+
+const RenderPerfMonitorScript = preload("res://src/autoloads/render_performance_monitor.gd")
+
+var _nodes_to_free: Array[Node] = []
+var _applied_presets: Array[int] = []
+
+func _track_node(node: Node) -> Node:
+	_nodes_to_free.append(node)
+	return node
+
+func after_each() -> void:
+	for node in _nodes_to_free:
+		if is_instance_valid(node):
+			node.free()
+	_nodes_to_free.clear()
+	_applied_presets.clear()
+
+func _capture_quality_preset(preset: int) -> void:
+	_applied_presets.append(preset)
+
+func test_recommendation_high_when_frame_times_are_low() -> void:
+	var monitor = _track_node(RenderPerfMonitorScript.new())
+	for i in range(60):
+		monitor.ingest_frame_time_ms(8.0)
+
+	assert_eq(monitor.recommend_quality_preset(60), monitor.QualityTier.HIGH)
+
+func test_recommendation_low_when_frame_times_are_high() -> void:
+	var monitor = _track_node(RenderPerfMonitorScript.new())
+	for i in range(60):
+		monitor.ingest_frame_time_ms(38.0)
+
+	assert_eq(monitor.recommend_quality_preset(60), monitor.QualityTier.LOW)
+
+func test_apply_auto_tuning_uses_manager() -> void:
+	var monitor = _track_node(RenderPerfMonitorScript.new())
+	monitor.set_graphics_apply_callback(Callable(self, "_capture_quality_preset"))
+
+	for i in range(90):
+		monitor.ingest_frame_time_ms(28.0)
+	monitor.apply_auto_tuning(60)
+
+	assert_size(_applied_presets, 1)
+	assert_eq(_applied_presets[0], monitor.QualityTier.LOW)

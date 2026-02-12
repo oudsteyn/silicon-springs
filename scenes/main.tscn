@@ -1,12 +1,16 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scenes/main.gd" id="1_main"]
 [ext_resource type="PackedScene" path="res://scenes/game_world.tscn" id="2_game_world"]
 [ext_resource type="PackedScene" path="res://src/ui/hud/main_hud.tscn" id="7_main_hud"]
+[ext_resource type="Environment" path="res://src/graphics/environments/city_day_night_environment.tres" id="8_environment"]
 
 [node name="Main" type="Node"]
 script = ExtResource("1_main")
 
 [node name="GameWorld" parent="." instance=ExtResource("2_game_world")]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = ExtResource("8_environment")
 
 [node name="MainHUD" parent="." instance=ExtResource("7_main_hud")]

@@ -18,6 +18,17 @@ var _income: int = -1
 var _expenses: int = -1
 var _selected_id: String = ""
 var _selected_payload: Dictionary = {}
+var _nodes_to_free: Array[Node] = []
+
+func _track_node(node: Node) -> Node:
+	_nodes_to_free.append(node)
+	return node
+
+func after_each() -> void:
+	for node in _nodes_to_free:
+		if is_instance_valid(node):
+			node.free()
+	_nodes_to_free.clear()
 
 func _capture_finance(balance: int, income: int, expenses: int) -> void:
 	_money = balance
@@ -29,7 +40,7 @@ func _capture_selected(building_id: String, payload: Dictionary) -> void:
 	_selected_payload = payload
 
 func test_budget_bridge_emits_snapshot_and_money() -> void:
-	var bus = CityEventBusScript.new()
+	var bus = _track_node(CityEventBusScript.new())
 	bus.finance_snapshot_updated.connect(_capture_finance)
 	bus.economy_changed.connect(func(money: int): _money = money)
 
@@ -40,9 +51,9 @@ func test_budget_bridge_emits_snapshot_and_money() -> void:
 	assert_eq(_expenses, 2200)
 
 func test_building_selected_creates_payload() -> void:
-	var bus = CityEventBusScript.new()
+	var bus = _track_node(CityEventBusScript.new())
 	bus.building_selected.connect(_capture_selected)
-	var building = DummyBuilding.new()
+	var building = _track_node(DummyBuilding.new())
 
 	bus._on_building_selected(building)
 
@@ -53,10 +64,8 @@ func test_building_selected_creates_payload() -> void:
 	assert_eq(_selected_payload.get("workers_capacity", 0), 20)
 	assert_approx(float(_selected_payload.get("efficiency", 0.0)), 0.75, 0.0001)
 
-	building.free()
-
 func test_category_mapping_defaults_are_valid() -> void:
-	var bus = CityEventBusScript.new()
+	var bus = _track_node(CityEventBusScript.new())
 	assert_eq(bus._map_build_mode_to_building_id("roads"), "road")
 	assert_eq(bus._map_build_mode_to_building_id("zoning"), "residential_zone")
 	assert_eq(bus._map_build_mode_to_building_id("utilities"), "power_line")

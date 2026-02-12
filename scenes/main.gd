@@ -2,6 +2,7 @@ extends Node
 ## Main game controller - coordinates new minimalist UI with game world
 
 @onready var game_world = $GameWorld
+@onready var world_environment: WorldEnvironment = $WorldEnvironment
 
 # New minimalist UI components
 var status_pill: StatusPill
@@ -43,6 +44,7 @@ func _start_game() -> void:
 
 	# Connect UIManager signals
 	_connect_ui_manager()
+	_configure_runtime_graphics_quality()
 
 	# Reset game state with new difficulty
 	GameState.reset_game()
@@ -231,6 +233,10 @@ func _create_modal_panels() -> void:
 
 	# Options Panel (dynamically created)
 	options_panel = OptionsPanel.new()
+	if GraphicsSettingsManager:
+		options_panel.set_graphics_manager(GraphicsSettingsManager)
+	if world_environment and world_environment.environment:
+		options_panel.set_graphics_environment(world_environment.environment)
 	add_child(options_panel)
 	options_panel.closed.connect(func(): UIManager.close_panel("options"))
 
@@ -258,6 +264,25 @@ func _setup_grid_system() -> void:
 func _connect_ui_manager() -> void:
 	UIManager.panel_opened.connect(_on_panel_opened)
 	UIManager.panel_closed.connect(_on_panel_closed)
+
+
+func _configure_runtime_graphics_quality() -> void:
+	if GraphicsSettingsManager and world_environment and world_environment.environment:
+		GraphicsSettingsManager.bind_environment(world_environment.environment)
+	if RenderPerformanceMonitor and GraphicsSettingsManager:
+		RenderPerformanceMonitor.set_graphics_apply_callback(_apply_recommended_quality)
+
+
+func _apply_recommended_quality(tier: int) -> void:
+	if GraphicsSettingsManager == null:
+		return
+	match tier:
+		0:
+			GraphicsSettingsManager.set_quality_preset(GraphicsSettingsManager.QualityPreset.LOW, true)
+		1:
+			GraphicsSettingsManager.set_quality_preset(GraphicsSettingsManager.QualityPreset.MEDIUM, true)
+		_:
+			GraphicsSettingsManager.set_quality_preset(GraphicsSettingsManager.QualityPreset.HIGH, true)
 
 
 func _input(event: InputEvent) -> void:

@@ -15,6 +15,8 @@ extends CanvasLayer
 @onready var finance_expenses: Label = $Root/FinancePanel/FinanceMargin/FinanceGrid/FinanceExpenses
 
 var _event_bus: Node = null
+var _selected_building_id: String = ""
+var _selected_building_payload: Dictionary = {}
 
 func set_event_bus(bus: Node) -> void:
 	_event_bus = bus
@@ -34,11 +36,15 @@ func _connect_event_bus() -> void:
 	var bus = _get_event_bus()
 	if bus == null:
 		return
+	if info_popup and info_popup.has_method("set_event_bus"):
+		info_popup.call("set_event_bus", bus)
 	bus.economy_changed.connect(_on_economy_changed)
 	bus.population_changed.connect(_on_population_changed)
 	bus.happiness_changed.connect(_on_happiness_changed)
 	bus.building_selected.connect(_on_building_selected)
 	bus.building_deselected.connect(_on_building_deselected)
+	if bus.has_signal("building_stats_changed"):
+		bus.building_stats_changed.connect(_on_building_stats_changed)
 	if bus.has_signal("finance_snapshot_updated"):
 		bus.finance_snapshot_updated.connect(_on_finance_snapshot_updated)
 	if bus.has_signal("finance_panel_toggled"):
@@ -61,10 +67,25 @@ func _on_happiness_changed(happiness: float) -> void:
 	happ_label.text = "%d%%" % int(round(happiness * 100.0))
 
 func _on_building_selected(building_id: String, payload: Dictionary) -> void:
+	_selected_building_id = building_id
+	_selected_building_payload = payload.duplicate(true)
 	info_popup.call("show_building", building_id, payload)
 
 func _on_building_deselected() -> void:
+	_selected_building_id = ""
+	_selected_building_payload.clear()
 	info_popup.call("hide_building")
+
+
+func _on_building_stats_changed(building_id: String, payload: Dictionary) -> void:
+	if _selected_building_id == "" or _selected_building_id != building_id:
+		return
+	for key in payload.keys():
+		_selected_building_payload[key] = payload[key]
+	if info_popup.has_method("update_building_stats"):
+		info_popup.call("update_building_stats", _selected_building_payload)
+	else:
+		info_popup.call("show_building", _selected_building_id, _selected_building_payload)
 
 func _on_finance_snapshot_updated(balance: int, income: int, expenses: int) -> void:
 	finance_balance.text = "$%s" % String.num_int64(balance)

@@ -8,6 +8,7 @@ class FakeBus extends Node:
 	signal happiness_changed(happiness: float)
 	signal building_selected(building_id: String, payload: Dictionary)
 	signal building_deselected()
+	signal building_stats_changed(building_id: String, payload: Dictionary)
 	signal finance_panel_toggled(visible: bool)
 	signal finance_snapshot_updated(balance: int, income: int, expenses: int)
 	signal build_mode_changed(mode_id: String)
@@ -16,6 +17,7 @@ class FakeInfoPopup extends Control:
 	var shown_with_id: String = ""
 	var shown_payload: Dictionary = {}
 	var hide_called: bool = false
+	var update_count: int = 0
 
 	func show_building(building_id: String, payload: Dictionary) -> void:
 		shown_with_id = building_id
@@ -24,6 +26,11 @@ class FakeInfoPopup extends Control:
 
 	func hide_building() -> void:
 		hide_called = true
+
+	func update_building_stats(payload: Dictionary) -> void:
+		update_count += 1
+		for key in payload.keys():
+			shown_payload[key] = payload[key]
 
 var _selected_mode: String = ""
 
@@ -141,6 +148,30 @@ func test_building_selection_routes_to_popup() -> void:
 
 	bus.building_deselected.emit()
 	assert_true(popup.hide_called)
+
+	hud.free()
+	bus.free()
+
+func test_building_stats_update_tracks_selected_building_only() -> void:
+	var bus = FakeBus.new()
+	var hud = _build_hud(bus)
+	add_child(bus)
+	add_child(hud)
+	var popup = hud.get_node("Root/BuildingInfoPopup") as FakeInfoPopup
+
+	bus.building_selected.emit("b-1", {"name": "Road", "workers": 2})
+	bus.building_stats_changed.emit("b-2", {"workers": 99})
+	assert_eq(popup.update_count, 0)
+	assert_eq(popup.shown_payload.get("workers", 0), 2)
+
+	bus.building_stats_changed.emit("b-1", {"workers": 3, "efficiency": 0.9})
+	assert_eq(popup.update_count, 1)
+	assert_eq(popup.shown_payload.get("workers", 0), 3)
+	assert_eq(popup.shown_payload.get("efficiency", 0.0), 0.9)
+
+	bus.building_deselected.emit()
+	bus.building_stats_changed.emit("b-1", {"workers": 4})
+	assert_eq(popup.update_count, 1)
 
 	hud.free()
 	bus.free()

@@ -36,6 +36,7 @@ NeighborDeals="*res://src/systems/neighbor_deals.gd"
 UIManager="*res://src/autoloads/ui_manager.gd"
 CityEventBus="*res://src/autoloads/city_event_bus.gd"
 GraphicsSettingsManager="*res://src/autoloads/graphics_settings_manager.gd"
+RenderPerformanceMonitor="*res://src/autoloads/render_performance_monitor.gd"
 
 [display]
 
