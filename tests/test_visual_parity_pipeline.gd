@@ -124,3 +124,14 @@ func test_run_and_write_reports_outputs_markdown_and_json() -> void:
 	assert_true(bool(result.get("passed", false)))
 	assert_true(FileAccess.file_exists("%s/visual_parity_result.json" % _report_dir))
 	assert_true(FileAccess.file_exists("%s/visual_parity_report.md" % _report_dir))
+
+func test_verify_fails_when_quality_score_below_threshold() -> void:
+	var pipeline = VisualParityPipelineScript.new()
+	var graphics = FakeGraphicsSettings.new()
+	var daylight = FakeDaylight.new()
+	pipeline.run(graphics, daylight, _baseline_path, "record")
+
+	var result = pipeline.run(graphics, daylight, _baseline_path, "verify", {"quality_score_threshold": 95.0})
+	assert_false(bool(result.get("passed", true)))
+	assert_true(result.has("quality_score_threshold"))
+	assert_true(float(result.get("quality_score", 0.0)) < 95.0)

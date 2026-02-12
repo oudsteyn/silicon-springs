@@ -45,3 +45,14 @@ func test_rejects_out_of_range_night_profile() -> void:
 	})
 	assert_false(bool(result.get("passed", true)))
 	assert_true(result.get("issues", []).size() >= 1)
+
+func test_evaluate_profiles_by_phase_returns_quality_score() -> void:
+	var gate = VisualGateScript.new()
+	var result = gate.evaluate_profiles_by_phase({
+		"day": {"tonemap_exposure": 1.05, "tonemap_white": 1.15, "fog_density": 0.011, "sun_energy": 1.1},
+		"dusk": {"tonemap_exposure": 1.0, "tonemap_white": 1.1, "fog_density": 0.016, "sun_energy": 0.45},
+		"night": {"tonemap_exposure": 0.92, "tonemap_white": 1.0, "fog_density": 0.022, "sun_energy": 0.1}
+	})
+	assert_true(result.has("quality_score"))
+	assert_gte(float(result.get("quality_score", -1.0)), 0.0)
+	assert_lte(float(result.get("quality_score", 101.0)), 100.0)

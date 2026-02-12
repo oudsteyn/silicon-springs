@@ -9,7 +9,14 @@ var harness = VisualRegressionHarnessScript.new()
 var acceptance_gate = VisualAcceptanceGateScript.new()
 var reporter = VisualParityReporterScript.new()
 
-func run(graphics_settings_manager, daylight_controller, baseline_path: String, mode: String = "verify") -> Dictionary:
+func run(
+	graphics_settings_manager,
+	daylight_controller,
+	baseline_path: String,
+	mode: String = "verify",
+	options: Dictionary = {}
+) -> Dictionary:
+	var quality_score_threshold = float(options.get("quality_score_threshold", 65.0))
 	var signatures = harness.generate_profile_signatures(graphics_settings_manager, daylight_controller)
 	if mode == "record":
 		var ok = harness.save_baseline(baseline_path, signatures)
@@ -18,7 +25,8 @@ func run(graphics_settings_manager, daylight_controller, baseline_path: String, 
 			"mode": mode,
 			"baseline_path": baseline_path,
 			"profile_count": signatures.size(),
-			"mismatches": []
+			"mismatches": [],
+			"quality_score_threshold": quality_score_threshold
 		}
 
 	var baseline = harness.load_baseline(baseline_path)
@@ -31,7 +39,9 @@ func run(graphics_settings_manager, daylight_controller, baseline_path: String, 
 			"baseline_path": baseline_path,
 			"profile_count": signatures.size(),
 			"mismatches": [],
-			"acceptance": {"passed": seeded, "by_phase": {}}
+			"acceptance": {"passed": seeded, "by_phase": {}, "quality_score": 100.0 if seeded else 0.0},
+			"quality_score": 100.0 if seeded else 0.0,
+			"quality_score_threshold": quality_score_threshold
 		}
 	if baseline.is_empty():
 		return {
@@ -39,7 +49,9 @@ func run(graphics_settings_manager, daylight_controller, baseline_path: String, 
 			"mode": mode,
 			"baseline_path": baseline_path,
 			"profile_count": signatures.size(),
-			"mismatches": ["Baseline missing or empty"]
+			"mismatches": ["Baseline missing or empty"],
+			"quality_score": 0.0,
+			"quality_score_threshold": quality_score_threshold
 		}
 
 	var mismatches: Array = []
@@ -49,13 +61,17 @@ func run(graphics_settings_manager, daylight_controller, baseline_path: String, 
 			mismatches.append(cmp)
 
 	var acceptance = _evaluate_day_acceptance(graphics_settings_manager, daylight_controller)
+	var quality_score = float(acceptance.get("quality_score", 0.0))
+	var threshold_ok = quality_score >= quality_score_threshold
 	return {
-		"passed": mismatches.is_empty() and bool(acceptance.get("passed", false)),
+		"passed": mismatches.is_empty() and bool(acceptance.get("passed", false)) and threshold_ok,
 		"mode": mode,
 		"baseline_path": baseline_path,
 		"profile_count": signatures.size(),
 		"mismatches": mismatches,
-		"acceptance": acceptance
+		"acceptance": acceptance,
+		"quality_score": quality_score,
+		"quality_score_threshold": quality_score_threshold
 	}
 
 func run_and_write_reports(
@@ -63,9 +79,10 @@ func run_and_write_reports(
 	daylight_controller,
 	baseline_path: String,
 	report_dir: String,
-	mode: String = "verify"
+	mode: String = "verify",
+	options: Dictionary = {}
 ) -> Dictionary:
-	var result = run(graphics_settings_manager, daylight_controller, baseline_path, mode)
+	var result = run(graphics_settings_manager, daylight_controller, baseline_path, mode, options)
 	var dir := DirAccess.open("user://")
 	if dir:
 		dir.make_dir_recursive_absolute(report_dir)

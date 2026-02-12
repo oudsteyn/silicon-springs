@@ -9,6 +9,8 @@ func generate_markdown(result: Dictionary) -> String:
 	lines.append("Status: %s" % ("PASS" if passed else "FAIL"))
 	lines.append("Mode: %s" % str(result.get("mode", "verify")))
 	lines.append("Profiles checked: %d" % int(result.get("profile_count", 0)))
+	lines.append("Quality score: %.2f" % float(result.get("quality_score", 0.0)))
+	lines.append("Quality threshold: %.2f" % float(result.get("quality_score_threshold", 0.0)))
 
 	var mismatches = result.get("mismatches", [])
 	lines.append("Mismatches: %d" % mismatches.size())
