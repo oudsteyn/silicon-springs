@@ -19,6 +19,8 @@ static var _shared_registry: Dictionary = {}
 static var _shared_building_scene: PackedScene = null
 static var _shared_loaded: bool = false
 static var _shared_load_cycles: int = 0
+static var _shared_data_paths: Array[String] = []
+static var _shared_path_scan_cycles: int = 0
 
 ## Data directory path
 const DATA_PATH: String = "res://src/data/"
@@ -39,24 +41,14 @@ func load_registry(force_reload: bool = false) -> void:
 
 	_registry.clear()
 
-	var dir = DirAccess.open(DATA_PATH)
-	if not dir:
-		push_error("BuildingRegistry: Cannot open building data directory: " + DATA_PATH)
-		return
-
-	dir.list_dir_begin()
-	var file_name = dir.get_next()
-	while file_name != "":
-		if file_name.ends_with(".tres"):
-			var resource = load(DATA_PATH + file_name)
-			# Only process BuildingData resources, skip other resource types
-			if _is_building_data(resource):
-				if validate_building_data(resource):
-					_registry[resource.id] = resource
-				else:
-					push_warning("BuildingRegistry: Invalid building data in " + file_name)
-		file_name = dir.get_next()
-	dir.list_dir_end()
+	for path in _get_building_resource_paths():
+		var resource = load(path)
+		# Only process BuildingData resources, skip other resource types
+		if _is_building_data(resource):
+			if validate_building_data(resource):
+				_registry[resource.id] = resource
+			else:
+				push_warning("BuildingRegistry: Invalid building data in " + path.get_file())
 
 	_shared_registry = _registry.duplicate()
 	_shared_loaded = true
@@ -189,7 +181,9 @@ static func get_shared_cache_stats() -> Dictionary:
 		"loaded": _shared_loaded,
 		"entry_count": _shared_registry.size(),
 		"load_cycles": _shared_load_cycles,
-		"has_scene": _shared_building_scene != null
+		"has_scene": _shared_building_scene != null,
+		"path_scan_cycles": _shared_path_scan_cycles,
+		"path_count": _shared_data_paths.size()
 	}
 
 
@@ -198,3 +192,28 @@ static func clear_shared_cache_for_tests() -> void:
 	_shared_building_scene = null
 	_shared_loaded = false
 	_shared_load_cycles = 0
+	_shared_data_paths.clear()
+	_shared_path_scan_cycles = 0
+
+
+static func _get_building_resource_paths() -> Array[String]:
+	if not _shared_data_paths.is_empty():
+		return _shared_data_paths
+
+	var dir = DirAccess.open(DATA_PATH)
+	if not dir:
+		push_error("BuildingRegistry: Cannot open building data directory: " + DATA_PATH)
+		return []
+
+	var paths: Array[String] = []
+	dir.list_dir_begin()
+	var file_name = dir.get_next()
+	while file_name != "":
+		if file_name.ends_with(".tres"):
+			paths.append(DATA_PATH + file_name)
+		file_name = dir.get_next()
+	dir.list_dir_end()
+	paths.sort()
+	_shared_data_paths = paths
+	_shared_path_scan_cycles += 1
+	return _shared_data_paths

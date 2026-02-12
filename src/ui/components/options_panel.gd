@@ -17,6 +17,7 @@ var _ssr_toggle: CheckButton = null
 var _ssao_toggle: CheckButton = null
 var _volumetric_fog_toggle: CheckButton = null
 var _glow_toggle: CheckButton = null
+var _auto_quality_toggle: CheckButton = null
 var _exposure_slider: HSlider = null
 var _white_point_slider: HSlider = null
 
@@ -176,6 +177,11 @@ func _build_ui() -> void:
 	_glow_toggle.toggled.connect(_on_glow_toggled)
 	content.add_child(_glow_toggle)
 
+	_auto_quality_toggle = CheckButton.new()
+	_auto_quality_toggle.text = "Auto Quality Tuning"
+	_auto_quality_toggle.toggled.connect(_on_auto_quality_toggled)
+	content.add_child(_auto_quality_toggle)
+
 	var exposure_row = HBoxContainer.new()
 	exposure_row.add_theme_constant_override("separation", 10)
 	content.add_child(exposure_row)
@@ -323,6 +329,7 @@ func _on_graphics_quality_selected(index: int) -> void:
 	elif _graphics_environment and _graphics_manager.has_method("apply_preset"):
 		_graphics_manager.apply_preset(_graphics_environment, index)
 	_sync_graphics_controls()
+	_persist_graphics_settings()
 
 
 func _on_shadow_quality_selected(index: int) -> void:
@@ -330,6 +337,7 @@ func _on_shadow_quality_selected(index: int) -> void:
 		return
 	if _graphics_manager.has_method("set_shadow_quality"):
 		_graphics_manager.set_shadow_quality(index, true)
+	_persist_graphics_settings()
 
 
 func _on_ssr_toggled(enabled: bool) -> void:
@@ -339,6 +347,7 @@ func _on_ssr_toggled(enabled: bool) -> void:
 		_graphics_manager.set_ssr_override(enabled, true)
 	elif _graphics_environment and _graphics_manager.has_method("set_ssr_enabled"):
 		_graphics_manager.set_ssr_enabled(_graphics_environment, enabled)
+	_persist_graphics_settings()
 
 
 func _on_ssao_toggled(enabled: bool) -> void:
@@ -348,6 +357,7 @@ func _on_ssao_toggled(enabled: bool) -> void:
 		_graphics_manager.set_ssao_override(enabled, true)
 	elif _graphics_environment and _graphics_manager.has_method("set_ssao_enabled"):
 		_graphics_manager.set_ssao_enabled(_graphics_environment, enabled)
+	_persist_graphics_settings()
 
 
 func _on_volumetric_fog_toggled(enabled: bool) -> void:
@@ -357,6 +367,7 @@ func _on_volumetric_fog_toggled(enabled: bool) -> void:
 		_graphics_manager.set_volumetric_fog_override(enabled, true)
 	elif _graphics_environment and _graphics_manager.has_method("set_volumetric_fog_enabled"):
 		_graphics_manager.set_volumetric_fog_enabled(_graphics_environment, enabled)
+	_persist_graphics_settings()
 
 
 func _on_glow_toggled(enabled: bool) -> void:
@@ -370,6 +381,7 @@ func _on_glow_toggled(enabled: bool) -> void:
 			enabled,
 			true
 		)
+		_persist_graphics_settings()
 
 
 func _on_exposure_changed(value: float) -> void:
@@ -383,6 +395,7 @@ func _on_exposure_changed(value: float) -> void:
 			bool(current.get("glow_enabled", true)),
 			true
 		)
+		_persist_graphics_settings()
 
 
 func _on_white_point_changed(value: float) -> void:
@@ -396,6 +409,20 @@ func _on_white_point_changed(value: float) -> void:
 			bool(current.get("glow_enabled", true)),
 			true
 		)
+		_persist_graphics_settings()
+
+
+func _on_auto_quality_toggled(enabled: bool) -> void:
+	if _graphics_manager == null:
+		return
+	if _graphics_manager.has_method("set_auto_quality_enabled"):
+		_graphics_manager.set_auto_quality_enabled(enabled)
+	_persist_graphics_settings()
+
+
+func _persist_graphics_settings() -> void:
+	if _graphics_manager and _graphics_manager.has_method("save_settings_to_disk"):
+		_graphics_manager.save_settings_to_disk()
 
 
 func _sync_graphics_controls() -> void:
@@ -427,6 +454,8 @@ func _sync_graphics_controls() -> void:
 		_exposure_slider.value = float(settings.get("tonemap_exposure", 1.0))
 	if _white_point_slider:
 		_white_point_slider.value = float(settings.get("tonemap_white", 1.0))
+	if _auto_quality_toggle:
+		_auto_quality_toggle.button_pressed = bool(settings.get("auto_quality_enabled", true))
 
 
 func show_panel() -> void:

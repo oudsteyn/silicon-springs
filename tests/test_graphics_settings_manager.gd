@@ -109,3 +109,50 @@ func test_set_cinematic_grade_updates_environment_tonemap() -> void:
 	assert_approx(env.tonemap_exposure, 1.25, 0.001)
 	assert_approx(env.tonemap_white, 1.4, 0.001)
 	assert_true(env.glow_enabled)
+
+
+func test_auto_quality_mode_toggle() -> void:
+	var mgr = _track_node(GraphicsSettingsManagerScript.new())
+	mgr.set_auto_quality_enabled(false)
+	assert_false(mgr.is_auto_quality_enabled())
+	mgr.set_auto_quality_enabled(true)
+	assert_true(mgr.is_auto_quality_enabled())
+
+
+func test_settings_round_trip_serialization() -> void:
+	var mgr = _track_node(GraphicsSettingsManagerScript.new())
+	mgr.set_quality_preset(mgr.QualityPreset.ULTRA, false)
+	mgr.set_shadow_quality(mgr.ShadowQuality.ULTRA, false)
+	mgr.set_ssr_override(false, false)
+	mgr.set_ssao_override(true, false)
+	mgr.set_volumetric_fog_override(true, false)
+	mgr.set_cinematic_grade(1.12, 1.3, true, false)
+	mgr.set_auto_quality_enabled(false)
+
+	var packed = mgr.to_serializable_dict()
+	var mgr2 = _track_node(GraphicsSettingsManagerScript.new())
+	mgr2.apply_serialized_settings(packed, false)
+	var unpacked = mgr2.get_current_settings()
+
+	assert_eq(int(unpacked.get("preset", -1)), int(mgr.QualityPreset.ULTRA))
+	assert_eq(int(unpacked.get("shadow_quality", -1)), int(mgr.ShadowQuality.ULTRA))
+	assert_false(bool(unpacked.get("ssr_enabled", true)))
+	assert_true(bool(unpacked.get("ssao_enabled", false)))
+	assert_true(bool(unpacked.get("volumetric_fog_enabled", false)))
+	assert_false(bool(unpacked.get("auto_quality_enabled", true)))
+
+
+func test_settings_save_and_load_from_disk() -> void:
+	var mgr = _track_node(GraphicsSettingsManagerScript.new())
+	var path = "user://graphics_settings_test.cfg"
+	mgr.set_settings_path_for_tests(path)
+	mgr.set_quality_preset(mgr.QualityPreset.MEDIUM, false)
+	mgr.set_auto_quality_enabled(false)
+	assert_true(mgr.save_settings_to_disk())
+
+	var mgr2 = _track_node(GraphicsSettingsManagerScript.new())
+	mgr2.set_settings_path_for_tests(path)
+	assert_true(mgr2.load_settings_from_disk(false))
+	var settings = mgr2.get_current_settings()
+	assert_eq(int(settings.get("preset", -1)), int(mgr.QualityPreset.MEDIUM))
+	assert_false(bool(settings.get("auto_quality_enabled", true)))

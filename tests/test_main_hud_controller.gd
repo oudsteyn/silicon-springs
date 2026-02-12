@@ -175,3 +175,22 @@ func test_building_stats_update_tracks_selected_building_only() -> void:
 
 	hud.free()
 	bus.free()
+
+func test_selection_churn_never_applies_stale_stats() -> void:
+	var bus = FakeBus.new()
+	var hud = _build_hud(bus)
+	add_child(bus)
+	add_child(hud)
+	var popup = hud.get_node("Root/BuildingInfoPopup") as FakeInfoPopup
+
+	bus.building_selected.emit("a", {"name": "A", "workers": 1})
+	bus.building_selected.emit("b", {"name": "B", "workers": 2})
+	bus.building_stats_changed.emit("a", {"workers": 99})
+	assert_eq(popup.shown_with_id, "b")
+	assert_eq(popup.shown_payload.get("workers", 0), 2)
+
+	bus.building_stats_changed.emit("b", {"workers": 3})
+	assert_eq(popup.shown_payload.get("workers", 0), 3)
+
+	hud.free()
+	bus.free()

@@ -276,6 +276,8 @@ func _configure_runtime_graphics_quality() -> void:
 func _apply_recommended_quality(tier: int) -> void:
 	if GraphicsSettingsManager == null:
 		return
+	if GraphicsSettingsManager.has_method("is_auto_quality_enabled") and not GraphicsSettingsManager.is_auto_quality_enabled():
+		return
 	match tier:
 		0:
 			GraphicsSettingsManager.set_quality_preset(GraphicsSettingsManager.QualityPreset.LOW, true)

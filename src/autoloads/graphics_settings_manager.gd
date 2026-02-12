@@ -24,9 +24,15 @@ var volumetric_fog_enabled: bool = true
 var glow_enabled: bool = true
 var tonemap_exposure: float = 1.0
 var tonemap_white: float = 1.0
+var auto_quality_enabled: bool = true
 
 var _bound_environment: Environment = null
 var _bound_sun_light: DirectionalLight3D = null
+var _settings_path: String = "user://graphics_settings.cfg"
+
+
+func _ready() -> void:
+	load_settings_from_disk(false)
 
 func apply_preset(env: Environment, preset: QualityPreset) -> void:
 	if env == null:
@@ -72,7 +78,8 @@ func get_current_settings() -> Dictionary:
 		"volumetric_fog_enabled": volumetric_fog_enabled,
 		"glow_enabled": glow_enabled,
 		"tonemap_exposure": tonemap_exposure,
-		"tonemap_white": tonemap_white
+		"tonemap_white": tonemap_white,
+		"auto_quality_enabled": auto_quality_enabled
 	}
 
 
@@ -111,6 +118,15 @@ func set_volumetric_fog_enabled(env: Environment, enabled: bool) -> void:
 	settings_changed.emit(get_current_settings())
 
 
+func set_auto_quality_enabled(enabled: bool) -> void:
+	auto_quality_enabled = enabled
+	settings_changed.emit(get_current_settings())
+
+
+func is_auto_quality_enabled() -> bool:
+	return auto_quality_enabled
+
+
 func set_shadow_quality(quality: ShadowQuality, apply_now: bool = true) -> void:
 	current_shadow_quality = quality
 	if apply_now:
@@ -147,6 +163,48 @@ func set_cinematic_grade(exposure: float, white_point: float, enable_glow: bool,
 	if apply_now:
 		apply_current_settings()
 	settings_changed.emit(get_current_settings())
+
+
+func to_serializable_dict() -> Dictionary:
+	return get_current_settings().duplicate(true)
+
+
+func apply_serialized_settings(data: Dictionary, apply_now: bool = true) -> void:
+	current_preset = int(data.get("preset", int(current_preset)))
+	current_shadow_quality = int(data.get("shadow_quality", int(current_shadow_quality)))
+	ssao_enabled = bool(data.get("ssao_enabled", ssao_enabled))
+	ssr_enabled = bool(data.get("ssr_enabled", ssr_enabled))
+	volumetric_fog_enabled = bool(data.get("volumetric_fog_enabled", volumetric_fog_enabled))
+	glow_enabled = bool(data.get("glow_enabled", glow_enabled))
+	tonemap_exposure = float(data.get("tonemap_exposure", tonemap_exposure))
+	tonemap_white = float(data.get("tonemap_white", tonemap_white))
+	auto_quality_enabled = bool(data.get("auto_quality_enabled", auto_quality_enabled))
+
+	if apply_now:
+		apply_current_settings()
+		apply_shadow_quality()
+	settings_changed.emit(get_current_settings())
+
+
+func set_settings_path_for_tests(path: String) -> void:
+	if path != "":
+		_settings_path = path
+
+
+func save_settings_to_disk() -> bool:
+	var config = ConfigFile.new()
+	config.set_value("graphics", "settings", to_serializable_dict())
+	return config.save(_settings_path) == OK
+
+
+func load_settings_from_disk(apply_now: bool = true) -> bool:
+	var config = ConfigFile.new()
+	var err = config.load(_settings_path)
+	if err != OK:
+		return false
+	var data = config.get_value("graphics", "settings", {}) as Dictionary
+	apply_serialized_settings(data, apply_now)
+	return true
 
 
 func _set_defaults_for_preset(preset: QualityPreset) -> void:

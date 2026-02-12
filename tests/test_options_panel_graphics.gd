@@ -12,6 +12,7 @@ class FakeGraphicsManager extends Node:
 	var glow_enabled: bool = false
 	var exposure: float = 1.0
 	var white_point: float = 1.0
+	var auto_quality_enabled: bool = true
 
 	func bind_environment(env: Environment) -> void:
 		bound_environment = env
@@ -36,6 +37,9 @@ class FakeGraphicsManager extends Node:
 		white_point = new_white_point
 		glow_enabled = new_glow_enabled
 
+	func set_auto_quality_enabled(enabled: bool) -> void:
+		auto_quality_enabled = enabled
+
 	func get_current_settings() -> Dictionary:
 		return {
 			"preset": selected_preset,
@@ -45,7 +49,8 @@ class FakeGraphicsManager extends Node:
 			"volumetric_fog_enabled": fog_enabled,
 			"glow_enabled": glow_enabled,
 			"tonemap_exposure": exposure,
-			"tonemap_white": white_point
+			"tonemap_white": white_point,
+			"auto_quality_enabled": auto_quality_enabled
 		}
 
 var _nodes_to_free: Array[Node] = []
@@ -78,6 +83,7 @@ func test_graphics_controls_forward_to_graphics_manager() -> void:
 	panel.call("_on_glow_toggled", true)
 	panel.call("_on_exposure_changed", 1.15)
 	panel.call("_on_white_point_changed", 1.35)
+	panel.call("_on_auto_quality_toggled", false)
 
 	assert_eq(manager.selected_preset, 2)
 	assert_eq(manager.shadow_quality, 3)
@@ -87,4 +93,5 @@ func test_graphics_controls_forward_to_graphics_manager() -> void:
 	assert_true(manager.glow_enabled)
 	assert_approx(manager.exposure, 1.15, 0.0001)
 	assert_approx(manager.white_point, 1.35, 0.0001)
+	assert_false(manager.auto_quality_enabled)
 	assert_eq(manager.bound_environment, env)

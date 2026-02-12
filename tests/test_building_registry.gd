@@ -36,3 +36,15 @@ func test_force_reload_increments_load_cycles() -> void:
 
 	var stats = BuildingRegistry.get_shared_cache_stats()
 	assert_eq(int(stats.get("load_cycles", -1)), 2)
+
+
+func test_data_path_scan_is_cached() -> void:
+	var registry = BuildingRegistryScript.new()
+	registry.load_registry()
+	var first_stats = BuildingRegistry.get_shared_cache_stats()
+
+	registry.load_registry(true)
+	var second_stats = BuildingRegistry.get_shared_cache_stats()
+
+	assert_eq(int(first_stats.get("path_scan_cycles", -1)), 1)
+	assert_eq(int(second_stats.get("path_scan_cycles", -1)), 1)

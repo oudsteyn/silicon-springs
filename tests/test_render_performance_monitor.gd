@@ -43,3 +43,39 @@ func test_apply_auto_tuning_uses_manager() -> void:
 
 	assert_size(_applied_presets, 1)
 	assert_eq(_applied_presets[0], monitor.QualityTier.LOW)
+
+
+func test_hysteresis_prevents_quality_flapping() -> void:
+	var monitor = _track_node(RenderPerfMonitorScript.new())
+	monitor.min_seconds_between_changes = 2.0
+	monitor.set_graphics_apply_callback(Callable(self, "_capture_quality_preset"))
+
+	for i in range(90):
+		monitor.ingest_frame_time_ms(38.0)
+	monitor.apply_auto_tuning(60, 0.1)
+
+	for i in range(90):
+		monitor.ingest_frame_time_ms(8.0)
+	monitor.apply_auto_tuning(60, 0.1)
+
+	assert_size(_applied_presets, 1)
+	assert_eq(_applied_presets[0], monitor.QualityTier.LOW)
+
+
+func test_cooldown_allows_next_change_after_threshold() -> void:
+	var monitor = _track_node(RenderPerfMonitorScript.new())
+	monitor.min_seconds_between_changes = 1.0
+	monitor.set_graphics_apply_callback(Callable(self, "_capture_quality_preset"))
+
+	for i in range(90):
+		monitor.ingest_frame_time_ms(38.0)
+	monitor.apply_auto_tuning(60, 0.1)
+
+	for i in range(240):
+		monitor.ingest_frame_time_ms(8.0)
+	monitor.apply_auto_tuning(60, 1.2)
+
+	assert_size(_applied_presets, 2)
+	if _applied_presets.size() >= 2:
+		assert_eq(_applied_presets[0], monitor.QualityTier.LOW)
+		assert_eq(_applied_presets[1], monitor.QualityTier.HIGH)
