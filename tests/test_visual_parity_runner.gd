@@ -1,6 +1,7 @@
 extends TestBase
 
 const VisualParityRunnerScript = preload("res://src/graphics/visual_parity_runner.gd")
+const VisualParityCiContractScript = preload("res://src/graphics/visual_parity_ci_contract.gd")
 
 class FakeGraphicsSettings:
 	enum QualityPreset { LOW, MEDIUM, HIGH, ULTRA }
@@ -26,6 +27,7 @@ class FakeDaylight:
 
 var _baseline_path := "user://visual_parity_runner_baseline.json"
 var _artifact_dir := "user://visual_parity_runner_artifacts"
+var _frame_dir := "user://visual_parity_runner_frames"
 
 func after_each() -> void:
 	if FileAccess.file_exists(_baseline_path):
@@ -38,6 +40,17 @@ func after_each() -> void:
 	]:
 		if FileAccess.file_exists(path) or DirAccess.dir_exists_absolute(path):
 			DirAccess.remove_absolute(path)
+	if DirAccess.dir_exists_absolute(_frame_dir):
+		var dir = DirAccess.open(_frame_dir)
+		if dir:
+			dir.list_dir_begin()
+			var n = dir.get_next()
+			while n != "":
+				if not dir.current_is_dir():
+					DirAccess.remove_absolute("%s/%s" % [_frame_dir, n])
+				n = dir.get_next()
+			dir.list_dir_end()
+		DirAccess.remove_absolute(_frame_dir)
 
 func test_execute_success_returns_zero_and_writes_manifest() -> void:
 	var runner = VisualParityRunnerScript.new()
@@ -69,3 +82,51 @@ func test_execute_failure_returns_nonzero_when_threshold_fails() -> void:
 
 	assert_eq(int(result.get("exit_code", 0)), 1)
 	assert_eq(str(result.get("status", "PASS")), "FAIL")
+
+func test_manifest_includes_metadata_and_artifact_hashes() -> void:
+	var runner = VisualParityRunnerScript.new()
+	var graphics = FakeGraphicsSettings.new()
+	var daylight = FakeDaylight.new()
+
+	runner.execute(graphics, daylight, _baseline_path, _artifact_dir, {"mode": "record"})
+	var result = runner.execute(graphics, daylight, _baseline_path, _artifact_dir, {
+		"metadata": {"git_sha": "abc123", "build_id": "ci-42"}
+	})
+
+	assert_eq(str(result.get("metadata", {}).get("git_sha", "")), "abc123")
+	assert_eq(str(result.get("metadata", {}).get("build_id", "")), "ci-42")
+	assert_eq(int(str(result.get("artifacts", {}).get("result_json_md5", "")).length()), 32)
+	assert_eq(int(str(result.get("artifacts", {}).get("report_markdown_md5", "")).length()), 32)
+
+
+func test_execute_strict_baseline_returns_seed_required_status() -> void:
+	var runner = VisualParityRunnerScript.new()
+	var graphics = FakeGraphicsSettings.new()
+	var daylight = FakeDaylight.new()
+
+	var result = runner.execute(graphics, daylight, _baseline_path, _artifact_dir, {
+		"mode": "verify_or_record",
+		"strict_baseline": true
+	})
+
+	assert_eq(str(result.get("status", "PASS")), "SEED_REQUIRED")
+	assert_eq(int(result.get("exit_code", 0)), 2)
+
+func test_execute_with_contract_profile_applies_policy_options() -> void:
+	var runner = VisualParityRunnerScript.new()
+	var contract = VisualParityCiContractScript.new()
+	var graphics = FakeGraphicsSettings.new()
+	var daylight = FakeDaylight.new()
+
+	var result = runner.execute_with_contract(
+		graphics,
+		daylight,
+		_baseline_path,
+		_artifact_dir,
+		contract,
+		"ci_strict",
+		{"frame_baseline_dir": _frame_dir}
+	)
+
+	assert_eq(str(result.get("status", "")), "SEED_REQUIRED")
+	assert_eq(int(result.get("exit_code", 0)), 2)
