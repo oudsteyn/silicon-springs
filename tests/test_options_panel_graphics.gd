@@ -95,3 +95,18 @@ func test_graphics_controls_forward_to_graphics_manager() -> void:
 	assert_approx(manager.white_point, 1.35, 0.0001)
 	assert_false(manager.auto_quality_enabled)
 	assert_eq(manager.bound_environment, env)
+
+
+func test_auto_quality_disables_manual_controls() -> void:
+	var manager = _track_node(FakeGraphicsManager.new())
+	manager.auto_quality_enabled = true
+	var panel = _track_node(OptionsPanelScript.new())
+	panel.call("set_graphics_manager", manager)
+	add_child(manager)
+	add_child(panel)
+
+	panel.call("_sync_graphics_controls")
+	var quality = panel.get("_quality_options") as OptionButton
+	var shadow_quality = panel.get("_shadow_quality_options") as OptionButton
+	assert_true(quality.disabled)
+	assert_true(shadow_quality.disabled)

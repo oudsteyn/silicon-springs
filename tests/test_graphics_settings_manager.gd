@@ -156,3 +156,17 @@ func test_settings_save_and_load_from_disk() -> void:
 	var settings = mgr2.get_current_settings()
 	assert_eq(int(settings.get("preset", -1)), int(mgr.QualityPreset.MEDIUM))
 	assert_false(bool(settings.get("auto_quality_enabled", true)))
+
+
+func test_preset_contract_validation_passes() -> void:
+	var mgr = _track_node(GraphicsSettingsManagerScript.new())
+	assert_true(mgr.validate_preset_contract())
+
+
+func test_low_preset_contract_values_are_stable() -> void:
+	var mgr = _track_node(GraphicsSettingsManagerScript.new())
+	var profile = mgr.get_preset_contract(int(mgr.QualityPreset.LOW))
+	assert_false(bool(profile.get("ssr_enabled", true)))
+	assert_false(bool(profile.get("ssao_enabled", true)))
+	assert_false(bool(profile.get("volumetric_fog_enabled", true)))
+	assert_eq(int(profile.get("shadow_quality", -1)), int(mgr.ShadowQuality.LOW))

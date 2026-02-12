@@ -29,9 +29,11 @@ var auto_quality_enabled: bool = true
 var _bound_environment: Environment = null
 var _bound_sun_light: DirectionalLight3D = null
 var _settings_path: String = "user://graphics_settings.cfg"
+var _preset_contracts: Dictionary = {}
 
 
 func _ready() -> void:
+	_build_preset_contracts()
 	load_settings_from_disk(false)
 
 func apply_preset(env: Environment, preset: QualityPreset) -> void:
@@ -208,6 +210,20 @@ func load_settings_from_disk(apply_now: bool = true) -> bool:
 
 
 func _set_defaults_for_preset(preset: QualityPreset) -> void:
+	if _preset_contracts.is_empty():
+		_build_preset_contracts()
+	var contract: Dictionary = _preset_contracts.get(int(preset), {})
+	if not contract.is_empty():
+		current_preset = preset
+		current_shadow_quality = int(contract.get("shadow_quality", int(current_shadow_quality)))
+		ssao_enabled = bool(contract.get("ssao_enabled", ssao_enabled))
+		ssr_enabled = bool(contract.get("ssr_enabled", ssr_enabled))
+		volumetric_fog_enabled = bool(contract.get("volumetric_fog_enabled", volumetric_fog_enabled))
+		glow_enabled = bool(contract.get("glow_enabled", glow_enabled))
+		tonemap_exposure = float(contract.get("tonemap_exposure", tonemap_exposure))
+		tonemap_white = float(contract.get("tonemap_white", tonemap_white))
+		return
+
 	current_preset = preset
 	match preset:
 		QualityPreset.LOW:
@@ -242,6 +258,74 @@ func _set_defaults_for_preset(preset: QualityPreset) -> void:
 			current_shadow_quality = ShadowQuality.ULTRA
 			tonemap_exposure = 1.1
 			tonemap_white = 1.2
+
+
+func get_preset_contract(preset: int) -> Dictionary:
+	if _preset_contracts.is_empty():
+		_build_preset_contracts()
+	return (_preset_contracts.get(preset, {}) as Dictionary).duplicate(true)
+
+
+func validate_preset_contract() -> bool:
+	if _preset_contracts.is_empty():
+		_build_preset_contracts()
+	for key in [int(QualityPreset.LOW), int(QualityPreset.MEDIUM), int(QualityPreset.HIGH), int(QualityPreset.ULTRA)]:
+		var profile = _preset_contracts.get(key, {})
+		if profile.is_empty():
+			return false
+		for required in [
+			"shadow_quality",
+			"ssao_enabled",
+			"ssr_enabled",
+			"volumetric_fog_enabled",
+			"glow_enabled",
+			"tonemap_exposure",
+			"tonemap_white"
+		]:
+			if not profile.has(required):
+				return false
+	return true
+
+
+func _build_preset_contracts() -> void:
+	_preset_contracts = {
+		int(QualityPreset.LOW): {
+			"shadow_quality": int(ShadowQuality.LOW),
+			"ssao_enabled": false,
+			"ssr_enabled": false,
+			"volumetric_fog_enabled": false,
+			"glow_enabled": false,
+			"tonemap_exposure": 0.95,
+			"tonemap_white": 1.0
+		},
+		int(QualityPreset.MEDIUM): {
+			"shadow_quality": int(ShadowQuality.MEDIUM),
+			"ssao_enabled": true,
+			"ssr_enabled": false,
+			"volumetric_fog_enabled": true,
+			"glow_enabled": true,
+			"tonemap_exposure": 1.0,
+			"tonemap_white": 1.0
+		},
+		int(QualityPreset.HIGH): {
+			"shadow_quality": int(ShadowQuality.HIGH),
+			"ssao_enabled": true,
+			"ssr_enabled": true,
+			"volumetric_fog_enabled": true,
+			"glow_enabled": true,
+			"tonemap_exposure": 1.05,
+			"tonemap_white": 1.1
+		},
+		int(QualityPreset.ULTRA): {
+			"shadow_quality": int(ShadowQuality.ULTRA),
+			"ssao_enabled": true,
+			"ssr_enabled": true,
+			"volumetric_fog_enabled": true,
+			"glow_enabled": true,
+			"tonemap_exposure": 1.1,
+			"tonemap_white": 1.2
+		}
+	}
 
 func set_ssr_enabled(env: Environment, enabled: bool) -> void:
 	ssr_enabled = enabled

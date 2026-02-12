@@ -456,6 +456,11 @@ func _sync_graphics_controls() -> void:
 		_white_point_slider.value = float(settings.get("tonemap_white", 1.0))
 	if _auto_quality_toggle:
 		_auto_quality_toggle.button_pressed = bool(settings.get("auto_quality_enabled", true))
+	var auto_enabled = bool(settings.get("auto_quality_enabled", true))
+	if _quality_options:
+		_quality_options.disabled = auto_enabled
+	if _shadow_quality_options:
+		_shadow_quality_options.disabled = auto_enabled
 
 
 func show_panel() -> void:
