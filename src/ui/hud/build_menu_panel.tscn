@@ -1,8 +1,11 @@
 [gd_scene load_steps=2 format=3]
 
+[ext_resource type="Script" path="res://src/ui/hud/build_menu_panel.gd" id="1_script"]
+
 [node name="BuildMenuPanel" type="PanelContainer"]
 custom_minimum_size = Vector2(0, 150)
 size_flags_horizontal = 3
+script = ExtResource("1_script")
 
 theme_override_constants/separation = 8
 

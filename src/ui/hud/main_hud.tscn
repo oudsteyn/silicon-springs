@@ -39,6 +39,62 @@ offset_right = -20.0
 offset_bottom = 150.0
 grow_horizontal = 0
 
+[node name="FinancePanel" type="PanelContainer" parent="Root"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 9
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -372.0
+offset_top = 160.0
+offset_right = -20.0
+offset_bottom = 300.0
+grow_horizontal = 0
+
+[node name="FinanceMargin" type="MarginContainer" parent="Root/FinancePanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 10
+
+[node name="FinanceGrid" type="GridContainer" parent="Root/FinancePanel/FinanceMargin"]
+layout_mode = 2
+columns = 2
+theme_override_constants/h_separation = 14
+theme_override_constants/v_separation = 8
+
+[node name="FinanceBalanceLabel" type="Label" parent="Root/FinancePanel/FinanceMargin/FinanceGrid"]
+layout_mode = 2
+text = "Balance"
+
+[node name="FinanceBalance" type="Label" parent="Root/FinancePanel/FinanceMargin/FinanceGrid"]
+unique_name_in_owner = true
+layout_mode = 2
+horizontal_alignment = 2
+text = "$0"
+
+[node name="FinanceIncomeLabel" type="Label" parent="Root/FinancePanel/FinanceMargin/FinanceGrid"]
+layout_mode = 2
+text = "Income"
+
+[node name="FinanceIncome" type="Label" parent="Root/FinancePanel/FinanceMargin/FinanceGrid"]
+unique_name_in_owner = true
+layout_mode = 2
+horizontal_alignment = 2
+text = "+$0/mo"
+
+[node name="FinanceExpensesLabel" type="Label" parent="Root/FinancePanel/FinanceMargin/FinanceGrid"]
+layout_mode = 2
+text = "Expenses"
+
+[node name="FinanceExpenses" type="Label" parent="Root/FinancePanel/FinanceMargin/FinanceGrid"]
+unique_name_in_owner = true
+layout_mode = 2
+horizontal_alignment = 2
+text = "-$0/mo"
+
 [node name="BuildingInfoPopup" parent="Root" instance=ExtResource("4_popup")]
 unique_name_in_owner = true
 layout_mode = 1
@@ -46,7 +102,7 @@ anchors_preset = 9
 anchor_left = 1.0
 anchor_right = 1.0
 offset_left = -392.0
-offset_top = 170.0
+offset_top = 310.0
 offset_right = -20.0
-offset_bottom = 430.0
+offset_bottom = 570.0
 grow_horizontal = 0

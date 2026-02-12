@@ -4,6 +4,9 @@ signal economy_changed(money: int)
 signal population_changed(population: int)
 signal happiness_changed(happiness: float)
 
+signal finance_snapshot_updated(balance: int, income: int, expenses: int)
+signal finance_panel_toggled(visible: bool)
+
 signal build_mode_changed(mode_id: String)
 signal building_selected(building_id: String, payload: Dictionary)
 signal building_deselected()
@@ -31,8 +34,9 @@ func _ready() -> void:
 		events.building_info_ready.connect(_on_building_info_ready)
 
 
-func _on_budget_updated(balance: int, _income: int, _expenses: int) -> void:
+func _on_budget_updated(balance: int, income: int, expenses: int) -> void:
 	economy_changed.emit(balance)
+	finance_snapshot_updated.emit(balance, income, expenses)
 
 
 func _on_population_changed(new_population: int, _delta: int) -> void:

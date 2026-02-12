@@ -381,8 +381,8 @@ func _on_panel_opened(panel_name: String) -> void:
 			elif not dashboard_panel.is_visible:
 				dashboard_panel.toggle()
 		"budget":
-			# Legacy budget panel retired. Keep event route for compatibility.
-			pass
+			if CityEventBus:
+				CityEventBus.finance_panel_toggled.emit(true)
 		"advisors":
 			if advisor_panel and not advisor_panel.visible:
 				advisor_panel.show_panel()
@@ -408,8 +408,8 @@ func _on_panel_closed(panel_name: String) -> void:
 			elif dashboard_panel.is_visible:
 				dashboard_panel.toggle()
 		"budget":
-			# Legacy budget panel retired. Keep event route for compatibility.
-			pass
+			if CityEventBus:
+				CityEventBus.finance_panel_toggled.emit(false)
 		"advisors":
 			if advisor_panel and advisor_panel.visible:
 				advisor_panel.hide_panel()
