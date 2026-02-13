@@ -17,6 +17,7 @@ var _connected_bus: Node = null
 
 func _ready() -> void:
 	visible = false
+	_set_action_buttons_enabled(false)
 	upgrade_button.pressed.connect(_on_upgrade_pressed)
 	demolish_button.pressed.connect(_on_demolish_pressed)
 	_bind_event_bus(_get_event_bus())
@@ -24,6 +25,7 @@ func _ready() -> void:
 func show_building(building_id: String, payload: Dictionary) -> void:
 	_building_id = building_id
 	_apply_payload(payload)
+	_set_action_buttons_enabled(true)
 	visible = true
 
 
@@ -33,6 +35,7 @@ func update_building_stats(payload: Dictionary) -> void:
 
 func hide_building() -> void:
 	_building_id = ""
+	_set_action_buttons_enabled(false)
 	visible = false
 
 func _on_building_stats_changed(building_id: String, payload: Dictionary) -> void:
@@ -78,3 +81,10 @@ func _bind_event_bus(bus: Node) -> void:
 		if not bus.building_stats_changed.is_connected(_on_building_stats_changed):
 			bus.building_stats_changed.connect(_on_building_stats_changed)
 		_connected_bus = bus
+
+
+func _set_action_buttons_enabled(enabled: bool) -> void:
+	if upgrade_button:
+		upgrade_button.disabled = not enabled
+	if demolish_button:
+		demolish_button.disabled = not enabled

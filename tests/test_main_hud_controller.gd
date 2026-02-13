@@ -13,8 +13,13 @@ class FakeBus extends Node:
 	signal finance_panel_toggled(visible: bool)
 	signal finance_snapshot_updated(balance: int, income: int, expenses: int)
 	signal build_mode_changed(mode_id: String)
+	signal building_upgrade_requested(building_id: String)
+	signal building_demolish_requested(building_id: String)
 
 class FakeInfoPopup extends Control:
+	signal upgrade_requested(building_id: String)
+	signal demolish_requested(building_id: String)
+
 	var shown_with_id: String = ""
 	var shown_payload: Dictionary = {}
 	var hide_called: bool = false
@@ -232,6 +237,28 @@ func test_connect_event_bus_is_idempotent() -> void:
 	bus.building_selected.emit("b-1", {"name": "Road"})
 
 	assert_eq(popup.show_count, 1)
+
+	hud.free()
+	bus.free()
+
+
+func test_popup_actions_route_to_event_bus() -> void:
+	var bus = FakeBus.new()
+	var upgraded: Array[String] = []
+	var demolished: Array[String] = []
+	bus.building_upgrade_requested.connect(func(building_id: String): upgraded.append(building_id))
+	bus.building_demolish_requested.connect(func(building_id: String): demolished.append(building_id))
+
+	var hud = _build_hud(bus)
+	add_child(bus)
+	add_child(hud)
+	var popup = hud.get_node("Root/BuildingInfoPopup") as FakeInfoPopup
+
+	popup.emit_signal("upgrade_requested", "b-9")
+	popup.emit_signal("demolish_requested", "b-7")
+
+	assert_eq(upgraded, ["b-9"])
+	assert_eq(demolished, ["b-7"])
 
 	hud.free()
 	bus.free()

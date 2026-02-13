@@ -181,8 +181,8 @@ func apply_serialized_settings(data: Dictionary, apply_now: bool = true) -> void
 	volumetric_fog_enabled = bool(data.get("volumetric_fog_enabled", volumetric_fog_enabled))
 	glow_enabled = bool(data.get("glow_enabled", glow_enabled))
 	ssao_power = clampf(float(data.get("ssao_power", ssao_power)), 0.1, 4.0)
-	tonemap_exposure = float(data.get("tonemap_exposure", tonemap_exposure))
-	tonemap_white = float(data.get("tonemap_white", tonemap_white))
+	tonemap_exposure = clampf(float(data.get("tonemap_exposure", tonemap_exposure)), 0.4, 2.2)
+	tonemap_white = clampf(float(data.get("tonemap_white", tonemap_white)), 0.8, 2.5)
 	auto_quality_enabled = bool(data.get("auto_quality_enabled", auto_quality_enabled))
 
 	if apply_now:

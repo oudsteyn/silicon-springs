@@ -189,3 +189,17 @@ func test_downgrading_from_ultra_resets_ssao_power() -> void:
 	mgr.apply_preset(env, mgr.QualityPreset.LOW)
 
 	assert_approx(env.ssao_power, 1.0, 0.001)
+
+
+func test_apply_serialized_settings_clamps_visual_ranges() -> void:
+	var mgr = _track_node(GraphicsSettingsManagerScript.new())
+	mgr.apply_serialized_settings({
+		"ssao_power": 99.0,
+		"tonemap_exposure": -5.0,
+		"tonemap_white": 99.0
+	}, false)
+	var settings = mgr.get_current_settings()
+
+	assert_approx(float(settings.get("ssao_power", 0.0)), 4.0, 0.001)
+	assert_approx(float(settings.get("tonemap_exposure", 0.0)), 0.4, 0.001)
+	assert_approx(float(settings.get("tonemap_white", 0.0)), 2.5, 0.001)

@@ -60,3 +60,23 @@ func test_set_event_bus_same_bus_does_not_duplicate_connections() -> void:
 
 	popup.free()
 	bus.free()
+
+
+func test_action_buttons_enable_only_when_building_selected() -> void:
+	var popup = PopupScene.instantiate()
+	add_child(popup)
+
+	var upgrade_button := popup.get_node("Margin/VBox/Actions/UpgradeButton") as Button
+	var demolish_button := popup.get_node("Margin/VBox/Actions/DemolishButton") as Button
+	assert_true(upgrade_button.disabled)
+	assert_true(demolish_button.disabled)
+
+	popup.hide_building()
+	assert_true(upgrade_button.disabled)
+	assert_true(demolish_button.disabled)
+
+	popup.show_building("b-42", {"name": "Depot"})
+	assert_false(upgrade_button.disabled)
+	assert_false(demolish_button.disabled)
+
+	popup.free()

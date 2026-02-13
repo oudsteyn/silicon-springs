@@ -11,11 +11,19 @@ signal build_mode_changed(mode_id: String)
 signal building_selected(building_id: String, payload: Dictionary)
 signal building_deselected()
 signal building_stats_changed(building_id: String, payload: Dictionary)
+signal building_upgrade_requested(building_id: String)
+signal building_demolish_requested(building_id: String)
+
+var _selected_building: Node2D = null
 
 
 func _ready() -> void:
 	if not build_mode_changed.is_connected(_process_build_mode_request):
 		build_mode_changed.connect(_process_build_mode_request)
+	if not building_upgrade_requested.is_connected(_process_upgrade_request):
+		building_upgrade_requested.connect(_process_upgrade_request)
+	if not building_demolish_requested.is_connected(_process_demolish_request):
+		building_demolish_requested.connect(_process_demolish_request)
 
 	var events = get_node_or_null("/root/Events")
 	if events == null:
@@ -70,12 +78,14 @@ func _on_building_selected(building: Node2D) -> void:
 	if building == null:
 		return
 
+	_selected_building = building
 	var building_id = str(building.get_instance_id())
 	var payload = _make_payload(building)
 	building_selected.emit(building_id, payload)
 
 
 func _on_building_deselected() -> void:
+	_selected_building = null
 	building_deselected.emit()
 
 
@@ -111,3 +121,31 @@ func _map_build_mode_to_building_id(mode_id: String) -> String:
 			return "police_station"
 		_:
 			return mode_id
+
+
+func _process_upgrade_request(building_id: String) -> void:
+	var selected = _selected_building
+	if not is_instance_valid(selected):
+		return
+	if str(selected.get_instance_id()) != building_id:
+		return
+
+	var events = get_node_or_null("/root/Events")
+	if events and events.has_signal("upgrade_requested"):
+		events.upgrade_requested.emit(selected)
+
+
+func _process_demolish_request(building_id: String) -> void:
+	var selected = _selected_building
+	if not is_instance_valid(selected):
+		return
+	if str(selected.get_instance_id()) != building_id:
+		return
+
+	var grid_cell = selected.get("grid_cell")
+	if typeof(grid_cell) != TYPE_VECTOR2I:
+		return
+
+	var events = get_node_or_null("/root/Events")
+	if events and events.has_signal("demolish_requested"):
+		events.demolish_requested.emit(grid_cell)

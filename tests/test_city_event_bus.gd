@@ -12,6 +12,7 @@ class DummyBuilding extends Node2D:
 	var workers: int = 15
 	var workers_required: int = 20
 	var efficiency: float = 0.75
+	var grid_cell: Vector2i = Vector2i(11, 17)
 
 class DummyEvents extends Node:
 	signal budget_updated(balance: int, income: int, expenses: int)
@@ -21,6 +22,8 @@ class DummyEvents extends Node:
 	signal building_selected(building: Node2D)
 	signal building_deselected()
 	signal building_info_ready(building: Node2D, payload: Dictionary)
+	signal upgrade_requested(building: Node2D)
+	signal demolish_requested(cell: Vector2i)
 
 var _money: int = -1
 var _income: int = -1
@@ -133,3 +136,64 @@ func test_build_mode_entered_passthrough_does_not_reemit_to_events() -> void:
 	assert_eq(observed_bus.size() >= 1, true)
 	assert_eq(observed_bus[0], "road")
 	assert_size(forwarded, 0)
+
+
+func test_popup_action_signals_exist() -> void:
+	var bus = _track_node(CityEventBusScript.new())
+	assert_true(bus.has_signal("building_upgrade_requested"))
+	assert_true(bus.has_signal("building_demolish_requested"))
+
+
+func test_upgrade_request_for_selected_building_forwards_to_events() -> void:
+	var events = _get_events_node()
+	var bus = _track_node(CityEventBusScript.new())
+	var building = _track_node(DummyBuilding.new())
+	get_tree().root.add_child(bus)
+
+	var forwarded: Array[Node2D] = []
+	if events.has_signal("upgrade_requested"):
+		events.connect("upgrade_requested", func(target: Node2D): forwarded.append(target))
+
+	bus._on_building_selected(building)
+	bus.emit_signal("building_upgrade_requested", str(building.get_instance_id()))
+
+	assert_size(forwarded, 1)
+	assert_eq(forwarded[0], building)
+
+
+func test_demolish_request_for_selected_building_forwards_cell_to_events() -> void:
+	var events = _get_events_node()
+	var bus = _track_node(CityEventBusScript.new())
+	var building = _track_node(DummyBuilding.new())
+	get_tree().root.add_child(bus)
+
+	var forwarded_cells: Array[Vector2i] = []
+	if events.has_signal("demolish_requested"):
+		events.connect("demolish_requested", func(cell: Vector2i): forwarded_cells.append(cell))
+
+	bus._on_building_selected(building)
+	bus.emit_signal("building_demolish_requested", str(building.get_instance_id()))
+
+	assert_size(forwarded_cells, 1)
+	assert_eq(forwarded_cells[0], building.grid_cell)
+
+
+func test_popup_actions_ignore_non_selected_building_id() -> void:
+	var events = _get_events_node()
+	var bus = _track_node(CityEventBusScript.new())
+	var building = _track_node(DummyBuilding.new())
+	get_tree().root.add_child(bus)
+
+	var upgrade_count := 0
+	var demolish_count := 0
+	if events.has_signal("upgrade_requested"):
+		events.connect("upgrade_requested", func(_target: Node2D): upgrade_count += 1)
+	if events.has_signal("demolish_requested"):
+		events.connect("demolish_requested", func(_cell: Vector2i): demolish_count += 1)
+
+	bus._on_building_selected(building)
+	bus.emit_signal("building_upgrade_requested", "other-id")
+	bus.emit_signal("building_demolish_requested", "other-id")
+
+	assert_eq(upgrade_count, 0)
+	assert_eq(demolish_count, 0)

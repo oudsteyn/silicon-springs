@@ -23,6 +23,7 @@ func set_event_bus(bus: Node) -> void:
 
 func _ready() -> void:
 	_connect_event_bus()
+	_connect_popup_actions()
 	var build_menu_has_category_signal := build_menu and build_menu.has_signal("build_category_selected")
 	if build_menu_has_category_signal:
 		build_menu.connect("build_category_selected", Callable(self, "_on_build_category_selected"))
@@ -33,6 +34,16 @@ func _ready() -> void:
 		services_button.pressed.connect(func(): _on_build_category_selected("services"))
 	if finance_panel:
 		finance_panel.visible = false
+
+
+func _connect_popup_actions() -> void:
+	if info_popup == null:
+		return
+	if info_popup.has_signal("upgrade_requested") and not info_popup.upgrade_requested.is_connected(_on_popup_upgrade_requested):
+		info_popup.upgrade_requested.connect(_on_popup_upgrade_requested)
+	if info_popup.has_signal("demolish_requested") and not info_popup.demolish_requested.is_connected(_on_popup_demolish_requested):
+		info_popup.demolish_requested.connect(_on_popup_demolish_requested)
+
 
 func _connect_event_bus() -> void:
 	var bus = _get_event_bus()
@@ -56,6 +67,18 @@ func _connect_event_bus() -> void:
 		bus.finance_snapshot_updated.connect(_on_finance_snapshot_updated)
 	if bus.has_signal("finance_panel_toggled") and not bus.finance_panel_toggled.is_connected(_on_finance_panel_toggled):
 		bus.finance_panel_toggled.connect(_on_finance_panel_toggled)
+
+
+func _on_popup_upgrade_requested(building_id: String) -> void:
+	var bus = _get_event_bus()
+	if bus and bus.has_signal("building_upgrade_requested"):
+		bus.emit_signal("building_upgrade_requested", building_id)
+
+
+func _on_popup_demolish_requested(building_id: String) -> void:
+	var bus = _get_event_bus()
+	if bus and bus.has_signal("building_demolish_requested"):
+		bus.emit_signal("building_demolish_requested", building_id)
 
 func _get_event_bus() -> Node:
 	if _event_bus:
