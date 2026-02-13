@@ -188,6 +188,8 @@ func _create_new_ui() -> void:
 	tool_palette.demolish_selected.connect(_on_demolish_selected)
 	tool_palette.overlay_selected.connect(_on_overlay_selected)
 	tool_palette.setting_selected.connect(_on_setting_selected)
+	if CityEventBus and not CityEventBus.build_mode_changed.is_connected(_on_city_build_mode_changed):
+		CityEventBus.build_mode_changed.connect(_on_city_build_mode_changed)
 
 	# Connect dashboard panel_requested signal
 	dashboard_panel.panel_requested.connect(_on_dashboard_panel_requested)
@@ -330,6 +332,32 @@ func _input(event: InputEvent) -> void:
 # Tool Palette signal handlers
 func _on_building_selected(building_id: String) -> void:
 	game_world.enter_build_mode(building_id)
+
+
+func _on_city_build_mode_changed(mode_id: String) -> void:
+	var building_id = _map_hud_build_mode_to_building_id(mode_id)
+	if building_id == "":
+		return
+	if not game_world:
+		return
+	# Avoid re-entering the same mode from CityEventBus passthrough events.
+	if bool(game_world.get("build_mode")) and str(game_world.get("current_building_id")) == building_id:
+		return
+	game_world.enter_build_mode(building_id)
+
+
+func _map_hud_build_mode_to_building_id(mode_id: String) -> String:
+	match mode_id:
+		"roads":
+			return "road"
+		"zoning":
+			return "residential_zone"
+		"utilities":
+			return "power_line"
+		"services":
+			return "police_station"
+		_:
+			return ""
 
 
 func _on_zone_selected(zone_type: int) -> void:
