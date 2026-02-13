@@ -271,6 +271,8 @@ func _connect_ui_manager() -> void:
 func _configure_runtime_graphics_quality() -> void:
 	if GraphicsSettingsManager and world_environment and world_environment.environment:
 		GraphicsSettingsManager.bind_environment(world_environment.environment)
+		if GraphicsSettingsManager.has_method("apply_terrain_atmosphere_profile"):
+			GraphicsSettingsManager.apply_terrain_atmosphere_profile(world_environment.environment, "city_scale")
 	if RenderPerformanceMonitor and GraphicsSettingsManager:
 		RenderPerformanceMonitor.set_graphics_apply_callback(_apply_recommended_quality)
 

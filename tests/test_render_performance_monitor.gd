@@ -79,3 +79,16 @@ func test_cooldown_allows_next_change_after_threshold() -> void:
 	if _applied_presets.size() >= 2:
 		assert_eq(_applied_presets[0], monitor.QualityTier.LOW)
 		assert_eq(_applied_presets[1], monitor.QualityTier.HIGH)
+
+
+func test_evaluate_terrain_runtime_budget_surfaces_failures() -> void:
+	var monitor = _track_node(RenderPerfMonitorScript.new())
+	var result = monitor.evaluate_terrain_runtime_budget({
+		"avg_frame_ms": 30.0,
+		"p95_frame_ms": 45.0,
+		"chunk_rebuilds_per_second": 50.0,
+		"gpu_memory_mb": 5000.0
+	})
+
+	assert_false(bool(result.get("pass", true)))
+	assert_not_empty(result.get("failures", []))

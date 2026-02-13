@@ -2,6 +2,11 @@ extends Node
 class_name TerrainSystem
 ## Core terrain data and logic for elevation, water, and natural features
 
+const ProceduralTerrainGeneratorScript = preload("res://src/terrain/procedural_terrain_generator.gd")
+const TerrainNoiseProfileScript = preload("res://src/terrain/terrain_noise_profile.gd")
+const HydraulicErosionScript = preload("res://src/terrain/hydraulic_erosion.gd")
+const TerrainLodManagerScript = preload("res://src/terrain/terrain_lod_manager.gd")
+
 # Terrain type enums
 enum WaterType { NONE, POND, LAKE, RIVER }
 enum FeatureType { NONE, TREE_SPARSE, TREE_DENSE, ROCK_SMALL, ROCK_LARGE, BEACH }
@@ -21,8 +26,20 @@ var current_biome: Resource = null  # BiomePreset
 # Reference to grid system for building checks
 var grid_system: Node = null
 
+# Runtime terrain pipeline components
+var _runtime_pipeline_enabled: bool = false
+var _runtime_erosion_iterations: int = 0
+var _runtime_noise_profile: Resource = null
+var _terrain_generator = ProceduralTerrainGeneratorScript.new()
+var _hydraulic_erosion = HydraulicErosionScript.new()
+var _lod_manager = TerrainLodManagerScript.new()
+var _runtime_heightmap: PackedFloat32Array = PackedFloat32Array()
+var _runtime_heightmap_size: int = 0
+var _runtime_sea_level: float = 0.0
+
 # Signals
 signal terrain_changed(cells: Array)
+signal runtime_heightmap_generated(heightmap: PackedFloat32Array, size: int, sea_level: float)
 
 
 func _ready() -> void:
@@ -44,6 +61,35 @@ func set_grid_system(gs: Node) -> void:
 
 func set_biome(biome: Resource) -> void:
 	current_biome = biome
+
+
+func configure_runtime_pipeline(enabled: bool, profile: Resource = null, erosion_iterations: int = -1) -> void:
+	_runtime_pipeline_enabled = enabled
+	_runtime_noise_profile = profile
+	if erosion_iterations >= 0:
+		_runtime_erosion_iterations = erosion_iterations
+
+
+func is_runtime_pipeline_enabled() -> bool:
+	return _runtime_pipeline_enabled
+
+
+func get_runtime_lod_plan(camera_world_pos: Vector3, chunk_size_m: float = 128.0) -> Dictionary:
+	if _lod_manager == null:
+		return {}
+	return _lod_manager.compute_visible_chunks(camera_world_pos, chunk_size_m)
+
+
+func get_runtime_heightmap() -> PackedFloat32Array:
+	return _runtime_heightmap
+
+
+func get_runtime_heightmap_size() -> int:
+	return _runtime_heightmap_size
+
+
+func get_runtime_sea_level() -> float:
+	return _runtime_sea_level
 
 
 # ============================================
@@ -347,6 +393,13 @@ func _check_cell_buildable(cell: Vector2i, building_type: String, building_size:
 # ============================================
 
 func generate_initial_terrain(map_seed: int, biome: Resource = null) -> void:
+	if _runtime_pipeline_enabled:
+		_generate_runtime_pipeline_terrain(map_seed, biome)
+		return
+	_generate_legacy_initial_terrain(map_seed, biome)
+
+
+func _generate_legacy_initial_terrain(map_seed: int, biome: Resource = null) -> void:
 	var noise = FastNoiseLite.new()
 	noise.seed = map_seed
 	noise.frequency = 0.015  # Good frequency for 128x128 map
@@ -409,6 +462,54 @@ func generate_initial_terrain(map_seed: int, biome: Resource = null) -> void:
 		for y in range(GridConstants.GRID_HEIGHT):
 			all_cells.append(Vector2i(x, y))
 	_emit_terrain_changed(all_cells)
+
+
+func _generate_runtime_pipeline_terrain(map_seed: int, biome: Resource = null) -> void:
+	if biome:
+		set_biome(biome)
+
+	var profile = _runtime_noise_profile
+	if profile == null:
+		profile = TerrainNoiseProfileScript.new()
+	if profile.get("seed") != null:
+		profile.seed = map_seed
+
+	var size = GridConstants.GRID_WIDTH
+	var height = _terrain_generator.generate_heightmap(size, profile)
+	if _runtime_erosion_iterations > 0:
+		_hydraulic_erosion.erode(height, size, _runtime_erosion_iterations, map_seed + 13)
+	_runtime_heightmap = height
+	_runtime_heightmap_size = size
+
+	elevation.clear()
+	water.clear()
+	features.clear()
+
+	var sea_level = float(profile.sea_level) if profile.get("sea_level") != null else 28.0
+	_runtime_sea_level = sea_level
+	var max_height = float(profile.height_scale) if profile.get("height_scale") != null else 450.0
+	var height_span = max(max_height - sea_level, 1.0)
+	for y in range(size):
+		for x in range(size):
+			var cell = Vector2i(x, y)
+			var h = height[y * size + x]
+			var depth = sea_level - h
+			if depth > 0.0:
+				elevation[cell] = -3 if depth > sea_level * 0.35 else -2
+				water[cell] = WaterType.LAKE
+			else:
+				var normalized = clamp((h - sea_level) / height_span, 0.0, 1.0)
+				elevation[cell] = clampi(int(round(normalized * float(MAX_ELEVATION))), 0, MAX_ELEVATION)
+
+	_create_beaches()
+	_scatter_features(0.18, 0.1, map_seed + 41)
+
+	var all_cells: Array = []
+	for x in range(GridConstants.GRID_WIDTH):
+		for y in range(GridConstants.GRID_HEIGHT):
+			all_cells.append(Vector2i(x, y))
+	_emit_terrain_changed(all_cells)
+	runtime_heightmap_generated.emit(_runtime_heightmap, _runtime_heightmap_size, _runtime_sea_level)
 
 
 func _generate_river(map_seed: int) -> void:

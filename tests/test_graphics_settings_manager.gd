@@ -215,3 +215,14 @@ func test_apply_serialized_settings_clamps_invalid_enum_values() -> void:
 
 	assert_eq(int(settings.get("preset", -1)), int(mgr.QualityPreset.HIGH))
 	assert_eq(int(settings.get("shadow_quality", -1)), int(mgr.ShadowQuality.HIGH))
+
+
+func test_apply_terrain_atmosphere_profile_enables_fog_and_dof() -> void:
+	var mgr = _track_node(GraphicsSettingsManagerScript.new())
+	var env = Environment.new()
+
+	var applied = mgr.apply_terrain_atmosphere_profile(env, "city_scale")
+
+	assert_true(env.volumetric_fog_enabled)
+	assert_true(bool(applied.get("dof_far_enabled", false)))
+	assert_gt(float(applied.get("dof_far_distance", 0.0)), 1000.0)

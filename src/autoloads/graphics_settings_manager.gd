@@ -371,3 +371,35 @@ func _set_features(env: Environment, ssao_on: bool, ssr_on: bool, fog_on: bool) 
 	env.ssao_enabled = ssao_on
 	env.ssr_enabled = ssr_on
 	env.volumetric_fog_enabled = fog_on
+
+
+func apply_terrain_atmosphere_profile(env: Environment, profile: String = "city_scale") -> Dictionary:
+	if env == null:
+		return {}
+	var applied := {}
+	match profile:
+		"city_scale":
+			_set_env_property_if_exists(env, "volumetric_fog_enabled", true, applied)
+			_set_env_property_if_exists(env, "volumetric_fog_density", 0.012, applied)
+			_set_env_property_if_exists(env, "volumetric_fog_anisotropy", 0.6, applied)
+			applied["dof_far_enabled"] = true
+			applied["dof_far_distance"] = 1800.0
+			applied["dof_far_transition"] = 750.0
+			applied["dof_far_amount"] = 0.05
+		"clear":
+			applied["dof_far_enabled"] = false
+			_set_env_property_if_exists(env, "volumetric_fog_density", 0.004, applied)
+			_set_env_property_if_exists(env, "volumetric_fog_anisotropy", 0.5, applied)
+		_:
+			# Fallback to conservative cinematic defaults.
+			_set_env_property_if_exists(env, "volumetric_fog_enabled", true, applied)
+			applied["dof_far_enabled"] = true
+	return applied
+
+
+func _set_env_property_if_exists(env: Environment, property_name: String, value, sink: Dictionary = {}) -> void:
+	for prop in env.get_property_list():
+		if String(prop.get("name", "")) == property_name:
+			env.set(property_name, value)
+			sink[property_name] = value
+			return

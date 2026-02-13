@@ -81,6 +81,8 @@ var action_feedback_effects: ActionFeedbackEffects = null
 
 # Fine grid settings
 const FINE_GRID_RADIUS: int = 8  # Show grid within this many cells of cursor
+const TERRAIN_RUNTIME_PIPELINE_ENABLED: bool = true
+const TERRAIN_RUNTIME_EROSION_ITERATIONS: int = 1800
 
 # Tool modes
 enum ToolMode { SELECT, PAN, BUILD, DEMOLISH, ZONE, TERRAIN }
@@ -397,7 +399,15 @@ func _setup_terrain() -> void:
 		terrain_renderer.set_terrain_system(terrain_system)
 		terrain_renderer.set_grid_system(grid_system)
 		terrain_renderer.set_camera(camera)
+		if terrain_renderer.has_method("configure_runtime_terrain_pipeline"):
+			terrain_renderer.configure_runtime_terrain_pipeline(terrain_system)
 		terrain_system.set_grid_system(grid_system)
+		if terrain_system.has_method("configure_runtime_pipeline"):
+			terrain_system.configure_runtime_pipeline(
+				TERRAIN_RUNTIME_PIPELINE_ENABLED,
+				null,
+				TERRAIN_RUNTIME_EROSION_ITERATIONS
+			)
 
 		# Generate initial terrain with default seed
 		terrain_system.generate_initial_terrain(randi())

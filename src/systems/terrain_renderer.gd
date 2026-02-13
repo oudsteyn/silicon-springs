@@ -2,6 +2,9 @@ extends Node2D
 class_name TerrainRenderer
 ## Procedural terrain rendering with viewport culling for performance
 
+const TerrainMeshBridgeScript = preload("res://src/terrain/terrain_mesh_bridge.gd")
+const TerrainClipmapStreamerScript = preload("res://src/terrain/terrain_clipmap_streamer.gd")
+const TerrainDetailScatterScript = preload("res://src/terrain/terrain_detail_scatter.gd")
 
 # References
 var terrain_system: TerrainSystem = null
@@ -18,6 +21,14 @@ var chunk_textures: Dictionary = {}  # Vector2i -> ImageTexture
 # Track camera position to detect movement and trigger redraws
 var _last_camera_position: Vector2 = Vector2.ZERO
 var _last_camera_zoom: float = 1.0
+var _runtime_heightmap: PackedFloat32Array = PackedFloat32Array()
+var _runtime_heightmap_size: int = 0
+var _runtime_sea_level: float = 0.0
+var _runtime_visible_chunks: Dictionary = {}
+var _runtime_detail_transforms: Dictionary = {"grass": [], "rocks": []}
+var _mesh_bridge = TerrainMeshBridgeScript.new()
+var _clipmap_streamer = TerrainClipmapStreamerScript.new()
+var _detail_scatter = TerrainDetailScatterScript.new()
 
 # Color palette for elevation levels
 const ELEVATION_COLORS = {
@@ -58,8 +69,20 @@ func set_terrain_system(ts: TerrainSystem) -> void:
 	terrain_system = ts
 	if terrain_system:
 		terrain_system.terrain_changed.connect(_on_terrain_changed)
+		if terrain_system.has_signal("runtime_heightmap_generated") and not terrain_system.runtime_heightmap_generated.is_connected(_on_runtime_heightmap_generated):
+			terrain_system.runtime_heightmap_generated.connect(_on_runtime_heightmap_generated)
 	# Mark all chunks as dirty for initial render
 	_mark_all_chunks_dirty()
+
+
+func configure_runtime_terrain_pipeline(ts: TerrainSystem) -> void:
+	set_terrain_system(ts)
+	if terrain_system and terrain_system.has_method("get_runtime_heightmap"):
+		var heightmap = terrain_system.get_runtime_heightmap()
+		if heightmap.size() > 0:
+			var size = terrain_system.get_runtime_heightmap_size()
+			var sea_level = terrain_system.get_runtime_sea_level()
+			_on_runtime_heightmap_generated(heightmap, size, sea_level)
 
 
 func set_grid_system(gs: Node) -> void:
@@ -82,7 +105,21 @@ func _process(_delta: float) -> void:
 		if position_changed or zoom_changed:
 			_last_camera_position = camera.position
 			_last_camera_zoom = camera.zoom.x
+			var camera3 = Vector3(camera.position.x, 0.0, camera.position.y)
+			var update = _clipmap_streamer.update_camera(camera3)
+			_runtime_visible_chunks = update.get("visible_chunks", {})
 			queue_redraw()
+
+
+func get_runtime_visible_chunks() -> Dictionary:
+	return _runtime_visible_chunks
+
+
+func get_runtime_detail_counts() -> Dictionary:
+	return {
+		"grass": _runtime_detail_transforms.get("grass", []).size(),
+		"rocks": _runtime_detail_transforms.get("rocks", []).size()
+	}
 
 
 func _mark_all_chunks_dirty() -> void:
@@ -127,6 +164,14 @@ func _draw() -> void:
 		for cy in range(start_chunk.y, end_chunk.y + 1):
 			var chunk_pos = Vector2i(cx, cy)
 			_draw_chunk(chunk_pos)
+
+
+func _on_runtime_heightmap_generated(heightmap: PackedFloat32Array, size: int, sea_level: float) -> void:
+	_runtime_heightmap = heightmap
+	_runtime_heightmap_size = size
+	_runtime_sea_level = sea_level
+	_runtime_detail_transforms = _detail_scatter.build_scatter_transforms(heightmap, size, 1.0, sea_level, 1337)
+	_runtime_visible_chunks = _clipmap_streamer.update_camera(Vector3.ZERO).get("visible_chunks", {})
 
 
 func _draw_chunk(chunk_pos: Vector2i) -> void:

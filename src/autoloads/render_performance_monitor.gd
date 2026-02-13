@@ -1,4 +1,5 @@
 extends Node
+const TerrainPerformanceGateScript = preload("res://src/terrain/terrain_performance_gate.gd")
 
 signal quality_recommendation_changed(recommended_tier: int, avg_frame_ms: float)
 
@@ -21,6 +22,7 @@ var _graphics_apply_callback: Callable = Callable()
 var _last_recommendation: int = -1
 var _seconds_since_last_change: float = 9999.0
 var _seconds_since_check: float = 0.0
+var _terrain_gate = TerrainPerformanceGateScript.new()
 
 func _process(delta: float) -> void:
 	if not enabled:
@@ -84,3 +86,7 @@ func _apply_hysteresis(current_tier: int, recommended_tier: int) -> int:
 	if recommended_tier > current_tier and get_average_frame_time_ms() > (1000.0 / 60.0) * 0.72:
 		return current_tier
 	return recommended_tier
+
+
+func evaluate_terrain_runtime_budget(metrics: Dictionary) -> Dictionary:
+	return _terrain_gate.evaluate(metrics)
