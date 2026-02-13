@@ -264,6 +264,10 @@ func _draw_road(image: Image, w: int, h: int, neighbors: Dictionary = {}) -> voi
 			for x in range(edge_width):
 				image.set_pixel(w - 1 - x, y, sidewalk_color)
 
+	# Curved corner geometry for L-turn road tiles.
+	if connection_count == 2 and has_vertical and has_horizontal:
+		_carve_road_inner_corner(image, w, h, has_north, has_south, has_east, has_west, sidewalk_color)
+
 	# Determine road type and draw appropriate lane lines
 	if connection_count >= 3:
 		# Intersection (3-way or 4-way) - draw crosswalks
@@ -362,6 +366,58 @@ func _draw_road(image: Image, w: int, h: int, neighbors: Dictionary = {}) -> voi
 			for y in range(h):
 				if (x + y) % 16 < 2:
 					image.set_pixel(x, y, edge_col)
+
+
+func _carve_road_inner_corner(
+	image: Image,
+	w: int,
+	h: int,
+	has_north: bool,
+	has_south: bool,
+	has_east: bool,
+	has_west: bool,
+	sidewalk_color: Color
+) -> void:
+	var cx = int(w * 0.5)
+	var cy = int(h * 0.5)
+	var radius = float(mini(w, h)) * 0.42
+	var radius_sq = radius * radius
+	var quadrant = _get_corner_quadrant(has_north, has_south, has_east, has_west)
+
+	for x in range(w):
+		for y in range(h):
+			if not _is_in_quadrant(x, y, cx, cy, quadrant):
+				continue
+			var dx = float(x - cx)
+			var dy = float(y - cy)
+			if (dx * dx + dy * dy) > radius_sq:
+				image.set_pixel(x, y, sidewalk_color)
+
+
+func _get_corner_quadrant(has_north: bool, has_south: bool, has_east: bool, has_west: bool) -> String:
+	if has_north and has_east:
+		return "sw"
+	if has_south and has_east:
+		return "nw"
+	if has_south and has_west:
+		return "ne"
+	if has_north and has_west:
+		return "se"
+	return ""
+
+
+func _is_in_quadrant(x: int, y: int, cx: int, cy: int, quadrant: String) -> bool:
+	match quadrant:
+		"sw":
+			return x <= cx and y >= cy
+		"se":
+			return x >= cx and y >= cy
+		"nw":
+			return x <= cx and y <= cy
+		"ne":
+			return x >= cx and y <= cy
+		_:
+			return false
 
 
 func _draw_power_line(image: Image, w: int, h: int, _base_color: Color, neighbors: Dictionary = {}) -> void:

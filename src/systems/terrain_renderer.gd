@@ -60,6 +60,10 @@ const WATER_COLORS = {
 const TREE_COLOR: Color = Color(0.15, 0.35, 0.15)
 const ROCK_COLOR: Color = Color(0.45, 0.45, 0.48)
 const BEACH_COLOR: Color = Color(0.85, 0.8, 0.6)
+const TERRAIN_BLEND_ALPHA: float = 0.28
+const TERRAIN_BLEND_EDGE_WIDTH: float = 9.0
+const TERRAIN_BLEND_CORNER_RADIUS: float = 12.0
+const TERRAIN_BLEND_COLOR_DELTA: float = 0.025
 
 
 func _ready() -> void:
@@ -268,11 +272,15 @@ func _draw_cell(cell: Vector2i) -> void:
 	# Draw base terrain color
 	var base_color = _elevation_to_color(elev)
 	draw_rect(Rect2(pos, Vector2(GridConstants.CELL_SIZE, GridConstants.CELL_SIZE)), base_color)
+	_draw_cell_blend(cell, pos, elev, water_type)
 
 	# Draw water overlay if present
 	if water_type != TerrainSystem.WaterType.NONE:
 		var water_color = WATER_COLORS.get(water_type, Color.TRANSPARENT)
-		draw_rect(Rect2(pos, Vector2(GridConstants.CELL_SIZE, GridConstants.CELL_SIZE)), water_color)
+		if _is_isolated_pond_cell(cell, water_type):
+			_draw_round_pond(pos, water_color)
+		else:
+			draw_rect(Rect2(pos, Vector2(GridConstants.CELL_SIZE, GridConstants.CELL_SIZE)), water_color)
 		# Add subtle wave pattern
 		_draw_water_detail(pos, water_type)
 
@@ -431,6 +439,159 @@ func _draw_elevation_hint(pos: Vector2, elev: int) -> void:
 		draw_line(pos + Vector2(0, GridConstants.CELL_SIZE - 2), pos + Vector2(GridConstants.CELL_SIZE, GridConstants.CELL_SIZE - 2), shadow_color, 2)
 		# Right edge shadow
 		draw_line(pos + Vector2(GridConstants.CELL_SIZE - 2, 0), pos + Vector2(GridConstants.CELL_SIZE - 2, GridConstants.CELL_SIZE), shadow_color, 2)
+
+
+func _draw_cell_blend(cell: Vector2i, pos: Vector2, elev: int, water_type: TerrainSystem.WaterType) -> void:
+	if terrain_system == null:
+		return
+	var current_surface = _get_surface_class(elev, water_type)
+	var current_color = _surface_color(current_surface, elev, water_type)
+
+	var north_diff = _draw_surface_blend_toward_neighbor(cell, pos, Vector2i.UP, current_surface, current_color)
+	var south_diff = _draw_surface_blend_toward_neighbor(cell, pos, Vector2i.DOWN, current_surface, current_color)
+	var east_diff = _draw_surface_blend_toward_neighbor(cell, pos, Vector2i.RIGHT, current_surface, current_color)
+	var west_diff = _draw_surface_blend_toward_neighbor(cell, pos, Vector2i.LEFT, current_surface, current_color)
+
+	if north_diff and east_diff:
+		_draw_blend_corner(pos + Vector2(GridConstants.CELL_SIZE, 0.0), current_color)
+	if south_diff and east_diff:
+		_draw_blend_corner(pos + Vector2(GridConstants.CELL_SIZE, GridConstants.CELL_SIZE), current_color)
+	if south_diff and west_diff:
+		_draw_blend_corner(pos + Vector2(0.0, GridConstants.CELL_SIZE), current_color)
+	if north_diff and west_diff:
+		_draw_blend_corner(pos, current_color)
+
+
+func _draw_surface_blend_toward_neighbor(
+	cell: Vector2i,
+	pos: Vector2,
+	dir: Vector2i,
+	current_surface: String,
+	current_color: Color
+) -> bool:
+	var neighbor = cell + dir
+	if not GridConstants.is_valid_cell(neighbor):
+		return false
+
+	var neighbor_elev = terrain_system.get_elevation(neighbor)
+	var neighbor_water = terrain_system.get_water(neighbor)
+	var neighbor_surface = _get_surface_class(neighbor_elev, neighbor_water)
+	var neighbor_color = _surface_color(neighbor_surface, neighbor_elev, neighbor_water)
+	if not _should_blend_transition(current_surface, current_color, neighbor_surface, neighbor_color):
+		return false
+
+	var color = _blend_surface_color(current_color, neighbor_color)
+	_draw_edge_band_with_jitter(cell, pos, dir, color)
+
+	return true
+
+
+func _draw_blend_corner(corner_pos: Vector2, current_color: Color) -> void:
+	draw_circle(corner_pos, TERRAIN_BLEND_CORNER_RADIUS, Color(current_color.r, current_color.g, current_color.b, TERRAIN_BLEND_ALPHA * 0.75))
+
+
+func _get_surface_class(elev: int, water_type: TerrainSystem.WaterType) -> String:
+	if water_type != TerrainSystem.WaterType.NONE:
+		return "water"
+	if elev <= -1:
+		return "sand"
+	if elev >= 3:
+		return "rock"
+	return "grass"
+
+
+func _surface_color(surface: String, elev: int, water_type: TerrainSystem.WaterType) -> Color:
+	match surface:
+		"water":
+			return WATER_COLORS.get(water_type, WATER_COLORS[TerrainSystem.WaterType.LAKE])
+		"sand":
+			return ELEVATION_COLORS[-1]
+		"rock":
+			return _elevation_to_color(elev)
+		_:
+			return _elevation_to_color(elev)
+
+
+func _blend_surface_color(a: Color, b: Color) -> Color:
+	var mixed = a.lerp(b, 0.5)
+	return Color(mixed.r, mixed.g, mixed.b, TERRAIN_BLEND_ALPHA)
+
+
+func _should_blend_transition(current_surface: String, current_color: Color, neighbor_surface: String, neighbor_color: Color) -> bool:
+	if neighbor_surface != current_surface:
+		return true
+	return _color_delta(current_color, neighbor_color) >= TERRAIN_BLEND_COLOR_DELTA
+
+
+func _color_delta(a: Color, b: Color) -> float:
+	return maxf(maxf(abs(a.r - b.r), abs(a.g - b.g)), abs(a.b - b.b))
+
+
+func _draw_edge_band_with_jitter(cell: Vector2i, pos: Vector2, dir: Vector2i, color: Color) -> void:
+	var width = TERRAIN_BLEND_EDGE_WIDTH
+	if dir == Vector2i.UP:
+		draw_rect(Rect2(pos, Vector2(GridConstants.CELL_SIZE, width)), color)
+	elif dir == Vector2i.DOWN:
+		draw_rect(Rect2(pos + Vector2(0.0, GridConstants.CELL_SIZE - width), Vector2(GridConstants.CELL_SIZE, width)), color)
+	elif dir == Vector2i.RIGHT:
+		draw_rect(Rect2(pos + Vector2(GridConstants.CELL_SIZE - width, 0.0), Vector2(width, GridConstants.CELL_SIZE)), color)
+	else:
+		draw_rect(Rect2(pos, Vector2(width, GridConstants.CELL_SIZE)), color)
+
+	# Avoid painterly dabs for water transitions to keep pond/lake edges clean.
+	if _is_water_like_color(color):
+		return
+
+	# Break straight lines with deterministic painterly noise along the edge.
+	var steps = 6
+	for i in range(steps):
+		var t = float(i + 1) / float(steps + 1)
+		var jitter = (_edge_hash01(cell, dir, i) - 0.5) * width * 0.9
+		var radius = width * (0.28 + _edge_hash01(cell, dir, i + 17) * 0.35)
+		var p = pos
+		if dir == Vector2i.UP:
+			p += Vector2(t * GridConstants.CELL_SIZE, width + jitter)
+		elif dir == Vector2i.DOWN:
+			p += Vector2(t * GridConstants.CELL_SIZE, GridConstants.CELL_SIZE - width + jitter)
+		elif dir == Vector2i.RIGHT:
+			p += Vector2(GridConstants.CELL_SIZE - width + jitter, t * GridConstants.CELL_SIZE)
+		else:
+			p += Vector2(width + jitter, t * GridConstants.CELL_SIZE)
+		draw_circle(p, radius, Color(color.r, color.g, color.b, color.a * 0.52))
+
+
+func _edge_hash01(cell: Vector2i, dir: Vector2i, salt: int) -> float:
+	var h = int(cell.x) * 73856093
+	h ^= int(cell.y) * 19349663
+	h ^= int(dir.x + 2) * 83492791
+	h ^= int(dir.y + 2) * 2654435761
+	h ^= salt * 374761393
+	h = (h ^ (h >> 13)) * 1274126177
+	h = h ^ (h >> 16)
+	var positive = abs(h % 10000)
+	return float(positive) / 9999.0
+
+
+func _is_isolated_pond_cell(cell: Vector2i, water_type: TerrainSystem.WaterType) -> bool:
+	if water_type == TerrainSystem.WaterType.NONE or terrain_system == null:
+		return false
+	for dir in [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]:
+		var neighbor = cell + dir
+		if GridConstants.is_valid_cell(neighbor) and terrain_system.get_water(neighbor) != TerrainSystem.WaterType.NONE:
+			return false
+	return true
+
+
+func _draw_round_pond(pos: Vector2, water_color: Color) -> void:
+	var center = pos + Vector2(GridConstants.CELL_SIZE * 0.5, GridConstants.CELL_SIZE * 0.5)
+	var outer_r = GridConstants.CELL_SIZE * 0.42
+	var inner_r = GridConstants.CELL_SIZE * 0.34
+	draw_circle(center, outer_r, Color(water_color.r * 0.8, water_color.g * 0.82, water_color.b * 0.85, 0.85))
+	draw_circle(center, inner_r, water_color)
+
+
+func _is_water_like_color(c: Color) -> bool:
+	return c.b > c.g and c.b > c.r and c.a >= (TERRAIN_BLEND_ALPHA * 0.7)
 
 
 func _get_visible_rect() -> Rect2:
