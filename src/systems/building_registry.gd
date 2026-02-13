@@ -21,6 +21,8 @@ static var _shared_loaded: bool = false
 static var _shared_load_cycles: int = 0
 static var _shared_data_paths: Array[String] = []
 static var _shared_path_scan_cycles: int = 0
+static var _shared_resource_cache: Dictionary = {}
+static var _shared_resource_load_cycles: int = 0
 
 ## Data directory path
 const DATA_PATH: String = "res://src/data/"
@@ -42,7 +44,7 @@ func load_registry(force_reload: bool = false) -> void:
 	_registry.clear()
 
 	for path in _get_building_resource_paths():
-		var resource = load(path)
+		var resource = _load_building_resource_cached(path)
 		# Only process BuildingData resources, skip other resource types
 		if _is_building_data(resource):
 			if validate_building_data(resource):
@@ -183,7 +185,9 @@ static func get_shared_cache_stats() -> Dictionary:
 		"load_cycles": _shared_load_cycles,
 		"has_scene": _shared_building_scene != null,
 		"path_scan_cycles": _shared_path_scan_cycles,
-		"path_count": _shared_data_paths.size()
+		"path_count": _shared_data_paths.size(),
+		"resource_cache_count": _shared_resource_cache.size(),
+		"resource_load_cycles": _shared_resource_load_cycles
 	}
 
 
@@ -194,6 +198,8 @@ static func clear_shared_cache_for_tests() -> void:
 	_shared_load_cycles = 0
 	_shared_data_paths.clear()
 	_shared_path_scan_cycles = 0
+	_shared_resource_cache.clear()
+	_shared_resource_load_cycles = 0
 
 
 static func _get_building_resource_paths() -> Array[String]:
@@ -217,3 +223,12 @@ static func _get_building_resource_paths() -> Array[String]:
 	_shared_data_paths = paths
 	_shared_path_scan_cycles += 1
 	return _shared_data_paths
+
+
+static func _load_building_resource_cached(path: String) -> Resource:
+	if _shared_resource_cache.has(path):
+		return _shared_resource_cache[path]
+	var resource = load(path)
+	_shared_resource_cache[path] = resource
+	_shared_resource_load_cycles += 1
+	return resource

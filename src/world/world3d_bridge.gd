@@ -101,10 +101,7 @@ func _notification(what: int) -> void:
 		return
 	if camera_3d and is_instance_valid(camera_3d):
 		camera_3d.current = false
-	if events_bus and events_bus.has_signal("building_placed") and events_bus.building_placed.is_connected(_on_building_placed):
-		events_bus.building_placed.disconnect(_on_building_placed)
-	if events_bus and events_bus.has_signal("building_removed") and events_bus.building_removed.is_connected(_on_building_removed):
-		events_bus.building_removed.disconnect(_on_building_removed)
+	_disconnect_events()
 	_free_if_orphan(camera_3d)
 	_free_if_orphan(sun_light)
 	_free_if_orphan(road_root)
@@ -129,6 +126,7 @@ func _notification(what: int) -> void:
 
 func initialize(grid: Node, camera: Camera2D, bus: Node = null) -> void:
 	_ensure_runtime_nodes()
+	_disconnect_events()
 	grid_system = grid
 	camera_2d = camera
 	events_bus = bus if bus != null else _resolve_events_bus()
@@ -185,6 +183,15 @@ func _connect_events() -> void:
 		events_bus.building_placed.connect(_on_building_placed)
 	if events_bus.has_signal("building_removed") and not events_bus.building_removed.is_connected(_on_building_removed):
 		events_bus.building_removed.connect(_on_building_removed)
+
+
+func _disconnect_events() -> void:
+	if events_bus == null:
+		return
+	if events_bus.has_signal("building_placed") and events_bus.building_placed.is_connected(_on_building_placed):
+		events_bus.building_placed.disconnect(_on_building_placed)
+	if events_bus.has_signal("building_removed") and events_bus.building_removed.is_connected(_on_building_removed):
+		events_bus.building_removed.disconnect(_on_building_removed)
 
 
 func _sync_camera_transform() -> void:

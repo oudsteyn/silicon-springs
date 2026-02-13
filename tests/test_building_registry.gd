@@ -48,3 +48,17 @@ func test_data_path_scan_is_cached() -> void:
 
 	assert_eq(int(first_stats.get("path_scan_cycles", -1)), 1)
 	assert_eq(int(second_stats.get("path_scan_cycles", -1)), 1)
+
+
+func test_force_reload_reuses_resource_cache_without_extra_disk_loads() -> void:
+	var registry = BuildingRegistryScript.new()
+	registry.load_registry()
+	var first_stats = BuildingRegistry.get_shared_cache_stats()
+	var first_resource_load_cycles = int(first_stats.get("resource_load_cycles", -1))
+	assert_gt(first_resource_load_cycles, 0)
+
+	registry.load_registry(true)
+	var second_stats = BuildingRegistry.get_shared_cache_stats()
+	var second_resource_load_cycles = int(second_stats.get("resource_load_cycles", -1))
+
+	assert_eq(first_resource_load_cycles, second_resource_load_cycles)

@@ -3,6 +3,11 @@ extends TestBase
 const TerrainRendererScript = preload("res://src/systems/terrain_renderer.gd")
 var _to_free: Array = []
 
+class DummyTerrainSystem:
+	extends Node
+	signal terrain_changed(cells: Array)
+	signal runtime_heightmap_generated(heightmap: PackedFloat32Array, size: int, sea_level: float)
+
 
 func after_each() -> void:
 	for i in range(_to_free.size() - 1, -1, -1):
@@ -47,3 +52,19 @@ func test_runtime_3d_pipeline_releases_internal_nodes_on_free() -> void:
 
 	assert_eq(manager_ref.get_ref(), null)
 	assert_eq(detail_ref.get_ref(), null)
+
+
+func test_set_terrain_system_rebinds_signals_to_latest_system_only() -> void:
+	var renderer = _track(TerrainRendererScript.new())
+	var first = _track(DummyTerrainSystem.new())
+	var second = _track(DummyTerrainSystem.new())
+
+	renderer.set_terrain_system(first)
+	assert_true(first.terrain_changed.is_connected(renderer._on_terrain_changed))
+	assert_true(first.runtime_heightmap_generated.is_connected(renderer._on_runtime_heightmap_generated))
+
+	renderer.set_terrain_system(second)
+	assert_false(first.terrain_changed.is_connected(renderer._on_terrain_changed))
+	assert_false(first.runtime_heightmap_generated.is_connected(renderer._on_runtime_heightmap_generated))
+	assert_true(second.terrain_changed.is_connected(renderer._on_terrain_changed))
+	assert_true(second.runtime_heightmap_generated.is_connected(renderer._on_runtime_heightmap_generated))

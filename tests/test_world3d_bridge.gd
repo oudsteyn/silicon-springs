@@ -134,3 +134,27 @@ func test_bridge_rebuilds_existing_grid_state_on_initialize() -> void:
 
 	assert_eq(bridge.get_road_segment_count(), 1)
 	assert_eq(bridge.get_modular_building_count(), 1)
+
+
+func test_initialize_rebinds_events_bus_without_stale_connections() -> void:
+	var bridge = _track(World3DBridgeScript.new())
+	var root = _track(Node.new())
+	root.add_child(bridge)
+	var grid = _track(DummyGridSystem.new())
+	var bus_a = _track(DummyEventsBus.new())
+	var bus_b = _track(DummyEventsBus.new())
+
+	bridge.initialize(grid, _track(Camera2D.new()), bus_a)
+	bridge.initialize(grid, _track(Camera2D.new()), bus_b)
+
+	var road_data = BuildingDataScript.new()
+	road_data.id = "road"
+	road_data.building_type = "road"
+	var road = _track(DummyBuilding.new())
+	road.building_data = road_data
+
+	bus_a.emit_signal("building_placed", Vector2i(9, 9), road)
+	assert_eq(bridge.get_road_segment_count(), 0)
+
+	bus_b.emit_signal("building_placed", Vector2i(9, 9), road)
+	assert_eq(bridge.get_road_segment_count(), 1)

@@ -9,7 +9,7 @@ const TerrainRuntime3DManagerScript = preload("res://src/terrain/terrain_runtime
 const TerrainDetailRenderer3DScript = preload("res://src/terrain/terrain_detail_renderer_3d.gd")
 
 # References
-var terrain_system: TerrainSystem = null
+var terrain_system: Node = null
 var grid_system: Node = null
 
 # Cached camera for viewport culling
@@ -75,7 +75,12 @@ func _notification(what: int) -> void:
 		_cleanup_runtime_3d_nodes()
 
 
-func set_terrain_system(ts: TerrainSystem) -> void:
+func set_terrain_system(ts: Node) -> void:
+	if terrain_system and is_instance_valid(terrain_system):
+		if terrain_system.terrain_changed.is_connected(_on_terrain_changed):
+			terrain_system.terrain_changed.disconnect(_on_terrain_changed)
+		if terrain_system.has_signal("runtime_heightmap_generated") and terrain_system.runtime_heightmap_generated.is_connected(_on_runtime_heightmap_generated):
+			terrain_system.runtime_heightmap_generated.disconnect(_on_runtime_heightmap_generated)
 	terrain_system = ts
 	if terrain_system:
 		if not terrain_system.terrain_changed.is_connected(_on_terrain_changed):

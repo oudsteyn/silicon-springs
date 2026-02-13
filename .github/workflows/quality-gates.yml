@@ -22,7 +22,7 @@ jobs:
           chmod +x "${GODOT_BIN}"
 
       - name: Run Headless Tests
-        run: "${GODOT_BIN}" --headless -s tests/run_headless.gd
+        run: ./scripts/run_tests_strict.sh "${GODOT_BIN}"
 
       - name: Run Terrain Perf Gate
         run: "${GODOT_BIN}" --headless -s res://scripts/terrain_perf_gate.gd ./tests/fixtures/terrain_perf_metrics_pass.json
