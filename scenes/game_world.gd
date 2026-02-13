@@ -109,6 +109,7 @@ var current_building_data = null  # BuildingData
 var is_drag_building: bool = false
 var is_drag_demolishing: bool = false
 var last_drag_cell: Vector2i = Vector2i(-1, -1)
+var _drag_bulldoze_cost: int = 0  # Running total during drag
 
 # Camera settings
 const CAMERA_SPEED: float = 500.0
@@ -630,6 +631,7 @@ func _input(event: InputEvent) -> void:
 					elif demolish_mode:
 						is_drag_demolishing = true
 						last_drag_cell = hovered_cell
+						_drag_bulldoze_cost = 0
 			else:
 				if is_panning:
 					_end_pan()
@@ -641,6 +643,7 @@ func _input(event: InputEvent) -> void:
 				is_drag_building = false
 				is_drag_demolishing = false
 				last_drag_cell = Vector2i(-1, -1)
+				_drag_bulldoze_cost = 0
 		elif event.button_index == MOUSE_BUTTON_RIGHT:
 			if event.pressed:
 				_handle_right_click()
@@ -837,6 +840,48 @@ func _update_cell_highlight() -> void:
 		has_building
 	)
 	cell_highlight.set_state(state)
+
+	# Show bulldoze cost preview when in demolish mode
+	if demolish_mode:
+		_update_demolish_cost_preview(target_cell)
+	else:
+		cell_highlight.clear_demolish_info()
+
+
+func _update_demolish_cost_preview(cell: Vector2i) -> void:
+	# Building → show refund amount
+	var building = grid_system.get_building_at(cell)
+	if building:
+		var building_data = building.building_data
+		var refund = int(building_data.build_cost * 0.5) if building_data else 0
+		if refund > 0:
+			cell_highlight.set_demolish_info("+$%d" % refund)
+		else:
+			cell_highlight.set_demolish_info("Free")
+		return
+
+	# Zone → free
+	if zoning_system and zoning_system.get_zone_at(cell) != 0:
+		cell_highlight.set_demolish_info("Free")
+		return
+
+	# Terrain features
+	if terrain_system:
+		var feature = terrain_system.get_feature(cell)
+		if feature == TerrainSystem.FeatureType.ROCK_SMALL:
+			cell_highlight.set_demolish_info("$%d" % GridConstants.BULLDOZE_COST_ROCK_SMALL)
+			return
+		if feature == TerrainSystem.FeatureType.ROCK_LARGE:
+			cell_highlight.set_demolish_info("$%d" % GridConstants.BULLDOZE_COST_ROCK_LARGE)
+			return
+		if feature == TerrainSystem.FeatureType.TREE_SPARSE or feature == TerrainSystem.FeatureType.TREE_DENSE:
+			cell_highlight.set_demolish_info("$%d" % GridConstants.BULLDOZE_COST_TREE)
+			return
+		if feature == TerrainSystem.FeatureType.BEACH:
+			cell_highlight.set_demolish_info("Free")
+			return
+
+	cell_highlight.clear_demolish_info()
 
 
 func _should_show_cell_highlight() -> bool:
@@ -1035,9 +1080,11 @@ func _check_data_center_requirements(cell: Vector2i, data) -> bool:
 	return true
 
 
-func _try_bulldoze() -> void:
-	# Priority 1: Building present → remove building (refund 50%)
-	var building = grid_system.get_building_at(hovered_cell)
+## Shared bulldoze logic for a single cell. Returns result dict:
+## { "cleared": bool, "type": String, "cost": int }
+func _bulldoze_cell(cell: Vector2i) -> Dictionary:
+	# Priority 1: Building present → remove building (refund via grid_system.remove_building)
+	var building = grid_system.get_building_at(cell)
 	if building:
 		var building_data = building.building_data
 		var building_name = building_data.display_name if building_data else "Building"
@@ -1047,66 +1094,69 @@ func _try_bulldoze() -> void:
 		if building_data and building_data.category == "data_center":
 			GameState.remove_data_center(building_data.data_center_tier)
 
-		grid_system.remove_building(hovered_cell)
-		Events.simulation_event.emit("building_demolished", {"name": building_name, "refund": refund})
-
-		if cell_highlight:
-			cell_highlight.pulse_feedback(true)
-		return
+		grid_system.remove_building(cell)
+		return {"cleared": true, "type": "building_demolished", "cost": -refund,
+				"data": {"name": building_name, "refund": refund}}
 
 	# Priority 2: Zone present (no building) → remove zone (free)
-	if zoning_system and zoning_system.get_zone_at(hovered_cell) != 0:
-		zoning_system.set_zone(hovered_cell, 0)  # ZoneType.NONE
-		Events.simulation_event.emit("zone_cleared", {"cell": hovered_cell})
-		if cell_highlight:
-			cell_highlight.pulse_feedback(true)
-		return
+	if zoning_system and zoning_system.get_zone_at(cell) != 0:
+		zoning_system.set_zone(cell, 0)  # ZoneType.NONE
+		return {"cleared": true, "type": "zone_cleared", "cost": 0,
+				"data": {"cell": cell}}
 
 	# Priority 3-5: Terrain features
 	if terrain_system:
-		var feature = terrain_system.get_feature(hovered_cell)
+		var feature = terrain_system.get_feature(cell)
 
 		# Priority 3: Rock feature → clear rocks (costs $500/$1000)
 		if feature == TerrainSystem.FeatureType.ROCK_SMALL or feature == TerrainSystem.FeatureType.ROCK_LARGE:
 			var cost = GridConstants.BULLDOZE_COST_ROCK_LARGE if feature == TerrainSystem.FeatureType.ROCK_LARGE else GridConstants.BULLDOZE_COST_ROCK_SMALL
 			if GameState.can_afford(cost):
-				terrain_system.clear_rocks(hovered_cell)
+				terrain_system.clear_rocks(cell)
 				GameState.spend(cost)
-				Events.simulation_event.emit("rocks_cleared", {"cell": hovered_cell, "cost": cost})
-				if cell_highlight:
-					cell_highlight.pulse_feedback(true)
+				return {"cleared": true, "type": "rocks_cleared", "cost": cost,
+						"data": {"cell": cell, "cost": cost}}
 			else:
-				Events.simulation_event.emit("insufficient_funds", {"cost": cost})
-				if cell_highlight:
-					cell_highlight.pulse_feedback(false)
-			return
+				return {"cleared": false, "type": "insufficient_funds", "cost": 0,
+						"data": {"cost": cost}}
 
 		# Priority 4: Tree feature → clear trees (costs $100)
 		if feature == TerrainSystem.FeatureType.TREE_SPARSE or feature == TerrainSystem.FeatureType.TREE_DENSE:
 			var cost = GridConstants.BULLDOZE_COST_TREE
 			if GameState.can_afford(cost):
-				terrain_system.clear_trees(hovered_cell)
+				terrain_system.clear_trees(cell)
 				GameState.spend(cost)
-				Events.simulation_event.emit("trees_cleared", {"cell": hovered_cell, "cost": cost})
-				if cell_highlight:
-					cell_highlight.pulse_feedback(true)
+				return {"cleared": true, "type": "trees_cleared", "cost": cost,
+						"data": {"cell": cell, "cost": cost}}
 			else:
-				Events.simulation_event.emit("insufficient_funds", {"cost": cost})
-				if cell_highlight:
-					cell_highlight.pulse_feedback(false)
-			return
+				return {"cleared": false, "type": "insufficient_funds", "cost": 0,
+						"data": {"cost": cost}}
 
 		# Priority 5: Beach feature → remove feature (free)
 		if feature == TerrainSystem.FeatureType.BEACH:
-			terrain_system.remove_feature(hovered_cell)
-			Events.simulation_event.emit("beach_cleared", {"cell": hovered_cell})
-			if cell_highlight:
-				cell_highlight.pulse_feedback(true)
-			return
+			terrain_system.remove_feature(cell)
+			return {"cleared": true, "type": "beach_cleared", "cost": 0,
+					"data": {"cell": cell}}
 
-	# Priority 6: Nothing clearable → red pulse feedback
-	if cell_highlight:
-		cell_highlight.pulse_feedback(false)
+	# Nothing clearable
+	return {"cleared": false, "type": "", "cost": 0, "data": {}}
+
+
+func _try_bulldoze() -> void:
+	var result = _bulldoze_cell(hovered_cell)
+
+	if result.cleared:
+		Events.simulation_event.emit(result.type, result.data)
+		if cell_highlight:
+			cell_highlight.pulse_feedback(true)
+	elif result.type == "insufficient_funds":
+		Events.simulation_event.emit("insufficient_funds", result.data)
+		if cell_highlight:
+			cell_highlight.pulse_feedback(false)
+	else:
+		# Nothing clearable
+		if cell_highlight:
+			cell_highlight.pulse_feedback(false)
 
 
 func _handle_drag_build() -> void:
@@ -1177,46 +1227,19 @@ func _handle_drag_bulldoze() -> void:
 
 	last_drag_cell = hovered_cell
 
-	# Priority 1: Building present → remove building
-	var building = grid_system.get_building_at(hovered_cell)
-	if building:
-		var building_data = building.building_data
+	var result = _bulldoze_cell(hovered_cell)
 
-		# Track data center removal
-		if building_data and building_data.category == "data_center":
-			GameState.remove_data_center(building_data.data_center_tier)
-
-		grid_system.remove_building(hovered_cell)
-		return
-
-	# Priority 2: Zone present → remove zone (free)
-	if zoning_system and zoning_system.get_zone_at(hovered_cell) != 0:
-		zoning_system.set_zone(hovered_cell, 0)
-		return
-
-	# Priority 3-5: Terrain features
-	if terrain_system:
-		var feature = terrain_system.get_feature(hovered_cell)
-
-		# Priority 3: Rock feature
-		if feature == TerrainSystem.FeatureType.ROCK_SMALL or feature == TerrainSystem.FeatureType.ROCK_LARGE:
-			var cost = GridConstants.BULLDOZE_COST_ROCK_LARGE if feature == TerrainSystem.FeatureType.ROCK_LARGE else GridConstants.BULLDOZE_COST_ROCK_SMALL
-			if GameState.can_afford(cost):
-				terrain_system.clear_rocks(hovered_cell)
-				GameState.spend(cost)
-			return
-
-		# Priority 4: Tree feature
-		if feature == TerrainSystem.FeatureType.TREE_SPARSE or feature == TerrainSystem.FeatureType.TREE_DENSE:
-			if GameState.can_afford(GridConstants.BULLDOZE_COST_TREE):
-				terrain_system.clear_trees(hovered_cell)
-				GameState.spend(GridConstants.BULLDOZE_COST_TREE)
-			return
-
-		# Priority 5: Beach feature (free)
-		if feature == TerrainSystem.FeatureType.BEACH:
-			terrain_system.remove_feature(hovered_cell)
-			return
+	if result.cleared:
+		Events.simulation_event.emit(result.type, result.data)
+		if result.cost > 0:
+			_drag_bulldoze_cost += result.cost
+			# Show floating cost at cell
+			if action_feedback_effects:
+				action_feedback_effects.spawn_effect(
+					ActionFeedbackEffects.EffectType.MONEY_LOSS,
+					hovered_cell,
+					{"amount": result.cost}
+				)
 
 
 func _apply_terrain_tool(cell: Vector2i) -> void:
@@ -1650,20 +1673,12 @@ func _on_build_requested(building_id: String, cell: Vector2i) -> void:
 
 
 func _on_demolish_requested(cell: Vector2i) -> void:
-	var building = grid_system.get_building_at(cell)
-	if not building:
-		return
+	var result = _bulldoze_cell(cell)
 
-	var building_data = building.building_data
-	var building_name = building_data.display_name if building_data else "Building"
-	var refund = int(building_data.build_cost * 0.5) if building_data else 0
-
-	# Track data center removal
-	if building_data and building_data.category == "data_center":
-		GameState.remove_data_center(building_data.data_center_tier)
-
-	grid_system.remove_building(cell)
-	Events.simulation_event.emit("building_demolished", {"name": building_name, "refund": refund})
+	if result.cleared:
+		Events.simulation_event.emit(result.type, result.data)
+	elif result.type == "insufficient_funds":
+		Events.simulation_event.emit("insufficient_funds", result.data)
 
 
 func _on_zone_requested(zone_type: int, cells: Array) -> void:

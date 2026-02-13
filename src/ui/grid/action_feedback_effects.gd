@@ -557,6 +557,22 @@ func _on_simulation_event(event_type: String, data: Dictionary) -> void:
 			var cell = data.get("cell", Vector2i(-1, -1))
 			if cell != Vector2i(-1, -1):
 				spawn_effect(EffectType.PLACEMENT_FAIL, cell)
+		"rocks_cleared":
+			var cell = data.get("cell", Vector2i(-1, -1))
+			if cell != Vector2i(-1, -1):
+				spawn_effect(EffectType.DEMOLITION, cell)
+		"trees_cleared":
+			var cell = data.get("cell", Vector2i(-1, -1))
+			if cell != Vector2i(-1, -1):
+				spawn_effect(EffectType.DEMOLITION, cell)
+		"zone_cleared":
+			var cell = data.get("cell", Vector2i(-1, -1))
+			if cell != Vector2i(-1, -1):
+				spawn_effect(EffectType.DEMOLITION, cell)
+		"beach_cleared":
+			var cell = data.get("cell", Vector2i(-1, -1))
+			if cell != Vector2i(-1, -1):
+				spawn_effect(EffectType.DEMOLITION, cell)
 		"building_upgraded":
 			var cell = data.get("cell", Vector2i(-1, -1))
 			if cell != Vector2i(-1, -1):

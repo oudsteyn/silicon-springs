@@ -63,6 +63,9 @@ var _visual_size: Vector2 = Vector2(GridConstants.CELL_SIZE, GridConstants.CELL_
 # Corner indicators for multi-cell buildings
 var _show_corners: bool = false
 
+# Demolish cost label
+var demolish_cost_text: String = ""  # e.g. "$500", "Free", "+$250" (refund)
+
 # References
 var grid_system = null
 
@@ -128,6 +131,10 @@ func _draw() -> void:
 	# Draw corner indicators for multi-cell buildings
 	if _show_corners and building_size != Vector2i(1, 1):
 		_draw_corner_indicators(rect, border_color)
+
+	# Draw demolish cost label
+	if demolish_cost_text != "" and current_state == "demolish":
+		_draw_demolish_cost(rect)
 
 	# Draw cell coordinate hint (subtle)
 	if current_state == "default":
@@ -206,6 +213,26 @@ func _draw_cell_coords(rect: Rect2) -> void:
 		draw_string(font, text_pos, coord_text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color(1, 1, 1, 0.25))
 
 
+func _draw_demolish_cost(rect: Rect2) -> void:
+	var font = ThemeDB.fallback_font
+	var font_size = 11
+	# Position below the cell
+	var text_pos = rect.position + Vector2(rect.size.x * 0.5, rect.size.y + 14)
+	# Green tint for refunds, white for costs, gray for "Free"
+	var color: Color
+	if demolish_cost_text.begins_with("+"):
+		color = Color(0.4, 1.0, 0.5, 0.9)  # Green for refund
+	elif demolish_cost_text == "Free":
+		color = Color(0.8, 0.8, 0.8, 0.7)  # Gray
+	else:
+		color = Color(1.0, 0.7, 0.3, 0.9)  # Orange for cost
+	# Outline for readability
+	var outline_color = Color(0, 0, 0, color.a * 0.5)
+	for offset in [Vector2(-1, 0), Vector2(1, 0), Vector2(0, -1), Vector2(0, 1)]:
+		draw_string(font, text_pos + offset, demolish_cost_text, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size, outline_color)
+	draw_string(font, text_pos, demolish_cost_text, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size, color)
+
+
 func _ease_out_cubic(t: float) -> float:
 	return 1.0 - pow(1.0 - t, 3.0)
 
@@ -269,6 +296,16 @@ func pulse_feedback(success: bool = true) -> void:
 	else:
 		_current_fill_color = Color(1.0, 0.3, 0.3, 0.3)
 		_current_border_color = Color(1.0, 0.4, 0.4, 1.0)
+
+
+## Set the demolish cost/info text shown below the cell
+func set_demolish_info(text: String) -> void:
+	demolish_cost_text = text
+
+
+## Clear the demolish cost/info text
+func clear_demolish_info() -> void:
+	demolish_cost_text = ""
 
 
 ## Hide the highlight
