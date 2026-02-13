@@ -143,6 +143,87 @@ const EVENT_MESSAGES: Dictionary = {
 	"generic_success": {"message": "{message}", "type": "success"},
 }
 
+# Events that are typically informational and should only surface if explicitly severe.
+const LOW_IMPACT_EVENTS: Dictionary = {
+	"front_passage": true,
+	"front_approaching": true,
+	"pressure_falling": true,
+	"air_quality_changed": true,
+	"inversion_started": true,
+	"inversion_ended": true,
+	"rain_clearing_pollution": true,
+	"climate_report": true,
+	"overlay_changed": true,
+	"zone_painted": true,
+	"zone_mode_entered": true,
+	"measurement_started": true,
+	"measurement_ended": true,
+	"measurement_mode_changed": true,
+	"disaster_debug_hint": true,
+	"options_coming_soon": true
+}
+
+# Events that are always relevant to city operations.
+const ALWAYS_NOTIFY_EVENTS: Dictionary = {
+	"insufficient_funds": true,
+	"budget_warning": true,
+	"budget_critical": true,
+	"bankruptcy": true,
+	"disaster_fire": true,
+	"disaster_fire_major": true,
+	"disaster_earthquake": true,
+	"disaster_tornado": true,
+	"disaster_flood": true,
+	"disaster_meteor": true,
+	"disaster_monster": true,
+	"buildings_collapsed": true,
+	"storm_damage": true,
+	"storm_building_damage": true,
+	"flood_started": true,
+	"flood_damage": true,
+	"flood_building_damage": true,
+	"water_pressure_low": true,
+	"water_pressure_critical": true,
+	"water_pressure_restored": true,
+	"wildfire_started": true,
+	"wildfire_ended": true,
+	"drought_started": true,
+	"drought_worsening": true,
+	"drought_ended": true,
+	"building_abandoned": true,
+	"building_on_fire": true,
+	"building_destroyed": true,
+	"building_constructed": true,
+	"infrastructure_degraded": true,
+	"infrastructure_critical": true,
+	"infrastructure_failure": true,
+	"infrastructure_repaired": true,
+	"power_line_degradation": true,
+	"water_pipe_leaks": true
+}
+
+## Weather/status chatter that should only surface when there is direct city impact.
+const WEATHER_CONTEXT_EVENTS: Dictionary = {
+	"front_passage": true,
+	"front_approaching": true,
+	"pressure_falling": true,
+	"storm_started": true,
+	"storm_ended": true,
+	"flood_started": true,
+	"flood_ended": true,
+	"heat_wave_started": true,
+	"heat_wave_ended": true,
+	"cold_snap_started": true,
+	"cold_snap_ended": true,
+	"high_water_demand": true,
+	"climate_report": true,
+	"air_quality_changed": true,
+	"inversion_started": true,
+	"inversion_ended": true,
+	"rain_clearing_pollution": true,
+	"wildfire_ongoing": true
+}
+
 
 func _ready() -> void:
 	Events.simulation_event.connect(_on_simulation_event)
@@ -163,6 +244,8 @@ func _on_simulation_event(event_type: String, data: Dictionary) -> void:
 
 	var message = _format_message(template.message, data)
 	var msg_type = data.get("type_override", template.type)
+	if not _should_emit_city_impact_notification(event_type, data, str(msg_type)):
+		return
 
 	Events.notification_requested.emit(message, msg_type)
 
@@ -187,3 +270,45 @@ func _format_message(template: String, data: Dictionary) -> String:
 ## Convenience method for systems to emit events with less boilerplate
 static func emit(event_type: String, data: Dictionary = {}) -> void:
 	Events.simulation_event.emit(event_type, data)
+
+
+func _should_emit_city_impact_notification(event_type: String, data: Dictionary, msg_type: String) -> bool:
+	if ALWAYS_NOTIFY_EVENTS.has(event_type):
+		return true
+	if WEATHER_CONTEXT_EVENTS.has(event_type):
+		return _has_direct_city_impact_payload(data)
+	if LOW_IMPACT_EVENTS.has(event_type):
+		# Only show low-impact events if explicitly escalated.
+		return msg_type == "warning" or msg_type == "error"
+
+	# Generic impact heuristics for event payloads.
+	if data.has("count") and int(data.get("count", 0)) <= 0:
+		return false
+	if data.has("affected_percent") and float(data.get("affected_percent", 0.0)) <= 0.0:
+		return false
+	if data.has("active") and not bool(data.get("active", false)):
+		return false
+	if data.has("severity") and (data.get("severity") is float or data.get("severity") is int):
+		if float(data.get("severity", 0.0)) <= 0.0:
+			return false
+
+	# Keep success/error signals for direct player actions (save/load/building ops).
+	if msg_type == "success" or msg_type == "error" or msg_type == "warning":
+		return true
+	return false
+
+
+func _has_direct_city_impact_payload(data: Dictionary) -> bool:
+	if data.has("count") and int(data.get("count", 0)) > 0:
+		return true
+	if data.has("affected_buildings") and int(data.get("affected_buildings", 0)) > 0:
+		return true
+	if data.has("damaged_buildings") and int(data.get("damaged_buildings", 0)) > 0:
+		return true
+	if data.has("population_affected") and int(data.get("population_affected", 0)) > 0:
+		return true
+	if data.has("affected_percent") and float(data.get("affected_percent", 0.0)) > 0.0:
+		return true
+	if data.has("has_shortage") and bool(data.get("has_shortage", false)):
+		return true
+	return false

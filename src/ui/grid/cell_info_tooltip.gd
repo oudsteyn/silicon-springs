@@ -12,6 +12,11 @@ const LINE_HEIGHT: float = 18.0
 const SECTION_SPACING: float = 8.0
 const CORNER_RADIUS: float = 6.0
 const BORDER_WIDTH: float = 1.5
+const HEADER_FONT_SIZE: int = 14
+const BODY_FONT_SIZE: int = 11
+const BAR_VALUE_FONT_SIZE: int = 10
+const VALUE_COLUMN_WIDTH: float = 84.0
+const ROW_COLUMN_GAP: float = 8.0
 
 # Colors
 const BG_COLOR: Color = Color(0.08, 0.1, 0.08, 0.95)
@@ -23,8 +28,6 @@ const POSITIVE_COLOR: Color = Color(0.3, 0.8, 0.4, 1.0)
 const NEGATIVE_COLOR: Color = Color(0.9, 0.35, 0.3, 1.0)
 const WARNING_COLOR: Color = Color(0.9, 0.7, 0.2, 1.0)
 
-# Timing
-const HOVER_DELAY: float = 0.3  # Delay before showing tooltip
 const FADE_DURATION: float = 0.15
 
 # System references
@@ -41,13 +44,13 @@ var traffic_system = null
 
 # State
 var _current_cell: Vector2i = Vector2i(-1, -1)
-var _hover_timer: float = 0.0
 var _is_visible: bool = false
 var _alpha: float = 0.0
 var _tooltip_content: Array[Dictionary] = []  # [{type, label, value, color}]
 var _tooltip_height: float = 0.0
 var _building_at_cell = null
 var _events: Node = null
+var _blocked_controls: Array[Control] = []
 
 
 
@@ -55,12 +58,8 @@ func _ready() -> void:
 	# Position above everything
 	z_index = 100
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	clip_contents = true
 	visible = false
-
-	# Connect to cell hover events
-	var events = _get_events()
-	if events:
-		events.cell_hovered.connect(_on_cell_hovered)
 
 
 func set_events(events: Node) -> void:
@@ -92,6 +91,10 @@ func set_systems(gs, ts, ps, ws, polls, lvs, sc, zs, trs) -> void:
 	traffic_system = trs
 
 
+func set_blocked_controls(controls: Array[Control]) -> void:
+	_blocked_controls = controls
+
+
 func _process(delta: float) -> void:
 	if not camera:
 		return
@@ -104,12 +107,6 @@ func _process(delta: float) -> void:
 		modulate.a = 0.0
 		visible = false
 		return
-
-	# Handle hover delay
-	if _current_cell != Vector2i(-1, -1) and not _is_visible:
-		_hover_timer += delta
-		if _hover_timer >= HOVER_DELAY:
-			_show_tooltip()
 
 	# Handle fade animation
 	if _is_visible:
@@ -125,18 +122,6 @@ func _process(delta: float) -> void:
 		queue_redraw()
 
 
-func _on_cell_hovered(cell: Vector2i) -> void:
-	if cell == _current_cell:
-		return
-
-	_current_cell = cell
-	_hover_timer = 0.0
-
-	# Hide immediately when moving to new cell
-	if _is_visible:
-		_is_visible = false
-
-
 func _show_tooltip() -> void:
 	if _current_cell == Vector2i(-1, -1):
 		return
@@ -150,6 +135,15 @@ func _show_tooltip() -> void:
 	# Only show if there's content
 	if _tooltip_content.size() > 0:
 		_is_visible = true
+
+
+func show_cell(cell: Vector2i) -> void:
+	if cell == Vector2i(-1, -1):
+		_hide_tooltip()
+		return
+
+	_current_cell = cell
+	_show_tooltip()
 
 
 func _hide_tooltip() -> void:
@@ -458,26 +452,45 @@ func _update_position() -> void:
 	var half_viewport = viewport_size * 0.5
 	var screen_pos = (cell_world - camera.position) * camera.zoom.x + half_viewport
 
-	# Offset tooltip to avoid cursor
-	var tooltip_pos = screen_pos + Vector2(20, -10)
-
-	# Keep tooltip on screen
 	var tooltip_size = Vector2(TOOLTIP_WIDTH, _tooltip_height)
+	var candidates: Array[Vector2] = [
+		screen_pos + Vector2(20, -10),
+		screen_pos + Vector2(-tooltip_size.x - 20, -10),
+		screen_pos + Vector2(20, 14),
+		screen_pos + Vector2(-tooltip_size.x - 20, 14)
+	]
+	var tooltip_pos := candidates[0]
 
-	# Horizontal bounds
-	if tooltip_pos.x + tooltip_size.x > viewport_size.x - 10:
-		tooltip_pos.x = screen_pos.x - tooltip_size.x - 20
-	if tooltip_pos.x < 10:
-		tooltip_pos.x = 10
+	for candidate in candidates:
+		var clamped = _clamp_tooltip_to_viewport(candidate, tooltip_size, viewport_size)
+		if not _intersects_blocked_rects(Rect2(clamped, tooltip_size)):
+			tooltip_pos = clamped
+			break
 
-	# Vertical bounds
-	if tooltip_pos.y + tooltip_size.y > viewport_size.y - 10:
-		tooltip_pos.y = viewport_size.y - tooltip_size.y - 10
-	if tooltip_pos.y < 10:
-		tooltip_pos.y = 10
-
-	position = tooltip_pos
+	position = _clamp_tooltip_to_viewport(tooltip_pos, tooltip_size, viewport_size)
 	size = tooltip_size
+
+
+func _clamp_tooltip_to_viewport(pos: Vector2, tooltip_size: Vector2, viewport_size: Vector2) -> Vector2:
+	var clamped = pos
+	if clamped.x + tooltip_size.x > viewport_size.x - 10:
+		clamped.x = viewport_size.x - tooltip_size.x - 10
+	if clamped.x < 10:
+		clamped.x = 10
+	if clamped.y + tooltip_size.y > viewport_size.y - 10:
+		clamped.y = viewport_size.y - tooltip_size.y - 10
+	if clamped.y < 10:
+		clamped.y = 10
+	return clamped
+
+
+func _intersects_blocked_rects(rect: Rect2) -> bool:
+	for control in _blocked_controls:
+		if not is_instance_valid(control) or not control.is_visible_in_tree():
+			continue
+		if rect.intersects(control.get_global_rect()):
+			return true
+	return false
 
 
 func _draw() -> void:
@@ -495,15 +508,22 @@ func _draw() -> void:
 	# Draw content
 	var font = ThemeDB.fallback_font
 	var y_offset = PADDING.y
+	var content_bottom = _tooltip_height - PADDING.y
 
 	for item in _tooltip_content:
 		match item.type:
 			"header":
-				draw_string(font, Vector2(PADDING.x, y_offset + 14), item.text,
-					HORIZONTAL_ALIGNMENT_LEFT, TOOLTIP_WIDTH - PADDING.x * 2, 14, item.color)
+				if y_offset + LINE_HEIGHT + 4.0 > content_bottom:
+					break
+				var header_width = TOOLTIP_WIDTH - PADDING.x * 2.0
+				var header_text = _fit_text(font, str(item.text), HEADER_FONT_SIZE, header_width)
+				draw_string(font, Vector2(PADDING.x, y_offset + 14), header_text,
+					HORIZONTAL_ALIGNMENT_LEFT, header_width, HEADER_FONT_SIZE, item.color)
 				y_offset += LINE_HEIGHT + 4.0
 
 			"section":
+				if y_offset + SECTION_SPACING > content_bottom:
+					break
 				# Draw separator line
 				var line_y = y_offset + SECTION_SPACING * 0.5
 				draw_line(
@@ -515,25 +535,39 @@ func _draw() -> void:
 				y_offset += SECTION_SPACING
 
 			"row":
+				if y_offset + LINE_HEIGHT > content_bottom:
+					break
 				# Label on left, value on right
-				draw_string(font, Vector2(PADDING.x, y_offset + 12), item.label,
-					HORIZONTAL_ALIGNMENT_LEFT, -1, 11, LABEL_COLOR)
-				draw_string(font, Vector2(TOOLTIP_WIDTH - PADDING.x, y_offset + 12), str(item.value),
-					HORIZONTAL_ALIGNMENT_RIGHT, -1, 11, item.color)
+				var label_width = TOOLTIP_WIDTH - PADDING.x * 2.0 - VALUE_COLUMN_WIDTH - ROW_COLUMN_GAP
+				var value_x = PADDING.x + label_width + ROW_COLUMN_GAP
+				var label_text = _fit_text(font, str(item.label), BODY_FONT_SIZE, label_width)
+				var value_text = _fit_text(font, str(item.value), BODY_FONT_SIZE, VALUE_COLUMN_WIDTH)
+				draw_string(font, Vector2(PADDING.x, y_offset + 12), label_text,
+					HORIZONTAL_ALIGNMENT_LEFT, label_width, BODY_FONT_SIZE, LABEL_COLOR)
+				draw_string(font, Vector2(value_x, y_offset + 12), value_text,
+					HORIZONTAL_ALIGNMENT_RIGHT, VALUE_COLUMN_WIDTH, BODY_FONT_SIZE, item.color)
 				y_offset += LINE_HEIGHT
 
 			"status":
+				if y_offset + LINE_HEIGHT > content_bottom:
+					break
 				# Label with status indicator
 				var indicator_color = item.color if item.active else LABEL_COLOR
 				draw_circle(Vector2(PADDING.x + 4, y_offset + 8), 4, indicator_color)
-				draw_string(font, Vector2(PADDING.x + 14, y_offset + 12), item.label,
-					HORIZONTAL_ALIGNMENT_LEFT, -1, 11, item.color if item.active else LABEL_COLOR)
+				var status_width = TOOLTIP_WIDTH - (PADDING.x + 14.0) - PADDING.x
+				var status_text = _fit_text(font, str(item.label), BODY_FONT_SIZE, status_width)
+				draw_string(font, Vector2(PADDING.x + 14, y_offset + 12), status_text,
+					HORIZONTAL_ALIGNMENT_LEFT, status_width, BODY_FONT_SIZE, item.color if item.active else LABEL_COLOR)
 				y_offset += LINE_HEIGHT
 
 			"bar":
+				if y_offset + LINE_HEIGHT + 4.0 > content_bottom:
+					break
 				# Label with progress bar
-				draw_string(font, Vector2(PADDING.x, y_offset + 12), item.label,
-					HORIZONTAL_ALIGNMENT_LEFT, -1, 11, LABEL_COLOR)
+				var bar_label_width = TOOLTIP_WIDTH - PADDING.x * 2.0 - 68.0
+				var bar_label = _fit_text(font, str(item.label), BODY_FONT_SIZE, bar_label_width)
+				draw_string(font, Vector2(PADDING.x, y_offset + 12), bar_label,
+					HORIZONTAL_ALIGNMENT_LEFT, bar_label_width, BODY_FONT_SIZE, LABEL_COLOR)
 
 				# Draw bar background
 				var bar_width = 60.0
@@ -550,9 +584,24 @@ func _draw() -> void:
 
 				# Draw value text
 				draw_string(font, Vector2(bar_x - 8, y_offset + 12), "%d" % int(item.value),
-					HORIZONTAL_ALIGNMENT_RIGHT, -1, 10, TEXT_COLOR)
+					HORIZONTAL_ALIGNMENT_RIGHT, 26.0, BAR_VALUE_FONT_SIZE, TEXT_COLOR)
 
 				y_offset += LINE_HEIGHT + 4.0
+
+
+func _fit_text(font: Font, text: String, font_size: int, max_width: float) -> String:
+	if max_width <= 0.0 or text.is_empty():
+		return ""
+	if font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x <= max_width:
+		return text
+
+	var clipped = text
+	while clipped.length() > 1:
+		clipped = clipped.left(clipped.length() - 1)
+		var candidate = "%s..." % clipped
+		if font.get_string_size(candidate, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x <= max_width:
+			return candidate
+	return "..."
 
 
 ## Force hide the tooltip

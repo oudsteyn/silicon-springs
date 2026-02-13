@@ -84,6 +84,7 @@ var action_feedback_effects: ActionFeedbackEffects = null
 const FINE_GRID_RADIUS: int = 8  # Show grid within this many cells of cursor
 const TERRAIN_RUNTIME_PIPELINE_ENABLED: bool = true
 const TERRAIN_RUNTIME_EROSION_ITERATIONS: int = 1800
+const ENABLE_CELL_INFO_TOOLTIP: bool = false
 
 # Tool modes
 enum ToolMode { SELECT, PAN, BUILD, DEMOLISH, ZONE, TERRAIN }
@@ -124,6 +125,8 @@ var pan_start_camera: Vector2 = Vector2.ZERO
 var selected_building = null  # Building
 var hovered_cell: Vector2i = Vector2i(-1, -1)
 var world3d_bridge: Node = null
+var _cell_inspector_active: bool = false
+var _cell_inspector_cell: Vector2i = Vector2i(-1, -1)
 
 
 func _ready() -> void:
@@ -358,7 +361,59 @@ func _setup_minimap() -> void:
 	minimap_overlay.set_terrain_system(terrain_system)
 	minimap_overlay.set_grid_system(grid_system)
 	minimap_overlay.set_zoning_system(zoning_system)
+	_sync_minimap_world_size()
+	_bind_minimap_world_size_updates()
 	ui_layer.add_child(minimap_overlay)
+
+
+func _sync_minimap_world_size() -> void:
+	if minimap_overlay and minimap_overlay.has_method("set_world_cell_size"):
+		minimap_overlay.set_world_cell_size(_resolve_world_cell_size())
+
+
+func _resolve_world_cell_size() -> Vector2i:
+	var configured_grid_size = _get_configured_grid_cell_size()
+
+	if terrain_system:
+		if terrain_system.has_method("get_runtime_heightmap_size"):
+			var runtime_size = int(terrain_system.get_runtime_heightmap_size())
+			if runtime_size > 0 and runtime_size == configured_grid_size.x and runtime_size == configured_grid_size.y:
+				return Vector2i(runtime_size, runtime_size)
+		if terrain_system.has_method("get_grid_size"):
+			var terrain_grid_size = terrain_system.get_grid_size()
+			if terrain_grid_size is Vector2i and terrain_grid_size.x > 0 and terrain_grid_size.y > 0:
+				return terrain_grid_size
+	return configured_grid_size
+
+
+func _get_configured_grid_cell_size() -> Vector2i:
+	if grid_system:
+		if grid_system.has_method("get_grid_size"):
+			var grid_size = grid_system.get_grid_size()
+			if grid_size is Vector2i and grid_size.x > 0 and grid_size.y > 0:
+				return grid_size
+		if grid_system.has_method("get_world_cell_size"):
+			var world_cell_size = grid_system.get_world_cell_size()
+			if world_cell_size is Vector2i and world_cell_size.x > 0 and world_cell_size.y > 0:
+				return world_cell_size
+	return Vector2i(GridConstants.GRID_WIDTH, GridConstants.GRID_HEIGHT)
+
+
+func _bind_minimap_world_size_updates() -> void:
+	if not terrain_system or not terrain_system.has_signal("runtime_heightmap_generated"):
+		return
+	if not terrain_system.runtime_heightmap_generated.is_connected(_on_minimap_runtime_heightmap_generated):
+		terrain_system.runtime_heightmap_generated.connect(_on_minimap_runtime_heightmap_generated)
+
+
+func _on_minimap_runtime_heightmap_generated(_heightmap: PackedFloat32Array, size: int, _sea_level: float) -> void:
+	if size <= 0:
+		return
+	var configured_grid_size = _get_configured_grid_cell_size()
+	if size != configured_grid_size.x or size != configured_grid_size.y:
+		return
+	if minimap_overlay and minimap_overlay.has_method("set_world_cell_size"):
+		minimap_overlay.set_world_cell_size(Vector2i(size, size))
 
 
 func _setup_phase5_overlays() -> void:
@@ -373,22 +428,22 @@ func _setup_phase5_overlays() -> void:
 	measurement_tool.set_camera(camera)
 	add_child(measurement_tool)
 
-	# Cell info tooltip - smart hover tooltips
-	# Added to CanvasLayer so it stays in screen space
-	var tooltip_layer = CanvasLayer.new()
-	tooltip_layer.name = "TooltipLayer"
-	tooltip_layer.layer = 20  # Above everything
-	add_child(tooltip_layer)
+	# Cell info tooltip (disabled by default)
+	if ENABLE_CELL_INFO_TOOLTIP:
+		var tooltip_layer = CanvasLayer.new()
+		tooltip_layer.name = "TooltipLayer"
+		tooltip_layer.layer = 9  # Above world content, below minimap/hud canvas layers
+		add_child(tooltip_layer)
 
-	cell_info_tooltip = CellInfoTooltip.new()
-	cell_info_tooltip.name = "CellInfoTooltip"
-	cell_info_tooltip.set_camera(camera)
-	cell_info_tooltip.set_systems(
-		grid_system, terrain_system, power_system, water_system,
-		pollution_system, land_value_system, service_coverage,
-		zoning_system, traffic_system
-	)
-	tooltip_layer.add_child(cell_info_tooltip)
+		cell_info_tooltip = CellInfoTooltip.new()
+		cell_info_tooltip.name = "CellInfoTooltip"
+		cell_info_tooltip.set_camera(camera)
+		cell_info_tooltip.set_systems(
+			grid_system, terrain_system, power_system, water_system,
+			pollution_system, land_value_system, service_coverage,
+			zoning_system, traffic_system
+		)
+		tooltip_layer.add_child(cell_info_tooltip)
 
 
 func _setup_world3d_bridge() -> void:
@@ -670,6 +725,10 @@ func _update_ghost_preview() -> void:
 
 ## Check if mouse is over UI elements that should block game input
 func _is_mouse_over_ui() -> bool:
+	var hovered_control: Control = get_viewport().gui_get_hovered_control()
+	if hovered_control and hovered_control.is_visible_in_tree():
+		return true
+
 	# Check if minimap is being dragged
 	if minimap_overlay and minimap_overlay._is_dragging:
 		return true
@@ -745,21 +804,25 @@ func _update_cell_highlight() -> void:
 	if not cell_highlight:
 		return
 
-	# Hide highlight when modal dialogs are open
-	if UIManager.is_modal_open():
+	# Hide highlight when modal dialogs are open or pointer is over UI
+	if UIManager.is_modal_open() or _is_mouse_over_ui():
 		cell_highlight.visible = false
 		return
-	cell_highlight.visible = true
 
-	# Update position
-	cell_highlight.set_cell(hovered_cell)
+	if not _should_show_cell_highlight():
+		cell_highlight.visible = false
+		return
+
+	cell_highlight.visible = true
+	var target_cell := _get_active_highlight_cell()
+	cell_highlight.set_cell(target_cell)
 
 	# Determine highlight state based on context
 	var can_place = false
-	var has_building = grid_system.get_building_at(hovered_cell) != null
+	var has_building = grid_system.get_building_at(target_cell) != null
 
 	if build_mode and current_building_data:
-		var check = grid_system.can_place_building(hovered_cell, current_building_data)
+		var check = grid_system.can_place_building(target_cell, current_building_data)
 		can_place = check.can_place and GameState.can_afford(current_building_data.build_cost)
 		cell_highlight.set_building_size(current_building_data.size)
 	else:
@@ -776,7 +839,19 @@ func _update_cell_highlight() -> void:
 	cell_highlight.set_state(state)
 
 
+func _should_show_cell_highlight() -> bool:
+	return build_mode or demolish_mode or zone_mode or current_tool == ToolMode.TERRAIN or _cell_inspector_active
+
+
+func _get_active_highlight_cell() -> Vector2i:
+	if _cell_inspector_active and not build_mode and not demolish_mode and not zone_mode:
+		return _cell_inspector_cell
+	return hovered_cell
+
+
 func _handle_left_click() -> void:
+	_clear_cell_inspector()
+
 	if build_mode and current_building_data:
 		_try_place_building()
 	elif demolish_mode:
@@ -829,6 +904,33 @@ func _handle_right_click() -> void:
 		exit_build_mode()
 	else:
 		_deselect_building()
+		_toggle_cell_inspector(hovered_cell)
+
+
+func _toggle_cell_inspector(cell: Vector2i) -> void:
+	if not ENABLE_CELL_INFO_TOOLTIP:
+		_clear_cell_inspector()
+		return
+
+	if not grid_system or not grid_system.is_valid_cell(cell):
+		_clear_cell_inspector()
+		return
+
+	if _cell_inspector_active and _cell_inspector_cell == cell:
+		_clear_cell_inspector()
+		return
+
+	_cell_inspector_active = true
+	_cell_inspector_cell = cell
+	if cell_info_tooltip and cell_info_tooltip.has_method("show_cell"):
+		cell_info_tooltip.show_cell(cell)
+
+
+func _clear_cell_inspector() -> void:
+	_cell_inspector_active = false
+	_cell_inspector_cell = Vector2i(-1, -1)
+	if cell_info_tooltip:
+		cell_info_tooltip.hide_tooltip()
 
 
 func _try_place_building() -> void:
@@ -1090,6 +1192,7 @@ func _deselect_building() -> void:
 
 
 func enter_build_mode(building_id: String) -> void:
+	_clear_cell_inspector()
 	current_building_id = building_id
 	current_building_data = grid_system.get_building_data(building_id)
 	build_mode = true
@@ -1109,6 +1212,7 @@ func enter_build_mode(building_id: String) -> void:
 
 
 func enter_demolish_mode() -> void:
+	_clear_cell_inspector()
 	demolish_mode = true
 	build_mode = false
 	current_building_id = ""
@@ -1125,6 +1229,7 @@ func enter_demolish_mode() -> void:
 
 
 func exit_build_mode() -> void:
+	_clear_cell_inspector()
 	build_mode = false
 	demolish_mode = false
 	zone_mode = false
@@ -1152,6 +1257,7 @@ func exit_build_mode() -> void:
 
 
 func enter_zone_mode(zone_type: int) -> void:
+	_clear_cell_inspector()
 	zone_mode = true
 	build_mode = false
 	demolish_mode = false

@@ -41,6 +41,7 @@ const BUILDING_COLORS: Dictionary = {
 # State
 var _minimap_size: Vector2 = DEFAULT_SIZE
 var _scale: Vector2 = Vector2.ONE  # World to minimap scale
+var _world_cell_size: Vector2i = Vector2i(GridConstants.GRID_WIDTH, GridConstants.GRID_HEIGHT)
 var _terrain_texture: ImageTexture = null
 var _terrain_dirty: bool = true
 var _buildings_dirty: bool = true
@@ -75,7 +76,7 @@ func _ready() -> void:
 	size = _minimap_size
 
 	# Calculate scale
-	_scale = _minimap_size / Vector2(GridConstants.GRID_WIDTH * GridConstants.CELL_SIZE, GridConstants.GRID_HEIGHT * GridConstants.CELL_SIZE)
+	_recalculate_scale()
 
 	# Connect to events
 	var events = _get_events()
@@ -136,10 +137,11 @@ func _rebuild_terrain_texture() -> void:
 		return
 
 	# Create an image for the terrain
-	var img = Image.create(GridConstants.GRID_WIDTH, GridConstants.GRID_HEIGHT, false, Image.FORMAT_RGBA8)
+	var world_size = _get_world_cell_size()
+	var img = Image.create(world_size.x, world_size.y, false, Image.FORMAT_RGBA8)
 
-	for x in range(GridConstants.GRID_WIDTH):
-		for y in range(GridConstants.GRID_HEIGHT):
+	for x in range(world_size.x):
+		for y in range(world_size.y):
 			var cell = Vector2i(x, y)
 			var color = _get_terrain_color(cell)
 			img.set_pixel(x, y, color)
@@ -175,6 +177,7 @@ func _get_terrain_color(cell: Vector2i) -> Color:
 
 func _rebuild_building_markers() -> void:
 	_building_markers.clear()
+	var map_origin = _get_map_draw_rect().position
 
 	if not grid_system:
 		_buildings_dirty = false
@@ -200,7 +203,7 @@ func _rebuild_building_markers() -> void:
 
 		# Calculate position on minimap
 		var world_pos = Vector2(cell) * GridConstants.CELL_SIZE + Vector2(bsize) * GridConstants.CELL_SIZE * 0.5
-		var minimap_pos = world_pos * _scale
+		var minimap_pos = map_origin + world_pos * _scale
 
 		_building_markers.append({
 			"pos": minimap_pos,
@@ -214,10 +217,11 @@ func _rebuild_building_markers() -> void:
 func _draw() -> void:
 	# Draw background
 	draw_rect(Rect2(Vector2.ZERO, _minimap_size), BG_COLOR)
+	var map_rect = _get_map_draw_rect()
 
 	# Draw terrain texture
 	if _terrain_texture:
-		draw_texture_rect(_terrain_texture, Rect2(Vector2.ZERO, _minimap_size), false)
+		draw_texture_rect(_terrain_texture, map_rect, false)
 
 	# Draw zones if enabled
 	if _show_zones:
@@ -240,13 +244,14 @@ func _draw_zones() -> void:
 	if not zoning_system:
 		return
 
+	var map_origin = _get_map_draw_rect().position
 	var zones = zoning_system.get_all_zones()
 	for cell in zones:
 		var zone_data = zones[cell]
 		var color = zoning_system.get_zone_color(zone_data.type)
 		color.a = 0.4
 
-		var minimap_pos = Vector2(cell) * GridConstants.CELL_SIZE * _scale
+		var minimap_pos = map_origin + Vector2(cell) * GridConstants.CELL_SIZE * _scale
 		var minimap_size = Vector2(GridConstants.CELL_SIZE, GridConstants.CELL_SIZE) * _scale
 		draw_rect(Rect2(minimap_pos, minimap_size), color)
 
@@ -265,17 +270,18 @@ func _draw_building_markers() -> void:
 func _draw_viewport_indicator() -> void:
 	if not camera:
 		return
+	var map_rect = _get_map_draw_rect()
 
 	var viewport_size = get_viewport_rect().size
 	var half_size = viewport_size / (2.0 * camera.zoom.x)
 
 	# Calculate viewport rectangle in minimap coordinates
-	var vp_min = (camera.position - half_size) * _scale
-	var vp_max = (camera.position + half_size) * _scale
+	var vp_min = map_rect.position + (camera.position - half_size) * _scale
+	var vp_max = map_rect.position + (camera.position + half_size) * _scale
 
 	# Clamp to minimap bounds
-	vp_min = vp_min.clamp(Vector2.ZERO, _minimap_size)
-	vp_max = vp_max.clamp(Vector2.ZERO, _minimap_size)
+	vp_min = vp_min.clamp(map_rect.position, map_rect.end)
+	vp_max = vp_max.clamp(map_rect.position, map_rect.end)
 
 	var vp_rect = Rect2(vp_min, vp_max - vp_min)
 
@@ -327,11 +333,12 @@ func _navigate_to_position(minimap_pos: Vector2) -> void:
 	if not camera:
 		return
 
-	# Clamp position to minimap bounds
-	minimap_pos = minimap_pos.clamp(Vector2.ZERO, _minimap_size)
+	var map_rect = _get_map_draw_rect()
+	# Clamp position to map drawing bounds
+	minimap_pos = minimap_pos.clamp(map_rect.position, map_rect.end)
 
 	# Convert minimap position to world position
-	var world_pos = minimap_pos / _scale
+	var world_pos = (minimap_pos - map_rect.position) / _scale
 
 	# Move camera
 	camera.position = world_pos
@@ -340,7 +347,7 @@ func _navigate_to_position(minimap_pos: Vector2) -> void:
 # Public API
 func set_minimap_size(new_size: Vector2) -> void:
 	_minimap_size = new_size.clamp(MIN_SIZE, MAX_SIZE)
-	_scale = _minimap_size / Vector2(GridConstants.GRID_WIDTH * GridConstants.CELL_SIZE, GridConstants.GRID_HEIGHT * GridConstants.CELL_SIZE)
+	_recalculate_scale()
 
 	custom_minimum_size = _minimap_size
 	size = _minimap_size
@@ -349,6 +356,46 @@ func set_minimap_size(new_size: Vector2) -> void:
 	offset_bottom = _minimap_size.y + MARGIN
 
 	_buildings_dirty = true
+
+
+func set_world_cell_size(world_cell_size: Vector2i) -> void:
+	_world_cell_size = Vector2i(maxi(1, world_cell_size.x), maxi(1, world_cell_size.y))
+	_recalculate_scale()
+	_terrain_dirty = true
+	_buildings_dirty = true
+
+
+func _get_map_draw_rect() -> Rect2:
+	var inset = BORDER_WIDTH
+	var available_size = _get_map_draw_size()
+	var world_size = _get_world_pixel_size()
+	var world_aspect = world_size.x / world_size.y
+	var available_aspect = available_size.x / available_size.y
+	var map_size = available_size
+	if world_aspect > available_aspect:
+		map_size.y = available_size.x / world_aspect
+	else:
+		map_size.x = available_size.y * world_aspect
+	var map_pos = Vector2(inset, inset) + (available_size - map_size) * 0.5
+	return Rect2(map_pos, map_size)
+
+
+func _get_map_draw_size() -> Vector2:
+	var inset = BORDER_WIDTH * 2.0
+	return Vector2(maxf(1.0, _minimap_size.x - inset), maxf(1.0, _minimap_size.y - inset))
+
+
+func _get_world_cell_size() -> Vector2i:
+	return _world_cell_size
+
+
+func _get_world_pixel_size() -> Vector2:
+	var world_size = _get_world_cell_size()
+	return Vector2(world_size.x * GridConstants.CELL_SIZE, world_size.y * GridConstants.CELL_SIZE)
+
+
+func _recalculate_scale() -> void:
+	_scale = _get_map_draw_rect().size / _get_world_pixel_size()
 
 
 func toggle_zones() -> void:

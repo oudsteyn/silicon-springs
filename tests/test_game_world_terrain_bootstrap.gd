@@ -1,6 +1,7 @@
 extends TestBase
 
 const GameWorldScript = preload("res://scenes/game_world.gd")
+const MinimapOverlayScript = preload("res://src/ui/grid/minimap_overlay.gd")
 
 var _to_free: Array = []
 
@@ -62,6 +63,21 @@ class DummyTerrainSystem extends Node:
 		generate_called = true
 
 
+class DummyTerrainSystemRuntime extends Node:
+	signal runtime_heightmap_generated(heightmap: PackedFloat32Array, size: int, sea_level: float)
+	var runtime_size: int = 0
+
+	func get_runtime_heightmap_size() -> int:
+		return runtime_size
+
+
+class DummyGridWithSize extends Node:
+	var size: Vector2i = Vector2i(128, 128)
+
+	func get_grid_size() -> Vector2i:
+		return size
+
+
 class DummyWorld3DBridge extends Node:
 	var initialize_called = false
 	var rendering_enabled_called = false
@@ -119,3 +135,52 @@ func test_setup_world3d_bridge_initializes_with_grid_and_camera() -> void:
 	assert_true(bridge.rendering_enabled_called)
 	assert_eq(bridge.last_grid, grid)
 	assert_eq(bridge.last_camera, cam)
+
+
+func test_sync_minimap_world_size_prefers_runtime_heightmap_size() -> void:
+	var world = _track(GameWorldScript.new())
+	var terrain = _track(DummyTerrainSystemRuntime.new())
+	var grid = _track(DummyGridWithSize.new())
+	var minimap = _track(MinimapOverlayScript.new())
+	grid.size = Vector2i(256, 256)
+	terrain.runtime_size = 256
+
+	world.terrain_system = terrain
+	world.grid_system = grid
+	world.minimap_overlay = minimap
+	world._sync_minimap_world_size()
+
+	assert_eq(minimap._world_cell_size, Vector2i(256, 256))
+
+
+func test_runtime_heightmap_signal_updates_minimap_world_size() -> void:
+	var world = _track(GameWorldScript.new())
+	var terrain = _track(DummyTerrainSystemRuntime.new())
+	var grid = _track(DummyGridWithSize.new())
+	var minimap = _track(MinimapOverlayScript.new())
+	grid.size = Vector2i(384, 384)
+
+	world.terrain_system = terrain
+	world.grid_system = grid
+	world.minimap_overlay = minimap
+	world._bind_minimap_world_size_updates()
+	terrain.runtime_heightmap_generated.emit(PackedFloat32Array(), 384, 0.0)
+
+	assert_eq(minimap._world_cell_size, Vector2i(384, 384))
+
+
+func test_runtime_heightmap_signal_ignores_mismatched_size() -> void:
+	var world = _track(GameWorldScript.new())
+	var terrain = _track(DummyTerrainSystemRuntime.new())
+	var grid = _track(DummyGridWithSize.new())
+	var minimap = _track(MinimapOverlayScript.new())
+	grid.size = Vector2i(128, 128)
+
+	world.terrain_system = terrain
+	world.grid_system = grid
+	world.minimap_overlay = minimap
+	world._sync_minimap_world_size()
+	world._bind_minimap_world_size_updates()
+	terrain.runtime_heightmap_generated.emit(PackedFloat32Array(), 384, 0.0)
+
+	assert_eq(minimap._world_cell_size, Vector2i(128, 128))
