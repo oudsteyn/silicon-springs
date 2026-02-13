@@ -170,3 +170,22 @@ func test_low_preset_contract_values_are_stable() -> void:
 	assert_false(bool(profile.get("ssao_enabled", true)))
 	assert_false(bool(profile.get("volumetric_fog_enabled", true)))
 	assert_eq(int(profile.get("shadow_quality", -1)), int(mgr.ShadowQuality.LOW))
+
+
+func test_ultra_preset_boosts_ssao_power() -> void:
+	var mgr = _track_node(GraphicsSettingsManagerScript.new())
+	var env = Environment.new()
+
+	mgr.apply_preset(env, mgr.QualityPreset.ULTRA)
+
+	assert_approx(env.ssao_power, 1.7, 0.001)
+
+
+func test_downgrading_from_ultra_resets_ssao_power() -> void:
+	var mgr = _track_node(GraphicsSettingsManagerScript.new())
+	var env = Environment.new()
+
+	mgr.apply_preset(env, mgr.QualityPreset.ULTRA)
+	mgr.apply_preset(env, mgr.QualityPreset.LOW)
+
+	assert_approx(env.ssao_power, 1.0, 0.001)

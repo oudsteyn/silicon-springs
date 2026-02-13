@@ -23,12 +23,14 @@ func set_event_bus(bus: Node) -> void:
 
 func _ready() -> void:
 	_connect_event_bus()
-	if build_menu and build_menu.has_signal("build_category_selected"):
+	var build_menu_has_category_signal := build_menu and build_menu.has_signal("build_category_selected")
+	if build_menu_has_category_signal:
 		build_menu.connect("build_category_selected", Callable(self, "_on_build_category_selected"))
-	roads_button.pressed.connect(func(): _on_build_category_selected("roads"))
-	zoning_button.pressed.connect(func(): _on_build_category_selected("zoning"))
-	utilities_button.pressed.connect(func(): _on_build_category_selected("utilities"))
-	services_button.pressed.connect(func(): _on_build_category_selected("services"))
+	else:
+		roads_button.pressed.connect(func(): _on_build_category_selected("roads"))
+		zoning_button.pressed.connect(func(): _on_build_category_selected("zoning"))
+		utilities_button.pressed.connect(func(): _on_build_category_selected("utilities"))
+		services_button.pressed.connect(func(): _on_build_category_selected("services"))
 	if finance_panel:
 		finance_panel.visible = false
 
@@ -38,16 +40,21 @@ func _connect_event_bus() -> void:
 		return
 	if info_popup and info_popup.has_method("set_event_bus"):
 		info_popup.call("set_event_bus", bus)
-	bus.economy_changed.connect(_on_economy_changed)
-	bus.population_changed.connect(_on_population_changed)
-	bus.happiness_changed.connect(_on_happiness_changed)
-	bus.building_selected.connect(_on_building_selected)
-	bus.building_deselected.connect(_on_building_deselected)
-	if bus.has_signal("building_stats_changed"):
+	if not bus.economy_changed.is_connected(_on_economy_changed):
+		bus.economy_changed.connect(_on_economy_changed)
+	if not bus.population_changed.is_connected(_on_population_changed):
+		bus.population_changed.connect(_on_population_changed)
+	if not bus.happiness_changed.is_connected(_on_happiness_changed):
+		bus.happiness_changed.connect(_on_happiness_changed)
+	if not bus.building_selected.is_connected(_on_building_selected):
+		bus.building_selected.connect(_on_building_selected)
+	if not bus.building_deselected.is_connected(_on_building_deselected):
+		bus.building_deselected.connect(_on_building_deselected)
+	if bus.has_signal("building_stats_changed") and not bus.building_stats_changed.is_connected(_on_building_stats_changed):
 		bus.building_stats_changed.connect(_on_building_stats_changed)
-	if bus.has_signal("finance_snapshot_updated"):
+	if bus.has_signal("finance_snapshot_updated") and not bus.finance_snapshot_updated.is_connected(_on_finance_snapshot_updated):
 		bus.finance_snapshot_updated.connect(_on_finance_snapshot_updated)
-	if bus.has_signal("finance_panel_toggled"):
+	if bus.has_signal("finance_panel_toggled") and not bus.finance_panel_toggled.is_connected(_on_finance_panel_toggled):
 		bus.finance_panel_toggled.connect(_on_finance_panel_toggled)
 
 func _get_event_bus() -> Node:

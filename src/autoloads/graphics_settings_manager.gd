@@ -22,6 +22,7 @@ var ssao_enabled: bool = true
 var ssr_enabled: bool = true
 var volumetric_fog_enabled: bool = true
 var glow_enabled: bool = true
+var ssao_power: float = 1.0
 var tonemap_exposure: float = 1.0
 var tonemap_white: float = 1.0
 var auto_quality_enabled: bool = true
@@ -77,11 +78,12 @@ func get_current_settings() -> Dictionary:
 		"shadow_quality": int(current_shadow_quality),
 		"ssao_enabled": ssao_enabled,
 		"ssr_enabled": ssr_enabled,
-		"volumetric_fog_enabled": volumetric_fog_enabled,
-		"glow_enabled": glow_enabled,
-		"tonemap_exposure": tonemap_exposure,
-		"tonemap_white": tonemap_white,
-		"auto_quality_enabled": auto_quality_enabled
+			"volumetric_fog_enabled": volumetric_fog_enabled,
+			"glow_enabled": glow_enabled,
+			"ssao_power": ssao_power,
+			"tonemap_exposure": tonemap_exposure,
+			"tonemap_white": tonemap_white,
+			"auto_quality_enabled": auto_quality_enabled
 	}
 
 
@@ -178,6 +180,7 @@ func apply_serialized_settings(data: Dictionary, apply_now: bool = true) -> void
 	ssr_enabled = bool(data.get("ssr_enabled", ssr_enabled))
 	volumetric_fog_enabled = bool(data.get("volumetric_fog_enabled", volumetric_fog_enabled))
 	glow_enabled = bool(data.get("glow_enabled", glow_enabled))
+	ssao_power = clampf(float(data.get("ssao_power", ssao_power)), 0.1, 4.0)
 	tonemap_exposure = float(data.get("tonemap_exposure", tonemap_exposure))
 	tonemap_white = float(data.get("tonemap_white", tonemap_white))
 	auto_quality_enabled = bool(data.get("auto_quality_enabled", auto_quality_enabled))
@@ -220,6 +223,7 @@ func _set_defaults_for_preset(preset: QualityPreset) -> void:
 		ssr_enabled = bool(contract.get("ssr_enabled", ssr_enabled))
 		volumetric_fog_enabled = bool(contract.get("volumetric_fog_enabled", volumetric_fog_enabled))
 		glow_enabled = bool(contract.get("glow_enabled", glow_enabled))
+		ssao_power = float(contract.get("ssao_power", ssao_power))
 		tonemap_exposure = float(contract.get("tonemap_exposure", tonemap_exposure))
 		tonemap_white = float(contract.get("tonemap_white", tonemap_white))
 		return
@@ -231,6 +235,7 @@ func _set_defaults_for_preset(preset: QualityPreset) -> void:
 			ssr_enabled = false
 			volumetric_fog_enabled = false
 			glow_enabled = false
+			ssao_power = 1.0
 			current_shadow_quality = ShadowQuality.LOW
 			tonemap_exposure = 0.95
 			tonemap_white = 1.0
@@ -239,6 +244,7 @@ func _set_defaults_for_preset(preset: QualityPreset) -> void:
 			ssr_enabled = false
 			volumetric_fog_enabled = true
 			glow_enabled = true
+			ssao_power = 1.2
 			current_shadow_quality = ShadowQuality.MEDIUM
 			tonemap_exposure = 1.0
 			tonemap_white = 1.0
@@ -247,6 +253,7 @@ func _set_defaults_for_preset(preset: QualityPreset) -> void:
 			ssr_enabled = true
 			volumetric_fog_enabled = true
 			glow_enabled = true
+			ssao_power = 1.4
 			current_shadow_quality = ShadowQuality.HIGH
 			tonemap_exposure = 1.05
 			tonemap_white = 1.1
@@ -255,6 +262,7 @@ func _set_defaults_for_preset(preset: QualityPreset) -> void:
 			ssr_enabled = true
 			volumetric_fog_enabled = true
 			glow_enabled = true
+			ssao_power = 1.7
 			current_shadow_quality = ShadowQuality.ULTRA
 			tonemap_exposure = 1.1
 			tonemap_white = 1.2
@@ -277,11 +285,12 @@ func validate_preset_contract() -> bool:
 			"shadow_quality",
 			"ssao_enabled",
 			"ssr_enabled",
-			"volumetric_fog_enabled",
-			"glow_enabled",
-			"tonemap_exposure",
-			"tonemap_white"
-		]:
+				"volumetric_fog_enabled",
+				"glow_enabled",
+				"ssao_power",
+				"tonemap_exposure",
+				"tonemap_white"
+			]:
 			if not profile.has(required):
 				return false
 	return true
@@ -292,40 +301,44 @@ func _build_preset_contracts() -> void:
 		int(QualityPreset.LOW): {
 			"shadow_quality": int(ShadowQuality.LOW),
 			"ssao_enabled": false,
-			"ssr_enabled": false,
-			"volumetric_fog_enabled": false,
-			"glow_enabled": false,
-			"tonemap_exposure": 0.95,
-			"tonemap_white": 1.0
-		},
+				"ssr_enabled": false,
+				"volumetric_fog_enabled": false,
+				"glow_enabled": false,
+				"ssao_power": 1.0,
+				"tonemap_exposure": 0.95,
+				"tonemap_white": 1.0
+			},
 		int(QualityPreset.MEDIUM): {
 			"shadow_quality": int(ShadowQuality.MEDIUM),
 			"ssao_enabled": true,
-			"ssr_enabled": false,
-			"volumetric_fog_enabled": true,
-			"glow_enabled": true,
-			"tonemap_exposure": 1.0,
-			"tonemap_white": 1.0
-		},
+				"ssr_enabled": false,
+				"volumetric_fog_enabled": true,
+				"glow_enabled": true,
+				"ssao_power": 1.2,
+				"tonemap_exposure": 1.0,
+				"tonemap_white": 1.0
+			},
 		int(QualityPreset.HIGH): {
 			"shadow_quality": int(ShadowQuality.HIGH),
 			"ssao_enabled": true,
-			"ssr_enabled": true,
-			"volumetric_fog_enabled": true,
-			"glow_enabled": true,
-			"tonemap_exposure": 1.05,
-			"tonemap_white": 1.1
-		},
+				"ssr_enabled": true,
+				"volumetric_fog_enabled": true,
+				"glow_enabled": true,
+				"ssao_power": 1.4,
+				"tonemap_exposure": 1.05,
+				"tonemap_white": 1.1
+			},
 		int(QualityPreset.ULTRA): {
 			"shadow_quality": int(ShadowQuality.ULTRA),
 			"ssao_enabled": true,
-			"ssr_enabled": true,
-			"volumetric_fog_enabled": true,
-			"glow_enabled": true,
-			"tonemap_exposure": 1.1,
-			"tonemap_white": 1.2
+				"ssr_enabled": true,
+				"volumetric_fog_enabled": true,
+				"glow_enabled": true,
+				"ssao_power": 1.7,
+				"tonemap_exposure": 1.1,
+				"tonemap_white": 1.2
+			}
 		}
-	}
 
 func set_ssr_enabled(env: Environment, enabled: bool) -> void:
 	ssr_enabled = enabled
@@ -336,8 +349,7 @@ func set_ssr_enabled(env: Environment, enabled: bool) -> void:
 
 func _apply_to_environment(env: Environment) -> void:
 	_set_features(env, ssao_enabled, ssr_enabled, volumetric_fog_enabled)
-	if current_preset == QualityPreset.ULTRA:
-		env.ssao_power = 1.7
+	env.ssao_power = ssao_power
 	env.glow_enabled = glow_enabled
 	env.tonemap_exposure = tonemap_exposure
 	env.tonemap_white = tonemap_white

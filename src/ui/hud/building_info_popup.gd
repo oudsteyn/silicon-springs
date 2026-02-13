@@ -13,14 +13,13 @@ signal demolish_requested(building_id: String)
 
 var _building_id: String = ""
 var _event_bus: Node = null
+var _connected_bus: Node = null
 
 func _ready() -> void:
 	visible = false
 	upgrade_button.pressed.connect(_on_upgrade_pressed)
 	demolish_button.pressed.connect(_on_demolish_pressed)
-	var bus = _get_event_bus()
-	if bus and bus.has_signal("building_stats_changed"):
-		bus.building_stats_changed.connect(_on_building_stats_changed)
+	_bind_event_bus(_get_event_bus())
 
 func show_building(building_id: String, payload: Dictionary) -> void:
 	_building_id = building_id
@@ -58,6 +57,7 @@ func _on_demolish_pressed() -> void:
 
 func set_event_bus(bus: Node) -> void:
 	_event_bus = bus
+	_bind_event_bus(_event_bus)
 
 
 func _get_event_bus() -> Node:
@@ -66,3 +66,15 @@ func _get_event_bus() -> Node:
 	if has_node("/root/CityEventBus"):
 		return get_node("/root/CityEventBus")
 	return null
+
+
+func _bind_event_bus(bus: Node) -> void:
+	if _connected_bus and _connected_bus.has_signal("building_stats_changed"):
+		if _connected_bus.building_stats_changed.is_connected(_on_building_stats_changed):
+			_connected_bus.building_stats_changed.disconnect(_on_building_stats_changed)
+	_connected_bus = null
+
+	if bus and bus.has_signal("building_stats_changed"):
+		if not bus.building_stats_changed.is_connected(_on_building_stats_changed):
+			bus.building_stats_changed.connect(_on_building_stats_changed)
+		_connected_bus = bus

@@ -1,6 +1,7 @@
 extends TestBase
 
 const MainHUDControllerScript = preload("res://src/ui/hud/main_hud_controller.gd")
+const BuildMenuPanelScript = preload("res://src/ui/hud/build_menu_panel.gd")
 
 class FakeBus extends Node:
 	signal economy_changed(money: int)
@@ -18,8 +19,10 @@ class FakeInfoPopup extends Control:
 	var shown_payload: Dictionary = {}
 	var hide_called: bool = false
 	var update_count: int = 0
+	var show_count: int = 0
 
 	func show_building(building_id: String, payload: Dictionary) -> void:
+		show_count += 1
 		shown_with_id = building_id
 		shown_payload = payload
 		hide_called = false
@@ -34,7 +37,7 @@ class FakeInfoPopup extends Control:
 
 var _selected_mode: String = ""
 
-func _build_hud(bus: Node) -> CanvasLayer:
+func _build_hud(bus: Node, use_build_menu_script: bool = false) -> CanvasLayer:
 	var hud := CanvasLayer.new()
 	hud.set_script(MainHUDControllerScript)
 
@@ -43,6 +46,8 @@ func _build_hud(bus: Node) -> CanvasLayer:
 	hud.add_child(root)
 
 	var build_menu := PanelContainer.new()
+	if use_build_menu_script:
+		build_menu.set_script(BuildMenuPanelScript)
 	build_menu.name = "BuildMenu"
 	root.add_child(build_menu)
 
@@ -135,6 +140,25 @@ func test_build_menu_selection_emits_build_mode() -> void:
 	hud.free()
 	bus.free()
 
+
+func test_build_menu_button_press_emits_build_mode_once() -> void:
+	var bus = FakeBus.new()
+	var emitted: Array[String] = []
+	bus.build_mode_changed.connect(func(mode_id: String): emitted.append(mode_id))
+
+	var hud = _build_hud(bus, true)
+	add_child(bus)
+	add_child(hud)
+
+	var roads_button := hud.get_node("Root/BuildMenu/Margin/Row/Roads") as Button
+	roads_button.emit_signal("pressed")
+
+	assert_eq(emitted.size(), 1)
+	assert_eq(emitted[0], "roads")
+
+	hud.free()
+	bus.free()
+
 func test_building_selection_routes_to_popup() -> void:
 	var bus = FakeBus.new()
 	var hud = _build_hud(bus)
@@ -191,6 +215,23 @@ func test_selection_churn_never_applies_stale_stats() -> void:
 
 	bus.building_stats_changed.emit("b", {"workers": 3})
 	assert_eq(popup.shown_payload.get("workers", 0), 3)
+
+	hud.free()
+	bus.free()
+
+
+func test_connect_event_bus_is_idempotent() -> void:
+	var bus = FakeBus.new()
+	var hud = _build_hud(bus)
+	add_child(bus)
+	add_child(hud)
+	var popup = hud.get_node("Root/BuildingInfoPopup") as FakeInfoPopup
+
+	hud.call("_connect_event_bus")
+	hud.call("_connect_event_bus")
+	bus.building_selected.emit("b-1", {"name": "Road"})
+
+	assert_eq(popup.show_count, 1)
 
 	hud.free()
 	bus.free()
