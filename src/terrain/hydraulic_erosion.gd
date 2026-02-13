@@ -6,23 +6,32 @@ func erode(height: PackedFloat32Array, size: int, iterations: int, seed: int = 1
 	if size <= 2 or iterations <= 0:
 		return
 
+	# Hydraulic erosion pass
+	_hydraulic_pass(height, size, iterations, seed)
+
+	# Thermal erosion pass: flatten steep slopes
+	var thermal_iterations = maxi(1, iterations / 8)
+	_thermal_pass(height, size, thermal_iterations)
+
+
+func _hydraulic_pass(height: PackedFloat32Array, size: int, iterations: int, seed: int) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed
 
 	const MAX_STEPS := 48
 	const INERTIA := 0.05
-	const CAPACITY := 3.5
-	const DEPOSIT := 0.12
-	const ERODE := 0.28
-	const EVAP := 0.015
-	const GRAVITY := 8.0
+	const CAPACITY := 4.0
+	const DEPOSIT := 0.10
+	const ERODE := 0.32
+	const EVAP := 0.012
+	const GRAVITY := 10.0
 
 	for _it in iterations:
 		var x = rng.randf_range(1.0, size - 2.0)
 		var y = rng.randf_range(1.0, size - 2.0)
 		var direction = Vector2.ZERO
 		var speed = 1.0
-		var water = 1.0
+		var water_amount = 1.0
 		var sediment = 0.0
 
 		for _s in MAX_STEPS:
@@ -50,7 +59,7 @@ func erode(height: PackedFloat32Array, size: int, iterations: int, seed: int = 1
 			var nidx = int(y) * size + int(x)
 			var h1 = height[nidx]
 			var delta_h = h1 - h0
-			var capacity = max(-delta_h * speed * water * CAPACITY, 0.01)
+			var capacity = max(-delta_h * speed * water_amount * CAPACITY, 0.01)
 
 			if sediment > capacity:
 				var deposited = (sediment - capacity) * DEPOSIT
@@ -66,6 +75,35 @@ func erode(height: PackedFloat32Array, size: int, iterations: int, seed: int = 1
 				height[idx] = max(height[idx] - eroded, 0.0)
 
 			speed = sqrt(max(speed * speed + (-delta_h) * GRAVITY, 0.0))
-			water *= (1.0 - EVAP)
-			if water < 0.02:
+			water_amount *= (1.0 - EVAP)
+			if water_amount < 0.02:
 				break
+
+
+## Thermal erosion: move material from steep slopes downhill
+func _thermal_pass(height: PackedFloat32Array, size: int, iterations: int) -> void:
+	const TALUS_ANGLE := 0.6  # Maximum stable height difference
+	const TRANSFER_RATE := 0.4  # Fraction of excess material transferred
+
+	for _it in iterations:
+		for y in range(1, size - 1):
+			for x in range(1, size - 1):
+				var idx = y * size + x
+				var h = height[idx]
+
+				# Check 4-connected neighbors
+				var neighbors = [idx - 1, idx + 1, idx - size, idx + size]
+				var max_diff = 0.0
+				var lowest_idx = -1
+
+				for n_idx in neighbors:
+					var diff = h - height[n_idx]
+					if diff > max_diff:
+						max_diff = diff
+						lowest_idx = n_idx
+
+				# Transfer material if slope exceeds talus angle
+				if max_diff > TALUS_ANGLE and lowest_idx >= 0:
+					var transfer = (max_diff - TALUS_ANGLE) * TRANSFER_RATE * 0.5
+					height[idx] -= transfer
+					height[lowest_idx] += transfer

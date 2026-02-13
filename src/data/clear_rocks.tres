@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="BuildingData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/resources/building_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "clear_rocks"
+display_name = "Clear Rocks"
+description = "Remove rocks to make terrain buildable."
+tooltip = "Clears rock formations from the terrain. Small rocks cost $500, large rocks cost $1000."
+category = "infrastructure"
+building_type = "clear_rocks"
+build_cost = 500
+monthly_maintenance = 0
+size = Vector2i(1, 1)
+power_production = 0.0
+power_consumption = 0.0
+water_production = 0.0
+water_consumption = 0.0
+coverage_radius = 0
+service_type = "none"
+population_capacity = 0
+jobs_provided = 0
+data_center_tier = 0
+score_value = 0
+requires_road_adjacent = false
+requires_power = false
+requires_water = false
+color = Color(0.6, 0.5, 0.4, 1)
+sprite_path = ""
+pollution_radius = 0
+happiness_modifier = 0.0

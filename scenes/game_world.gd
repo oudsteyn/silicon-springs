@@ -250,7 +250,7 @@ func _setup_additional_wiring() -> void:
 	day_night_system.add_to_group("day_night_system")
 
 	# Zoning system special initialization
-	zoning_system.initialize(grid_system, service_coverage, land_value_system)
+	zoning_system.initialize(grid_system, service_coverage, land_value_system, terrain_system)
 
 	# Disaster system special initialization
 	disaster_system.initialize(grid_system, service_coverage)

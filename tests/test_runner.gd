@@ -23,8 +23,9 @@ var _discovery_failures: Array[String] = []
 
 func _ready() -> void:
 	# If running as main scene, auto-run tests
+	# Deferred so the scene tree finishes setup (add_child works in tests)
 	if not _has_run and (get_tree().current_scene == self or get_tree().current_scene == null):
-		_run_from_command_line()
+		_run_from_command_line.call_deferred()
 
 
 func _run_from_command_line() -> void:

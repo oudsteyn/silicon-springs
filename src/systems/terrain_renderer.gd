@@ -35,17 +35,17 @@ var _runtime_3d_manager = TerrainRuntime3DManagerScript.new()
 var _runtime_detail_renderer = TerrainDetailRenderer3DScript.new()
 var _runtime_3d_enabled: bool = false
 
-# Color palette for elevation levels
+# Color palette for elevation levels - realistic terrain colors
 const ELEVATION_COLORS = {
-	-3: Color(0.1, 0.2, 0.5),    # Deep water
-	-2: Color(0.2, 0.4, 0.7),    # Shallow water
-	-1: Color(0.76, 0.7, 0.5),   # Beach/sand
-	0:  Color(0.25, 0.45, 0.25), # Grass (default)
-	1:  Color(0.3, 0.5, 0.28),   # Low hill
-	2:  Color(0.4, 0.5, 0.3),    # Hill
-	3:  Color(0.5, 0.48, 0.35),  # High hill
-	4:  Color(0.55, 0.5, 0.45),  # Mountain base
-	5:  Color(0.85, 0.85, 0.9),  # Mountain peak (snow)
+	-3: Color(0.08, 0.15, 0.42),   # Deep water - dark ocean blue
+	-2: Color(0.18, 0.35, 0.58),   # Shallow water - lighter blue
+	-1: Color(0.78, 0.72, 0.52),   # Beach/sand - warm tan
+	0:  Color(0.28, 0.52, 0.22),   # Lush grassland - vibrant green
+	1:  Color(0.35, 0.50, 0.25),   # Slightly drier grass - olive green
+	2:  Color(0.48, 0.46, 0.30),   # Scrubland - brown-green
+	3:  Color(0.52, 0.44, 0.32),   # Exposed rock/dirt - warm brown
+	4:  Color(0.58, 0.56, 0.52),   # Grey rock - stone grey
+	5:  Color(0.92, 0.90, 0.95),   # Snow-cap - bright white
 }
 
 # Water overlay colors
@@ -298,27 +298,49 @@ func _elevation_to_color(level: int) -> Color:
 
 
 func _draw_water_detail(pos: Vector2, water_type: TerrainSystem.WaterType) -> void:
-	# Add subtle wave lines for water
-	# Vary wave color intensity based on water type
+	var cs = float(GridConstants.CELL_SIZE)
 	var base_alpha = 0.15
+	var wave_angle = 0.0  # Horizontal by default
+
 	if water_type == TerrainSystem.WaterType.RIVER:
-		base_alpha = 0.2  # Rivers have more visible waves
+		base_alpha = 0.22
+		wave_angle = 0.3  # Slight angle for current direction
 	elif water_type == TerrainSystem.WaterType.LAKE:
-		base_alpha = 0.12  # Lakes have subtler waves
+		base_alpha = 0.10
+
 	var wave_color = Color(1, 1, 1, base_alpha)
 
-	# Simple wave pattern
+	# Animated wave pattern
 	var offset = fmod(Time.get_ticks_msec() / 1000.0, 1.0) * 8
+	var dy1 = sin(wave_angle) * cs * 0.3
+	var dy2 = sin(wave_angle) * cs * 0.3
 	draw_line(
-		pos + Vector2(8, 24 + offset),
-		pos + Vector2(56, 24 + offset),
+		pos + Vector2(cs * 0.12, cs * 0.38 + offset),
+		pos + Vector2(cs * 0.88, cs * 0.38 + offset + dy1),
 		wave_color, 1.0
 	)
 	draw_line(
-		pos + Vector2(12, 40 - offset),
-		pos + Vector2(52, 40 - offset),
+		pos + Vector2(cs * 0.18, cs * 0.62 - offset),
+		pos + Vector2(cs * 0.82, cs * 0.62 - offset + dy2),
 		wave_color, 1.0
 	)
+
+	# Shore foam: draw bright edge where water meets land
+	if terrain_system:
+		var cell = GridConstants.world_to_grid(pos)
+		for dir in [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]:
+			var neighbor = cell + dir
+			if GridConstants.is_valid_cell(neighbor) and terrain_system.get_water(neighbor) == TerrainSystem.WaterType.NONE:
+				var foam_color = Color(0.85, 0.9, 0.95, 0.35)
+				var foam_width = 3.0
+				if dir == Vector2i.UP:
+					draw_rect(Rect2(pos, Vector2(cs, foam_width)), foam_color)
+				elif dir == Vector2i.DOWN:
+					draw_rect(Rect2(pos + Vector2(0, cs - foam_width), Vector2(cs, foam_width)), foam_color)
+				elif dir == Vector2i.LEFT:
+					draw_rect(Rect2(pos, Vector2(foam_width, cs)), foam_color)
+				elif dir == Vector2i.RIGHT:
+					draw_rect(Rect2(pos + Vector2(cs - foam_width, 0), Vector2(foam_width, cs)), foam_color)
 
 
 func _draw_feature(pos: Vector2, feature: TerrainSystem.FeatureType) -> void:
@@ -341,29 +363,59 @@ func _draw_tree(center: Vector2, dense: bool) -> void:
 	var tree_color = TREE_COLOR
 	var trunk_color = Color(0.4, 0.25, 0.15)
 
+	# Elevation-based size variation: smaller trees at higher elevations
+	var elev_scale = 1.0
+	if terrain_system:
+		var cell = GridConstants.world_to_grid(center)
+		var elev = terrain_system.get_elevation(cell)
+		elev_scale = clampf(1.0 - float(elev) * 0.15, 0.6, 1.0)
+
+	# Fixed sun direction shadow offset (sun from upper-left)
+	var shadow_offset = Vector2(3, 4) * elev_scale
+
 	if dense:
 		# Dense forest - multiple overlapping trees
 		for i in range(3):
 			var offset = Vector2(randf_range(-12, 12), randf_range(-12, 12))
 			var tree_center = center + offset
+			var s = elev_scale
+
+			# Shadow
+			var shadow_points = PackedVector2Array([
+				tree_center + (Vector2(0, -16) + shadow_offset) * s,
+				tree_center + (Vector2(-12, 4) + shadow_offset) * s,
+				tree_center + (Vector2(12, 4) + shadow_offset) * s
+			])
+			draw_colored_polygon(shadow_points, Color(0, 0, 0, 0.12))
+
 			# Trunk
-			draw_rect(Rect2(tree_center.x - 2, tree_center.y, 4, 12), trunk_color)
+			draw_rect(Rect2(tree_center.x - 2 * s, tree_center.y, 4 * s, 12 * s), trunk_color)
 			# Foliage (triangle)
 			var points = PackedVector2Array([
-				tree_center + Vector2(0, -16),
-				tree_center + Vector2(-12, 4),
-				tree_center + Vector2(12, 4)
+				tree_center + Vector2(0, -16) * s,
+				tree_center + Vector2(-12, 4) * s,
+				tree_center + Vector2(12, 4) * s
 			])
 			draw_colored_polygon(points, tree_color.darkened(randf_range(0, 0.2)))
 	else:
 		# Single tree
+		var s = elev_scale
+
+		# Shadow
+		var shadow_points = PackedVector2Array([
+			center + (Vector2(0, -18) + shadow_offset) * s,
+			center + (Vector2(-14, 6) + shadow_offset) * s,
+			center + (Vector2(14, 6) + shadow_offset) * s
+		])
+		draw_colored_polygon(shadow_points, Color(0, 0, 0, 0.12))
+
 		# Trunk
-		draw_rect(Rect2(center.x - 3, center.y + 4, 6, 14), trunk_color)
+		draw_rect(Rect2(center.x - 3 * s, center.y + 4 * s, 6 * s, 14 * s), trunk_color)
 		# Foliage (triangle)
 		var points = PackedVector2Array([
-			center + Vector2(0, -18),
-			center + Vector2(-14, 6),
-			center + Vector2(14, 6)
+			center + Vector2(0, -18) * s,
+			center + Vector2(-14, 6) * s,
+			center + Vector2(14, 6) * s
 		])
 		draw_colored_polygon(points, tree_color)
 
@@ -372,50 +424,89 @@ func _draw_rock(center: Vector2, large: bool) -> void:
 	var rock_color = ROCK_COLOR
 	var shadow_color = rock_color.darkened(0.3)
 
+	# Elevation-based size variation
+	var elev_scale = 1.0
+	if terrain_system:
+		var cell = GridConstants.world_to_grid(center)
+		var elev = terrain_system.get_elevation(cell)
+		# Rocks get slightly larger at higher elevations (more imposing)
+		elev_scale = clampf(0.9 + float(elev) * 0.05, 0.85, 1.2)
+
+	# Fixed sun direction shadow offset (sun from upper-left)
+	var shadow_offset = Vector2(4, 5) * elev_scale
+	var s = elev_scale
+
 	if large:
-		# Large rock formation - draw shadow first
+		# Large rock formation - cast shadow
+		var cast_shadow = PackedVector2Array([
+			center + (Vector2(-12, 4) + shadow_offset) * s,
+			center + (Vector2(2, -10) + shadow_offset) * s,
+			center + (Vector2(18, -2) + shadow_offset) * s,
+			center + (Vector2(20, 14) + shadow_offset) * s,
+			center + (Vector2(-6, 16) + shadow_offset) * s
+		])
+		draw_colored_polygon(cast_shadow, Color(0, 0, 0, 0.15))
+
+		# Shadow face of rock
 		var shadow_points = PackedVector2Array([
-			center + Vector2(-16, 12),
-			center + Vector2(-12, -8),
-			center + Vector2(4, -14),
-			center + Vector2(18, -4),
-			center + Vector2(20, 10),
-			center + Vector2(8, 16),
-			center + Vector2(-6, 14)
+			center + Vector2(-16, 12) * s,
+			center + Vector2(-12, -8) * s,
+			center + Vector2(4, -14) * s,
+			center + Vector2(18, -4) * s,
+			center + Vector2(20, 10) * s,
+			center + Vector2(8, 16) * s,
+			center + Vector2(-6, 14) * s
 		])
 		draw_colored_polygon(shadow_points, shadow_color)
-		# Main rock
+		# Main lit face
 		var points = PackedVector2Array([
-			center + Vector2(-18, 8),
-			center + Vector2(-14, -12),
-			center + Vector2(2, -18),
-			center + Vector2(16, -8),
-			center + Vector2(18, 6),
-			center + Vector2(6, 12),
-			center + Vector2(-8, 10)
+			center + Vector2(-18, 8) * s,
+			center + Vector2(-14, -12) * s,
+			center + Vector2(2, -18) * s,
+			center + Vector2(16, -8) * s,
+			center + Vector2(18, 6) * s,
+			center + Vector2(6, 12) * s,
+			center + Vector2(-8, 10) * s
 		])
 		draw_colored_polygon(points, rock_color)
-		# Highlight
-		draw_line(center + Vector2(-10, -8), center + Vector2(4, -14), Color(1, 1, 1, 0.2), 2)
+		# Secondary rock detail for large formations
+		var detail_points = PackedVector2Array([
+			center + Vector2(-6, -14) * s,
+			center + Vector2(4, -20) * s,
+			center + Vector2(12, -12) * s,
+			center + Vector2(6, -6) * s,
+		])
+		draw_colored_polygon(detail_points, rock_color.lightened(0.08))
+		# Highlight edge
+		draw_line(center + Vector2(-10, -8) * s, center + Vector2(4, -14) * s, Color(1, 1, 1, 0.22), 2)
 	else:
-		# Small rock - draw shadow first
+		# Small rock - cast shadow
+		var cast_shadow = PackedVector2Array([
+			center + (Vector2(-4, 0) + shadow_offset) * s,
+			center + (Vector2(4, -6) + shadow_offset) * s,
+			center + (Vector2(10, 2) + shadow_offset) * s,
+			center + (Vector2(6, 10) + shadow_offset) * s,
+		])
+		draw_colored_polygon(cast_shadow, Color(0, 0, 0, 0.12))
+
+		# Shadow face
 		var shadow_points = PackedVector2Array([
-			center + Vector2(-8, 8),
-			center + Vector2(-4, -4),
-			center + Vector2(6, -6),
-			center + Vector2(12, 2),
-			center + Vector2(10, 10),
-			center + Vector2(-2, 12)
+			center + Vector2(-8, 8) * s,
+			center + Vector2(-4, -4) * s,
+			center + Vector2(6, -6) * s,
+			center + Vector2(12, 2) * s,
+			center + Vector2(10, 10) * s,
+			center + Vector2(-2, 12) * s
 		])
 		draw_colored_polygon(shadow_points, shadow_color)
 		# Main rock
 		var points = PackedVector2Array([
-			center + Vector2(-10, 4),
-			center + Vector2(-6, -8),
-			center + Vector2(4, -10),
-			center + Vector2(10, -2),
-			center + Vector2(8, 6),
-			center + Vector2(-4, 8)
+			center + Vector2(-10, 4) * s,
+			center + Vector2(-6, -8) * s,
+			center + Vector2(4, -10) * s,
+			center + Vector2(10, -2) * s,
+			center + Vector2(8, 6) * s,
+			center + Vector2(-4, 8) * s
 		])
 		draw_colored_polygon(points, rock_color)
 
@@ -432,13 +523,41 @@ func _draw_beach_detail(pos: Vector2) -> void:
 
 
 func _draw_elevation_hint(pos: Vector2, elev: int) -> void:
-	# Draw subtle contour/shadow on elevated terrain
-	if elev >= 2:
-		var shadow_color = Color(0, 0, 0, 0.1)
-		# Bottom edge shadow
-		draw_line(pos + Vector2(0, GridConstants.CELL_SIZE - 2), pos + Vector2(GridConstants.CELL_SIZE, GridConstants.CELL_SIZE - 2), shadow_color, 2)
-		# Right edge shadow
-		draw_line(pos + Vector2(GridConstants.CELL_SIZE - 2, 0), pos + Vector2(GridConstants.CELL_SIZE - 2, GridConstants.CELL_SIZE), shadow_color, 2)
+	var cs = float(GridConstants.CELL_SIZE)
+
+	# Contour lines at every 2 elevation levels
+	if elev >= 2 and elev % 2 == 0:
+		var contour_color = Color(0, 0, 0, 0.08)
+		# Draw contour along bottom and right edges
+		draw_line(pos + Vector2(0, cs - 1), pos + Vector2(cs, cs - 1), contour_color, 1.5)
+		draw_line(pos + Vector2(cs - 1, 0), pos + Vector2(cs - 1, cs), contour_color, 1.5)
+
+	# Directional hillshade: simulate sun from upper-left
+	# Darker on south/east faces, lighter on north/west faces
+	if elev >= 1 and terrain_system:
+		var cell = GridConstants.world_to_grid(pos)
+		var east_elev = terrain_system.get_elevation(cell + Vector2i(1, 0))
+		var south_elev = terrain_system.get_elevation(cell + Vector2i(0, 1))
+
+		# South-facing slope shadow (cell is higher than cell below)
+		if elev > south_elev:
+			var shade_alpha = clampf(float(elev - south_elev) * 0.06, 0.0, 0.18)
+			draw_rect(Rect2(pos + Vector2(0, cs - 4), Vector2(cs, 4)), Color(0, 0, 0, shade_alpha))
+
+		# East-facing slope shadow (cell is higher than cell to right)
+		if elev > east_elev:
+			var shade_alpha = clampf(float(elev - east_elev) * 0.05, 0.0, 0.15)
+			draw_rect(Rect2(pos + Vector2(cs - 4, 0), Vector2(4, cs)), Color(0, 0, 0, shade_alpha))
+
+		# North-west highlight (cell is higher than neighbors above/left)
+		var west_elev = terrain_system.get_elevation(cell + Vector2i(-1, 0))
+		var north_elev = terrain_system.get_elevation(cell + Vector2i(0, -1))
+		if elev > north_elev:
+			var highlight_alpha = clampf(float(elev - north_elev) * 0.04, 0.0, 0.12)
+			draw_rect(Rect2(pos, Vector2(cs, 3)), Color(1, 1, 1, highlight_alpha))
+		if elev > west_elev:
+			var highlight_alpha = clampf(float(elev - west_elev) * 0.03, 0.0, 0.10)
+			draw_rect(Rect2(pos, Vector2(3, cs)), Color(1, 1, 1, highlight_alpha))
 
 
 func _draw_cell_blend(cell: Vector2i, pos: Vector2, elev: int, water_type: TerrainSystem.WaterType) -> void:

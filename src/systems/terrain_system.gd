@@ -290,6 +290,15 @@ func remove_feature(cell: Vector2i) -> void:
 		_emit_terrain_changed([cell])
 
 
+func clear_rocks(cell: Vector2i) -> bool:
+	var feature = get_feature(cell)
+	if feature != FeatureType.ROCK_SMALL and feature != FeatureType.ROCK_LARGE:
+		return false
+	features.erase(cell)
+	_emit_terrain_changed([cell])
+	return true
+
+
 func toggle_feature(cell: Vector2i, type: FeatureType) -> void:
 	if features.get(cell, FeatureType.NONE) == type:
 		remove_feature(cell)
@@ -330,7 +339,7 @@ func is_buildable(cell: Vector2i, building_data = null) -> Dictionary:
 	return result
 
 
-func _check_cell_buildable(cell: Vector2i, building_type: String, building_size: Vector2i) -> Dictionary:
+func _check_cell_buildable(cell: Vector2i, building_type: String, _building_size: Vector2i) -> Dictionary:
 	var result = {
 		"can_build": true,
 		"reason": ""
@@ -343,48 +352,36 @@ func _check_cell_buildable(cell: Vector2i, building_type: String, building_size:
 
 	var elev = get_elevation(cell)
 	var water_type = get_water(cell)
+	var feature = get_feature(cell)
 
-	# Deep water (-3): No buildings
-	if elev == -3:
+	# Rock features block all building regardless of elevation
+	if feature == FeatureType.ROCK_SMALL or feature == FeatureType.ROCK_LARGE:
 		result.can_build = false
-		result.reason = "Cannot build on deep water"
+		result.reason = "Rocks must be cleared before building"
 		return result
 
-	# Shallow water (-2): Only bridges, docks, water pumps
-	if elev == -2 or water_type in [WaterType.POND, WaterType.RIVER, WaterType.LAKE]:
+	# Water cells: only water infrastructure allowed on shallow water (-2)
+	if water_type != WaterType.NONE or elev <= -2:
 		var water_allowed = ["bridge", "dock", "water_pump", "large_water_pump", "desalination_plant"]
-		if building_type not in water_allowed:
-			result.can_build = false
-			result.reason = "Only water infrastructure allowed here"
+		if elev == -2 and building_type in water_allowed:
 			return result
-
-	# Beach/Wetland (-1): Small buildings only
-	if elev == -1:
-		if building_size.x > 2 or building_size.y > 2:
-			result.can_build = false
-			result.reason = "Only small buildings on beach/wetland"
-			return result
-
-	# Mountain peak (+5): No buildings
-	if elev == 5:
 		result.can_build = false
-		result.reason = "Cannot build on mountain peak"
+		result.reason = "Cannot build on water"
 		return result
 
-	# Mountain base (+4): Small buildings only
-	if elev == 4:
-		if building_size.x > 2 or building_size.y > 2:
-			result.can_build = false
-			result.reason = "Only small buildings on mountain base"
-			return result
+	# Elevation -1 (beach/wetland): not buildable
+	if elev == -1:
+		result.can_build = false
+		result.reason = "Cannot build on beach or wetland"
+		return result
 
-	# High hill (+3): Limited buildings (no large infrastructure)
-	if elev == 3:
-		if building_size.x > 3 or building_size.y > 3:
-			result.can_build = false
-			result.reason = "Building too large for high hill"
-			return result
+	# Elevation 2+: terrain too steep
+	if elev >= 2:
+		result.can_build = false
+		result.reason = "Terrain too steep for construction"
+		return result
 
+	# Elevation 0-1: fully buildable (flat terrain)
 	return result
 
 
@@ -400,11 +397,29 @@ func generate_initial_terrain(map_seed: int, biome: Resource = null) -> void:
 
 
 func _generate_legacy_initial_terrain(map_seed: int, biome: Resource = null) -> void:
+	# Primary elevation noise with multi-octave detail
 	var noise = FastNoiseLite.new()
 	noise.seed = map_seed
-	noise.frequency = 0.015  # Good frequency for 128x128 map
+	noise.frequency = 0.012
 	noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
-	noise.fractal_octaves = 4
+	noise.fractal_type = FastNoiseLite.FRACTAL_FBM
+	noise.fractal_octaves = 5
+	noise.fractal_lacunarity = 2.1
+	noise.fractal_gain = 0.45
+
+	# Domain warping noise for organic shapes
+	var warp_noise = FastNoiseLite.new()
+	warp_noise.seed = map_seed + 500
+	warp_noise.frequency = 0.008
+	warp_noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
+	warp_noise.fractal_octaves = 3
+
+	# Secondary moisture noise for independent water placement
+	var moisture_noise = FastNoiseLite.new()
+	moisture_noise.seed = map_seed + 1000
+	moisture_noise.frequency = 0.018
+	moisture_noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
+	moisture_noise.fractal_octaves = 3
 
 	# Apply biome settings if provided
 	var base_elevation: int = 0
@@ -428,13 +443,24 @@ func _generate_legacy_initial_terrain(map_seed: int, biome: Resource = null) -> 
 	water.clear()
 	features.clear()
 
-	# Generate base elevation
+	# Generate base elevation with domain warping and flattening curve
 	for x in range(GridConstants.GRID_WIDTH):
 		for y in range(GridConstants.GRID_HEIGHT):
 			var cell = Vector2i(x, y)
-			var noise_val = noise.get_noise_2d(float(x), float(y))
-			# Map noise (-1 to 1) to elevation based on variation
-			var elev = base_elevation + int(noise_val * 4.0 * elevation_variation)
+			# Domain warping: warp coordinates for organic shapes
+			var warp_x = warp_noise.get_noise_2d(float(x), float(y)) * 20.0
+			var warp_y = warp_noise.get_noise_2d(float(x) + 300.0, float(y) + 300.0) * 20.0
+			var warped_x = float(x) + warp_x
+			var warped_y = float(y) + warp_y
+
+			var noise_val = noise.get_noise_2d(warped_x, warped_y)  # -1 to 1
+
+			# Flattening curve: cluster more cells around elevation 0-1
+			# Apply power curve to push values toward center
+			var normalized = (noise_val + 1.0) * 0.5  # 0 to 1
+			var flattened = _flatten_curve(normalized, elevation_variation)
+
+			var elev = base_elevation + int(flattened * float(MAX_ELEVATION - MIN_ELEVATION) + float(MIN_ELEVATION))
 			elevation[cell] = clampi(elev, MIN_ELEVATION, MAX_ELEVATION)
 
 	# Apply biome-specific terrain modifications
@@ -446,9 +472,12 @@ func _generate_legacy_initial_terrain(map_seed: int, biome: Resource = null) -> 
 		"high_desert":
 			_generate_mesas(map_seed, noise)
 
-	# Create water bodies in low areas (unless biome has special water handling)
+	# Create water bodies using flood-fill from low points
 	if biome_id not in ["great_river_valley", "coastal_shelf"]:
 		_create_water_bodies(water_coverage)
+
+	# Generate scattered ponds in flat areas
+	_generate_ponds(map_seed, moisture_noise)
 
 	# Add beaches at water edges
 	_create_beaches()
@@ -462,6 +491,18 @@ func _generate_legacy_initial_terrain(map_seed: int, biome: Resource = null) -> 
 		for y in range(GridConstants.GRID_HEIGHT):
 			all_cells.append(Vector2i(x, y))
 	_emit_terrain_changed(all_cells)
+
+
+## Flattening curve that clusters values around buildable elevations (0-1)
+func _flatten_curve(normalized: float, variation: float) -> float:
+	# Shift the distribution so ~60% of terrain lands at elevation 0-1
+	# Use a piecewise curve: flat central region with steep edges
+	var centered = (normalized - 0.5) * 2.0  # -1 to 1
+	var sign_val = signf(centered)
+	var abs_val = absf(centered)
+	# Power curve flattens the middle, steepens the extremes
+	var curved = sign_val * pow(abs_val, 1.0 + (1.0 - variation) * 1.5)
+	return (curved + 1.0) * 0.5  # Back to 0-1
 
 
 func _generate_runtime_pipeline_terrain(map_seed: int, biome: Resource = null) -> void:
@@ -519,16 +560,29 @@ func _generate_river(map_seed: int) -> void:
 
 	# River starts from one edge and flows to the opposite
 	var start_y = rng.randi_range(20, GridConstants.GRID_HEIGHT - 20)
-	var river_width = rng.randi_range(3, 5)
+	var base_river_width = rng.randi_range(3, 5)
 
 	# Create meandering path using sine wave with noise
 	var meander_freq = rng.randf_range(0.03, 0.06)
 	var meander_amp = rng.randf_range(15, 25)
 
+	# Track river center for tributary connections
+	var river_center_y: Array[float] = []
+	river_center_y.resize(GridConstants.GRID_WIDTH)
+
 	for x in range(GridConstants.GRID_WIDTH):
 		# Calculate river center y position with meandering
 		var meander = sin(x * meander_freq) * meander_amp
 		var center_y = start_y + meander + rng.randf_range(-2, 2)
+		river_center_y[x] = center_y
+
+		# Vary width: wider in flat areas (low elevation), narrower in valleys
+		var avg_elev = elevation.get(Vector2i(x, int(center_y)), 0)
+		var river_width = base_river_width
+		if avg_elev <= 0:
+			river_width = base_river_width + 1  # Wider in plains
+		elif avg_elev >= 2:
+			river_width = maxi(2, base_river_width - 1)  # Narrower in hills
 
 		# Carve river channel
 		for dy in range(-river_width, river_width + 1):
@@ -547,6 +601,37 @@ func _generate_river(map_seed: int) -> void:
 				else:
 					# Flood plain
 					elevation[cell] = mini(elevation.get(cell, 0), -1)
+
+	# Generate tributaries branching off the main river
+	var num_tributaries = rng.randi_range(2, 4)
+	for _t in range(num_tributaries):
+		var trib_start_x = rng.randi_range(20, GridConstants.GRID_WIDTH - 20)
+		var trib_center_y = river_center_y[trib_start_x]
+		var trib_direction = 1 if rng.randf() > 0.5 else -1  # Branch north or south
+		var trib_length = rng.randi_range(15, 35)
+		var trib_width = rng.randi_range(1, 2)
+
+		var ty = trib_center_y + trib_direction * (base_river_width + 2)
+		for dx in range(trib_length):
+			var tx = trib_start_x + dx * trib_direction  # Angle away
+			ty += trib_direction * rng.randf_range(0.5, 1.5)
+			if tx < 0 or tx >= GridConstants.GRID_WIDTH:
+				break
+			for w in range(-trib_width, trib_width + 1):
+				var iy = int(ty + w)
+				if iy >= 0 and iy < GridConstants.GRID_HEIGHT:
+					var cell = Vector2i(tx, iy)
+					if abs(w) == 0:
+						elevation[cell] = -2
+						water[cell] = WaterType.RIVER
+					else:
+						elevation[cell] = mini(elevation.get(cell, 0), -1)
+
+	# Add oxbow lakes at tight meander bends
+	for _i in range(rng.randi_range(1, 3)):
+		var bend_x = rng.randi_range(20, GridConstants.GRID_WIDTH - 20)
+		var bend_y = int(river_center_y[bend_x] + rng.randf_range(-12, 12))
+		_create_pond(Vector2i(bend_x, bend_y), rng.randi_range(3, 5), rng)
 
 	# Add some ponds/lakes along the river (flood plains)
 	for _i in range(rng.randi_range(3, 6)):
@@ -669,25 +754,96 @@ func _generate_mesas(map_seed: int, base_noise: FastNoiseLite) -> void:
 
 
 func _create_water_bodies(_coverage: float) -> void:
-	# Find cells at or below sea level and create water
-	# Note: Coverage is determined by elevation generation, not by limiting water placement
-	# The _coverage parameter is reserved for future use with procedural water features
-	var water_cells: Array = []
+	# Flood-fill from low points to create natural lake shapes
+	# Find all cells at or below water level
+	var low_cells: Array = []
+	var visited: Dictionary = {}
 
 	for x in range(GridConstants.GRID_WIDTH):
 		for y in range(GridConstants.GRID_HEIGHT):
 			var cell = Vector2i(x, y)
 			var elev = elevation.get(cell, 0)
 			if elev <= -2:
-				water_cells.append(cell)
+				low_cells.append(cell)
 
-	# Add water to low-lying cells
-	for cell in water_cells:
-		var elev = elevation.get(cell, 0)
-		if elev == -3:
-			water[cell] = WaterType.LAKE
-		elif elev == -2:
-			water[cell] = WaterType.POND
+	# Group low cells into connected water bodies using flood-fill
+	for start_cell in low_cells:
+		if visited.has(start_cell):
+			continue
+
+		# Flood-fill from this cell
+		var body: Array = []
+		var queue: Array = [start_cell]
+		while queue.size() > 0:
+			var cell = queue.pop_back()
+			if visited.has(cell):
+				continue
+			var elev = elevation.get(cell, 0)
+			if elev > -2:
+				continue
+			visited[cell] = true
+			body.append(cell)
+			for neighbor in _get_neighbors(cell):
+				if not visited.has(neighbor):
+					queue.append(neighbor)
+
+		# Classify water body by size
+		var body_size = body.size()
+		var water_type = WaterType.POND
+		if body_size > 30:
+			water_type = WaterType.LAKE
+		elif body_size > 8:
+			water_type = WaterType.POND
+
+		for cell in body:
+			var elev = elevation.get(cell, 0)
+			if elev == -3:
+				water[cell] = WaterType.LAKE  # Deep parts are always LAKE
+			else:
+				water[cell] = water_type
+
+
+func _generate_ponds(map_seed: int, moisture_noise: FastNoiseLite) -> void:
+	# Place small isolated ponds in flat terrain using Poisson disk-like sampling
+	var rng = RandomNumberGenerator.new()
+	rng.seed = map_seed + 2222
+	var min_spacing = 12  # Minimum distance between ponds
+
+	var pond_centers: Array[Vector2i] = []
+	var attempts = 80
+
+	for _i in range(attempts):
+		var px = rng.randi_range(8, GridConstants.GRID_WIDTH - 8)
+		var py = rng.randi_range(8, GridConstants.GRID_HEIGHT - 8)
+		var candidate = Vector2i(px, py)
+
+		# Only in flat terrain (elevation 0-1)
+		var elev = elevation.get(candidate, 0)
+		if elev < 0 or elev > 1:
+			continue
+
+		# Skip cells already with water
+		if water.has(candidate):
+			continue
+
+		# Check moisture noise - ponds more likely in moist areas
+		var moisture = moisture_noise.get_noise_2d(float(px), float(py))
+		if moisture < 0.1:
+			continue
+
+		# Enforce minimum spacing
+		var too_close = false
+		for existing in pond_centers:
+			if GridConstants.euclidean_distance(candidate, existing) < min_spacing:
+				too_close = true
+				break
+		if too_close:
+			continue
+
+		# Place pond
+		var radius = rng.randi_range(2, 4)
+		_create_pond(candidate, radius, rng)
+		pond_centers.append(candidate)
 
 
 func _create_beaches() -> void:
@@ -718,6 +874,12 @@ func _scatter_features(tree_density: float, rock_density: float, seed_val: int) 
 	var rng = RandomNumberGenerator.new()
 	rng.seed = seed_val + 12345  # Offset from terrain seed
 
+	# Noise layer for Poisson disk-like clustering
+	var cluster_noise = FastNoiseLite.new()
+	cluster_noise.seed = seed_val + 54321
+	cluster_noise.frequency = 0.04
+	cluster_noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
+
 	for x in range(GridConstants.GRID_WIDTH):
 		for y in range(GridConstants.GRID_HEIGHT):
 			var cell = Vector2i(x, y)
@@ -727,14 +889,28 @@ func _scatter_features(tree_density: float, rock_density: float, seed_val: int) 
 			if water.has(cell) or features.has(cell):
 				continue
 
-			# Trees on ground level (0-2)
-			if elev >= 0 and elev <= 2:
-				if rng.randf() < tree_density:
+			var cluster_val = (cluster_noise.get_noise_2d(float(x), float(y)) + 1.0) * 0.5
+
+			# Trees on flat terrain (0-1) matching buildable range
+			if elev >= 0 and elev <= 1:
+				# Increase density near water (riparian zones)
+				var effective_density = tree_density * cluster_val
+				if has_water_nearby(cell, 3):
+					effective_density *= 1.8
+
+				if rng.randf() < effective_density:
 					features[cell] = FeatureType.TREE_SPARSE if rng.randf() > 0.3 else FeatureType.TREE_DENSE
 
-			# Rocks on hills/mountains (2-5)
-			elif elev >= 2 and elev <= 4:
-				if rng.randf() < rock_density:
+			# Rocks on hills/mountains (2+)
+			elif elev >= 2:
+				# Rock clusters denser at higher elevations and on ridges
+				var effective_rock_density = rock_density * cluster_val
+				if elev >= 4:
+					effective_rock_density *= 2.0  # Mountain ridge clustering
+				elif elev >= 3:
+					effective_rock_density *= 1.5
+
+				if rng.randf() < effective_rock_density:
 					features[cell] = FeatureType.ROCK_SMALL if rng.randf() > 0.3 else FeatureType.ROCK_LARGE
 
 

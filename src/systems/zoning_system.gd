@@ -9,6 +9,7 @@ signal building_upgraded(cell: Vector2i, new_level: int)
 var grid_system: Node = null
 var service_coverage: Node = null
 var land_value_system: Node = null
+var terrain_system: Node = null
 
 # Zone data: {Vector2i: ZoneData}
 var zones: Dictionary = {}
@@ -162,10 +163,11 @@ func _ready() -> void:
 	Events.building_removed.connect(_on_building_removed)
 
 
-func initialize(grid: Node, coverage: Node, land_value: Node) -> void:
+func initialize(grid: Node, coverage: Node, land_value: Node, terrain: Node = null) -> void:
 	grid_system = grid
 	service_coverage = coverage
 	land_value_system = land_value
+	terrain_system = terrain
 
 
 ## Get FAR limit for a zone type
@@ -255,6 +257,12 @@ func set_zone(cell: Vector2i, zone_type: int) -> bool:
 	# Check if cell is valid
 	if not grid_system.is_valid_cell(cell):
 		return false
+
+	# Check terrain buildability (skip for zone removal)
+	if terrain_system and zone_type != ZoneType.NONE:
+		var terrain_check = terrain_system.is_buildable(cell)
+		if not terrain_check.can_build:
+			return false
 
 	# Can't zone on existing buildings (except other zones)
 	if grid_system.has_building_at(cell):
@@ -356,6 +364,12 @@ func _process_zone_development() -> void:
 
 
 func _can_zone_develop(cell: Vector2i, _zone_data: ZoneData) -> bool:
+	# Check terrain buildability
+	if terrain_system:
+		var terrain_check = terrain_system.is_buildable(cell)
+		if not terrain_check.can_build:
+			return false
+
 	# Check power
 	if GameState.has_power_shortage():
 		return false

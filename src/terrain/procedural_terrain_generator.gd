@@ -33,22 +33,55 @@ func generate_heightmap(size: int, profile = null) -> PackedFloat32Array:
 		cfg.plains_gain
 	)
 
+	# Domain warping noise for organic shapes
+	var warp_noise = _make_noise(
+		cfg.seed + 71,
+		FastNoiseLite.TYPE_SIMPLEX,
+		cfg.mountain_frequency * 1.5,
+		3,
+		2.0,
+		0.5
+	)
+
 	var output := PackedFloat32Array()
 	output.resize(size * size)
 
 	var half = float(size) * 0.5
+	var warp_strength = float(size) * 0.06  # Domain warp amplitude
+
 	for y in size:
 		for x in size:
 			var idx = y * size + x
 
-			var m = 0.5 + 0.5 * mountain.get_noise_2d(x, y)
-			var h = 0.5 + 0.5 * hills.get_noise_2d(x, y)
-			var p = 0.5 + 0.5 * plains.get_noise_2d(x, y)
+			# Domain warping: warp input coordinates for organic shapes
+			var wx = warp_noise.get_noise_2d(float(x), float(y)) * warp_strength
+			var wy = warp_noise.get_noise_2d(float(x) + 500.0, float(y) + 500.0) * warp_strength
+			var sx = float(x) + wx
+			var sy = float(y) + wy
+
+			var m = 0.5 + 0.5 * mountain.get_noise_2d(sx, sy)
+			var h = 0.5 + 0.5 * hills.get_noise_2d(sx, sy)
+			var p = 0.5 + 0.5 * plains.get_noise_2d(sx, sy)
 			var base = m * cfg.mountain_weight + h * cfg.hills_weight + p * cfg.plains_weight
+
+			# Terrace/plateau effect: quantize certain elevation bands
+			base = _apply_terrace(base, 6)
+
 			var falloff = calculate_island_falloff(x, y, half, cfg.falloff_start, cfg.falloff_range, cfg.falloff_power)
 
 			output[idx] = max(base * falloff * cfg.height_scale, 0.0)
 	return output
+
+
+## Quantize height into terrace steps for flat mesa tops and valley floors
+func _apply_terrace(height: float, num_terraces: int) -> float:
+	var step = 1.0 / float(num_terraces)
+	var terrace_index = floor(height / step)
+	var remainder = fmod(height, step) / step
+	# Smooth the terrace edges slightly to avoid hard steps
+	var smoothed = terrace_index * step + step * smoothstep(0.0, 1.0, remainder)
+	# Blend 60% terraced with 40% original for natural look
+	return lerp(height, smoothed, 0.6)
 
 
 func calculate_island_falloff(

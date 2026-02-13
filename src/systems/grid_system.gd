@@ -322,6 +322,11 @@ func _check_far_compliance(cell: Vector2i, building_data: Resource) -> Dictionar
 
 ## Place a building at the specified cell. Returns the Building node or null on failure.
 func place_building(cell: Vector2i, building_data: Resource) -> Node2D:
+	# Handle terrain actions (e.g. clear_rocks) - not real buildings
+	var building_type = building_data.building_type if building_data.get("building_type") else ""
+	if GridConstants.is_terrain_action(building_type):
+		return _handle_terrain_action(cell, building_data)
+
 	# Validate placement first
 	var check = can_place_building(cell, building_data)
 	if not check.can_place:
@@ -342,6 +347,27 @@ func place_building(cell: Vector2i, building_data: Resource) -> Node2D:
 	)
 
 	return result.building if result.success else null
+
+
+func _handle_terrain_action(cell: Vector2i, building_data: Resource) -> Node2D:
+	var building_type = building_data.building_type if building_data.get("building_type") else ""
+
+	if building_type == "clear_rocks" and terrain_system:
+		var feature = terrain_system.get_feature(cell)
+		# Determine cost based on rock size
+		var cost = building_data.build_cost
+		if feature == TerrainSystem.FeatureType.ROCK_LARGE:
+			cost = building_data.build_cost * 2  # Large rocks cost double
+
+		if GameState and not GameState.can_afford(cost):
+			return null
+
+		if terrain_system.clear_rocks(cell):
+			if GameState:
+				GameState.spend(cost)
+			return null  # No building placed, but action succeeded
+
+	return null
 
 
 ## Place a building during load without validation or cost checks.

@@ -51,6 +51,9 @@ const LINEAR_INFRASTRUCTURE: Array[String] = [
 	"water_pipe", "large_water_pipe"
 ]
 
+## Terrain action types (not real buildings - perform terrain modifications)
+const TERRAIN_ACTION_TYPES: Array[String] = ["clear_rocks"]
+
 
 # =============================================================================
 # COORDINATE CONVERSION
@@ -211,6 +214,11 @@ static func is_power_type(building_type: String) -> bool:
 ## Check if a building type is water-related
 static func is_water_type(building_type: String) -> bool:
 	return building_type in WATER_TYPES
+
+
+## Check if a building type is a terrain action (not a real building)
+static func is_terrain_action(building_type: String) -> bool:
+	return building_type in TERRAIN_ACTION_TYPES
 
 
 # =============================================================================
