@@ -45,6 +45,27 @@ class FakeFrameCaptureProvider:
 	func capture_profile_frame(profile_id: String) -> Image:
 		return frames.get(profile_id, null)
 
+class FakeFailingHarness:
+	var signatures := {
+		"HIGH_noon": "sig"
+	}
+	func generate_profile_signatures(_graphics_settings_manager, _daylight_controller) -> Dictionary:
+		return signatures.duplicate(true)
+	func load_baseline(_path: String) -> Dictionary:
+		return signatures.duplicate(true)
+	func compare_against_baseline(key: String, signature: String, baseline: Dictionary) -> Dictionary:
+		return {
+			"passed": baseline.get(key, "") == signature
+		}
+	func save_baseline(_path: String, _payload) -> bool:
+		return false
+
+class FakeFailingReporter:
+	func generate_markdown(_result: Dictionary) -> String:
+		return ""
+	func save_report(_path: String, _content: String) -> bool:
+		return false
+
 func _solid_frame(color: Color) -> Image:
 	var img = Image.create(4, 4, false, Image.FORMAT_RGBA8)
 	img.fill(color)
@@ -146,6 +167,19 @@ func test_run_and_write_reports_outputs_markdown_and_json() -> void:
 	assert_true(bool(result.get("passed", false)))
 	assert_true(FileAccess.file_exists("%s/visual_parity_result.json" % _report_dir))
 	assert_true(FileAccess.file_exists("%s/visual_parity_report.md" % _report_dir))
+
+
+func test_run_and_write_reports_reports_write_failures() -> void:
+	var pipeline = VisualParityPipelineScript.new()
+	var graphics = FakeGraphicsSettings.new()
+	var daylight = FakeDaylight.new()
+	pipeline.run(graphics, daylight, _baseline_path, "record")
+	pipeline.harness = FakeFailingHarness.new()
+	pipeline.reporter = FakeFailingReporter.new()
+
+	var result = pipeline.run_and_write_reports(graphics, daylight, _baseline_path, _report_dir, "verify")
+	assert_false(bool(result.get("passed", true)))
+	assert_not_empty(result.get("artifact_write_errors", []))
 
 func test_verify_fails_when_quality_score_below_threshold() -> void:
 	var pipeline = VisualParityPipelineScript.new()

@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="ModularBuildingData" load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://src/resources/modular_building_data.gd" id="1_mod"]
+
+[sub_resource type="BoxMesh" id="1_ground"]
+size = Vector3(16, 5, 16)
+
+[sub_resource type="BoxMesh" id="2_mid_a"]
+size = Vector3(14, 3, 14)
+
+[sub_resource type="BoxMesh" id="3_mid_b"]
+size = Vector3(14, 3, 12)
+
+[sub_resource type="BoxMesh" id="4_roof"]
+size = Vector3(15, 2, 15)
+
+[sub_resource type="BoxMesh" id="5_lod2"]
+size = Vector3(16, 36, 16)
+
+[resource]
+script = ExtResource("1_mod")
+building_id = "commercial_low"
+display_name = "Commercial Low"
+footprint_cells = Vector2i(1, 1)
+min_floors = 5
+max_floors = 12
+ground_floor_mesh = SubResource("1_ground")
+middle_floor_variant_a = SubResource("2_mid_a")
+middle_floor_variant_b = SubResource("3_mid_b")
+roof_mesh = SubResource("4_roof")
+lod2_mesh = SubResource("5_lod2")

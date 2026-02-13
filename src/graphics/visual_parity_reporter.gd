@@ -13,6 +13,8 @@ func generate_markdown(result: Dictionary) -> String:
 	lines.append("Quality threshold: %.2f" % float(result.get("quality_score_threshold", 0.0)))
 
 	var mismatches = result.get("mismatches", [])
+	if not (mismatches is Array):
+		mismatches = []
 	lines.append("Mismatches: %d" % mismatches.size())
 	if mismatches.size() > 0:
 		lines.append("")
@@ -20,26 +22,40 @@ func generate_markdown(result: Dictionary) -> String:
 		for mismatch in mismatches:
 			lines.append("- %s" % str(mismatch.get("profile_id", "unknown_profile")))
 
-	var acceptance: Dictionary = result.get("acceptance", {})
+	var acceptance = result.get("acceptance", {})
+	if not (acceptance is Dictionary):
+		acceptance = {}
 	if not acceptance.is_empty():
 		lines.append("")
 		lines.append("## Acceptance By Phase")
-		var by_phase: Dictionary = acceptance.get("by_phase", {})
+		var by_phase = acceptance.get("by_phase", {})
+		if not (by_phase is Dictionary):
+			by_phase = {}
 		for phase in ["day", "dusk", "night"]:
-			var phase_result: Dictionary = by_phase.get(phase, {})
+			var phase_result = by_phase.get(phase, {})
+			if not (phase_result is Dictionary):
+				phase_result = {}
 			var phase_passed := bool(phase_result.get("passed", false))
 			lines.append("- %s: %s" % [phase, "PASS" if phase_passed else "FAIL"])
-			for issue in phase_result.get("issues", []):
+			var issues = phase_result.get("issues", [])
+			if not (issues is Array):
+				issues = []
+			for issue in issues:
 				lines.append("  - %s" % str(issue))
 
-	var frame_gate: Dictionary = result.get("frame_gate", {})
+	var frame_gate = result.get("frame_gate", {})
+	if not (frame_gate is Dictionary):
+		frame_gate = {}
 	if not frame_gate.is_empty():
 		lines.append("")
 		lines.append("## Frame Gate")
 		lines.append("Status: %s" % ("PASS" if bool(frame_gate.get("passed", false)) else "FAIL"))
 		lines.append("Compared: %d" % int(frame_gate.get("compared", 0)))
 		lines.append("Seeded: %d" % int(frame_gate.get("seeded", 0)))
-		for mismatch in frame_gate.get("mismatches", []):
+		var frame_mismatches = frame_gate.get("mismatches", [])
+		if not (frame_mismatches is Array):
+			frame_mismatches = []
+		for mismatch in frame_mismatches:
 			lines.append("- %s" % str(mismatch.get("profile_id", "unknown_profile")))
 
 	return "\n".join(lines) + "\n"

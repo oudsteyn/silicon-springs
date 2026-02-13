@@ -78,7 +78,8 @@ func _notification(what: int) -> void:
 func set_terrain_system(ts: TerrainSystem) -> void:
 	terrain_system = ts
 	if terrain_system:
-		terrain_system.terrain_changed.connect(_on_terrain_changed)
+		if not terrain_system.terrain_changed.is_connected(_on_terrain_changed):
+			terrain_system.terrain_changed.connect(_on_terrain_changed)
 		if terrain_system.has_signal("runtime_heightmap_generated") and not terrain_system.runtime_heightmap_generated.is_connected(_on_runtime_heightmap_generated):
 			terrain_system.runtime_heightmap_generated.connect(_on_runtime_heightmap_generated)
 	# Mark all chunks as dirty for initial render

@@ -1,0 +1,36 @@
+{
+	"acceptance": {
+		"by_phase": {
+			"day": {
+				"issues": [],
+				"passed": true,
+				"quality_score": 81.24999661619468
+			},
+			"dusk": {
+				"issues": [],
+				"passed": true,
+				"quality_score": 82.49999389052536
+			},
+			"night": {
+				"issues": [],
+				"passed": true,
+				"quality_score": 83.05555101805933
+			}
+		},
+		"passed": true,
+		"quality_score": 82.26851384159313
+	},
+	"baseline_path": "user://visual_parity_pipeline_test.json",
+	"frame_gate": {
+		"compared": 0,
+		"mismatches": [],
+		"passed": true,
+		"seeded": 0
+	},
+	"mismatches": [],
+	"mode": "verify",
+	"passed": true,
+	"profile_count": 12,
+	"quality_score": 82.26851384159313,
+	"quality_score_threshold": 65.0
+}

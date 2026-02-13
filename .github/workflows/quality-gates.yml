@@ -7,21 +7,25 @@ on:
 jobs:
   quality-gates:
     runs-on: ubuntu-latest
+    env:
+      GODOT_VERSION: "4.6-stable"
+      GODOT_BIN: "${{ github.workspace }}/godot/Godot_v4.6-stable_linux.x86_64"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Install Godot
         run: |
-          sudo add-apt-repository ppa:godotengine/godot
-          sudo apt-get update
-          sudo apt-get install -y godot4
+          mkdir -p godot
+          curl -L -o godot/godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v4.6-stable_linux.x86_64.zip"
+          unzip -o godot/godot.zip -d godot
+          chmod +x "${GODOT_BIN}"
 
       - name: Run Headless Tests
-        run: godot --headless -s tests/run_headless.gd
+        run: "${GODOT_BIN}" --headless -s tests/run_headless.gd
 
       - name: Run Terrain Perf Gate
-        run: ./scripts/run_terrain_perf_gate.sh ./tests/fixtures/terrain_perf_metrics_pass.json
+        run: "${GODOT_BIN}" --headless -s res://scripts/terrain_perf_gate.gd ./tests/fixtures/terrain_perf_metrics_pass.json
 
       - name: Run Visual Parity Matrix Gate
-        run: godot --headless -s res://scripts/run_visual_parity_matrix_ci.gd
+        run: "${GODOT_BIN}" --headless -s res://scripts/run_visual_parity_matrix_ci.gd

@@ -12,6 +12,8 @@ func test_quality_workflow_exists_and_runs_required_gates() -> void:
 	var content = file.get_as_text()
 	file.close()
 
-	assert_true(content.find("godot --headless -s tests/run_headless.gd") >= 0)
-	assert_true(content.find("scripts/run_terrain_perf_gate.sh") >= 0)
-	assert_true(content.find("godot --headless -s res://scripts/run_visual_parity_matrix_ci.gd") >= 0)
+	assert_true(content.find("GODOT_VERSION: \"4.6-stable\"") >= 0)
+	assert_true(content.find("Godot_v4.6-stable_linux.x86_64.zip") >= 0)
+	assert_true(content.find("\"${GODOT_BIN}\" --headless -s tests/run_headless.gd") >= 0)
+	assert_true(content.find("\"${GODOT_BIN}\" --headless -s res://scripts/terrain_perf_gate.gd") >= 0)
+	assert_true(content.find("\"${GODOT_BIN}\" --headless -s res://scripts/run_visual_parity_matrix_ci.gd") >= 0)

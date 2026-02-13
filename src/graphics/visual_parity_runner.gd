@@ -33,6 +33,15 @@ func execute(
 	var metadata := _build_metadata(options)
 	var report_path = "%s/visual_parity_report.md" % artifact_dir
 	var result_path = "%s/visual_parity_result.json" % artifact_dir
+	var mismatches = result.get("mismatches", [])
+	if not (mismatches is Array):
+		mismatches = []
+	var frame_gate = result.get("frame_gate", {})
+	if not (frame_gate is Dictionary):
+		frame_gate = {}
+	var frame_gate_mismatches = frame_gate.get("mismatches", [])
+	if not (frame_gate_mismatches is Array):
+		frame_gate_mismatches = []
 	var manifest = {
 		"status": status,
 		"exit_code": exit_code,
@@ -47,8 +56,8 @@ func execute(
 			"result_json_md5": FileAccess.get_md5(result_path)
 		},
 		"result_summary": {
-			"mismatch_count": (result.get("mismatches", []) as Array).size(),
-			"frame_gate_mismatch_count": (result.get("frame_gate", {}).get("mismatches", []) as Array).size(),
+			"mismatch_count": mismatches.size(),
+			"frame_gate_mismatch_count": frame_gate_mismatches.size(),
 			"seeded_baseline": seeded_baseline
 		}
 	}

@@ -2,7 +2,7 @@ extends Node3D
 class_name BuildingLodController
 ## Aggressive LOD switching for modular buildings.
 
-@export var data: ModularBuildingData
+@export var data: Resource
 @export var target_mesh_instance_path: NodePath
 
 var _target_mesh_instance: MeshInstance3D = null

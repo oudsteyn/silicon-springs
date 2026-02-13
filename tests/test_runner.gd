@@ -18,6 +18,7 @@ const COLOR_BOLD = "\u001b[1m"
 var test_classes: Array[Script] = []
 var verbose: bool = true
 var _has_run: bool = false
+var _discovery_failures: Array[String] = []
 
 
 func _ready() -> void:
@@ -68,10 +69,12 @@ func _discover_tests() -> void:
 			if file_name != "test_base.gd" and file_name != "test_runner.gd":
 				var script_path = test_dir + file_name
 				var script = load(script_path)
-				if script:
+				if _is_instantiable_test_script(script):
 					test_classes.append(script)
 					if verbose:
 						print("Discovered: " + file_name)
+				else:
+					_discovery_failures.append(script_path)
 		file_name = dir.get_next()
 
 	dir.list_dir_end()
@@ -83,12 +86,27 @@ func add_test_class(script: Script) -> void:
 
 func run_all() -> Dictionary:
 	var total_passed: int = 0
-	var total_failed: int = 0
-	var total_tests: int = 0
+	var total_failed: int = _discovery_failures.size()
+	var total_tests: int = _discovery_failures.size()
 	var all_results: Array[Dictionary] = []
+	for path in _discovery_failures:
+		print("  " + COLOR_FAIL + "FAIL" + COLOR_RESET + " " + path.get_file())
+		print("       Failed to load or instantiate test script")
 
 	for test_script in test_classes:
+		if not _is_instantiable_test_script(test_script):
+			total_failed += 1
+			total_tests += 1
+			print("  " + COLOR_FAIL + "FAIL" + COLOR_RESET + " " + str(test_script))
+			print("       Test script is not instantiable")
+			continue
 		var test_instance = test_script.new()
+		if test_instance == null:
+			total_failed += 1
+			total_tests += 1
+			print("  " + COLOR_FAIL + "FAIL" + COLOR_RESET + " " + test_script.resource_path.get_file())
+			print("       Could not instantiate test script")
+			continue
 		add_child(test_instance)
 
 		if verbose:
@@ -120,3 +138,11 @@ func run_all() -> Dictionary:
 		"total": total_tests,
 		"class_results": all_results
 	}
+
+
+func _is_instantiable_test_script(script) -> bool:
+	if script == null:
+		return false
+	if not (script is Script):
+		return false
+	return script.can_instantiate()

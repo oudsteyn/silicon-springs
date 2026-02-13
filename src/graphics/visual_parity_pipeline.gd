@@ -100,12 +100,24 @@ func run_and_write_reports(
 ) -> Dictionary:
 	var result = run(graphics_settings_manager, daylight_controller, baseline_path, mode, options)
 	var dir := DirAccess.open("user://")
-	if dir:
-		dir.make_dir_recursive_absolute(report_dir)
+	var artifact_write_errors: Array[String] = []
+	if dir == null:
+		artifact_write_errors.append("Could not open user:// for artifact output")
+	else:
+		var mk = dir.make_dir_recursive_absolute(report_dir)
+		if mk != OK:
+			artifact_write_errors.append("Could not create artifact directory: %s" % report_dir)
 	var json_path = "%s/visual_parity_result.json" % report_dir
 	var md_path = "%s/visual_parity_report.md" % report_dir
-	harness.save_baseline(json_path, result)
-	reporter.save_report(md_path, reporter.generate_markdown(result))
+	var json_ok = harness.save_baseline(json_path, result)
+	if not json_ok:
+		artifact_write_errors.append("Could not write JSON result artifact: %s" % json_path)
+	var md_ok = reporter.save_report(md_path, reporter.generate_markdown(result))
+	if not md_ok:
+		artifact_write_errors.append("Could not write Markdown report artifact: %s" % md_path)
+	if not artifact_write_errors.is_empty():
+		result["passed"] = false
+		result["artifact_write_errors"] = artifact_write_errors
 	return result
 
 

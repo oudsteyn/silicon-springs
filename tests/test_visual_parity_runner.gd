@@ -25,6 +25,18 @@ class FakeDaylight:
 			return {"sun_energy": 0.10, "fog_density": 0.022}
 		return {"sun_energy": 1.0, "fog_density": 0.011}
 
+
+class MalformedPipeline:
+	extends RefCounted
+	func run_and_write_reports(_g, _d, _b, _a, _m, _o = {}) -> Dictionary:
+		return {
+			"passed": true,
+			"quality_score": 99.0,
+			"quality_score_threshold": 75.0,
+			"mismatches": "invalid",
+			"frame_gate": "invalid"
+		}
+
 var _baseline_path := "user://visual_parity_runner_baseline.json"
 var _artifact_dir := "user://visual_parity_runner_artifacts"
 var _frame_dir := "user://visual_parity_runner_frames"
@@ -130,3 +142,14 @@ func test_execute_with_contract_profile_applies_policy_options() -> void:
 
 	assert_eq(str(result.get("status", "")), "SEED_REQUIRED")
 	assert_eq(int(result.get("exit_code", 0)), 2)
+
+
+func test_execute_tolerates_malformed_pipeline_result_shapes() -> void:
+	var runner = VisualParityRunnerScript.new()
+	runner.pipeline = MalformedPipeline.new()
+
+	var result = runner.execute(FakeGraphicsSettings.new(), FakeDaylight.new(), _baseline_path, _artifact_dir)
+
+	assert_eq(int(result.get("exit_code", 1)), 0)
+	assert_eq(int(result.get("result_summary", {}).get("mismatch_count", -1)), 0)
+	assert_eq(int(result.get("result_summary", {}).get("frame_gate_mismatch_count", -1)), 0)
