@@ -62,6 +62,21 @@ class DummyTerrainSystem extends Node:
 		generate_called = true
 
 
+class DummyWorld3DBridge extends Node:
+	var initialize_called = false
+	var rendering_enabled_called = false
+	var last_grid = null
+	var last_camera = null
+
+	func initialize(grid, camera, _events_bus = null) -> void:
+		initialize_called = true
+		last_grid = grid
+		last_camera = camera
+
+	func set_rendering_enabled(_enabled: bool) -> void:
+		rendering_enabled_called = true
+
+
 func test_setup_terrain_configures_runtime_pipeline_before_generation() -> void:
 	var world = _track(GameWorldScript.new())
 	var terrain_system = _track(DummyTerrainSystem.new())
@@ -86,3 +101,21 @@ func test_setup_terrain_configures_runtime_pipeline_before_generation() -> void:
 	assert_true(terrain_system.generate_called)
 	assert_true(terrain_renderer.refresh_called)
 	assert_false(world.terrain_background.visible)
+
+
+func test_setup_world3d_bridge_initializes_with_grid_and_camera() -> void:
+	var world = _track(GameWorldScript.new())
+	var bridge = _track(DummyWorld3DBridge.new())
+	var grid = _track(Node.new())
+	var cam = _track(Camera2D.new())
+
+	world.world3d_bridge = bridge
+	world.grid_system = grid
+	world.camera = cam
+
+	world._setup_world3d_bridge()
+
+	assert_true(bridge.initialize_called)
+	assert_true(bridge.rendering_enabled_called)
+	assert_eq(bridge.last_grid, grid)
+	assert_eq(bridge.last_camera, cam)

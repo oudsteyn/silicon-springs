@@ -2,6 +2,7 @@ extends Node2D
 class_name GameWorld
 ## Main game world containing the grid, systems, and camera
 
+const World3DBridgeScript = preload("res://src/world/world3d_bridge.gd")
 
 # System Manager for dependency injection
 var system_manager: SystemManager
@@ -122,6 +123,7 @@ var pan_start_camera: Vector2 = Vector2.ZERO
 # Selection state
 var selected_building = null  # Building
 var hovered_cell: Vector2i = Vector2i(-1, -1)
+var world3d_bridge: Node = null
 
 
 func _ready() -> void:
@@ -163,6 +165,7 @@ func _ready() -> void:
 
 	# Setup terrain
 	_setup_terrain()
+	_setup_world3d_bridge()
 
 	# Connect events
 	Events.build_mode_entered.connect(_on_build_mode_entered)
@@ -386,6 +389,17 @@ func _setup_phase5_overlays() -> void:
 		zoning_system, traffic_system
 	)
 	tooltip_layer.add_child(cell_info_tooltip)
+
+
+func _setup_world3d_bridge() -> void:
+	if world3d_bridge == null:
+		world3d_bridge = World3DBridgeScript.new()
+		world3d_bridge.name = "World3DBridge"
+		add_child(world3d_bridge)
+	if world3d_bridge.has_method("initialize"):
+		world3d_bridge.initialize(grid_system, camera, Events)
+	if world3d_bridge.has_method("set_rendering_enabled"):
+		world3d_bridge.set_rendering_enabled(true)
 
 
 func _setup_terrain() -> void:

@@ -19,6 +19,7 @@ grow_vertical = 2
 theme = ExtResource("5_theme")
 
 [node name="BuildMenu" parent="Root" instance=ExtResource("2_build_menu")]
+visible = false
 layout_mode = 1
 anchors_preset = 14
 anchor_top = 1.0
