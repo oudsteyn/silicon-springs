@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/ui/components/glass_panel.gd" id="1_script"]
+
+[node name="GlassPanel" type="PanelContainer"]
+script = ExtResource("1_script")
+theme_type_variation = &"GlassPanel"
