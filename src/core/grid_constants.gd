@@ -54,6 +54,11 @@ const LINEAR_INFRASTRUCTURE: Array[String] = [
 ## Terrain action types (not real buildings - perform terrain modifications)
 const TERRAIN_ACTION_TYPES: Array[String] = ["clear_rocks"]
 
+## Bulldozer costs for clearing terrain features
+const BULLDOZE_COST_ROCK_SMALL: int = 500
+const BULLDOZE_COST_ROCK_LARGE: int = 1000
+const BULLDOZE_COST_TREE: int = 100
+
 
 # =============================================================================
 # COORDINATE CONVERSION

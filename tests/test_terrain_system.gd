@@ -175,6 +175,54 @@ func test_clear_rocks_on_non_rock_fails() -> void:
 	assert_false(cleared)
 
 
+# ============================================
+# TREE CLEARING
+# ============================================
+
+func test_clear_trees_removes_sparse_tree() -> void:
+	var terrain = _make_terrain()
+	var cell = Vector2i(10, 10)
+	terrain.elevation[cell] = 0
+	terrain.features[cell] = TerrainSystemScript.FeatureType.TREE_SPARSE
+
+	var cleared = terrain.clear_trees(cell)
+	assert_true(cleared)
+	assert_false(terrain.features.has(cell))
+
+
+func test_clear_trees_removes_dense_tree() -> void:
+	var terrain = _make_terrain()
+	var cell = Vector2i(10, 10)
+	terrain.elevation[cell] = 0
+	terrain.features[cell] = TerrainSystemScript.FeatureType.TREE_DENSE
+
+	var cleared = terrain.clear_trees(cell)
+	assert_true(cleared)
+	assert_false(terrain.features.has(cell))
+
+
+func test_clear_trees_on_non_tree_fails() -> void:
+	var terrain = _make_terrain()
+	var cell = Vector2i(10, 10)
+
+	# Rock feature should not be clearable via clear_trees
+	terrain.elevation[cell] = 2
+	terrain.features[cell] = TerrainSystemScript.FeatureType.ROCK_SMALL
+	var cleared = terrain.clear_trees(cell)
+	assert_false(cleared)
+	assert_true(terrain.features.has(cell))
+
+	# Beach feature should not be clearable via clear_trees
+	terrain.features[cell] = TerrainSystemScript.FeatureType.BEACH
+	cleared = terrain.clear_trees(cell)
+	assert_false(cleared)
+
+	# No feature should fail
+	terrain.features.erase(cell)
+	cleared = terrain.clear_trees(cell)
+	assert_false(cleared)
+
+
 func test_clear_rocks_emits_terrain_changed() -> void:
 	var terrain = _make_terrain()
 	var cell = Vector2i(10, 10)

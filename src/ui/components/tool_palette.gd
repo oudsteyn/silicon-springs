@@ -15,7 +15,7 @@ const TOOLS = [
 	{"id": "zoom", "icon": "🔍", "tooltip": "Zoom (Scroll)", "tool": UIManagerClass.Tool.ZOOM},
 	{"id": "build", "icon": "🏗", "tooltip": "Build", "tool": UIManagerClass.Tool.BUILD, "has_flyout": true},
 	{"id": "zone", "icon": "▦", "tooltip": "Zone", "tool": UIManagerClass.Tool.ZONE, "has_flyout": true},
-	{"id": "demolish", "icon": "✕", "tooltip": "Demolish (X)", "tool": UIManagerClass.Tool.DEMOLISH},
+	{"id": "demolish", "icon": "🚜", "tooltip": "Demolish (X)", "tool": UIManagerClass.Tool.DEMOLISH},
 	{"id": "terrain", "icon": "⛰", "tooltip": "Terrain", "tool": UIManagerClass.Tool.TERRAIN, "has_flyout": true},
 	{"id": "overlay", "icon": "👁", "tooltip": "Overlays", "tool": UIManagerClass.Tool.OVERLAY, "has_flyout": true},
 	{"id": "settings", "icon": "⚙", "tooltip": "Settings", "tool": UIManagerClass.Tool.SETTINGS, "has_flyout": true}

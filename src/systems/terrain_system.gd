@@ -299,6 +299,15 @@ func clear_rocks(cell: Vector2i) -> bool:
 	return true
 
 
+func clear_trees(cell: Vector2i) -> bool:
+	var feature = get_feature(cell)
+	if feature != FeatureType.TREE_SPARSE and feature != FeatureType.TREE_DENSE:
+		return false
+	features.erase(cell)
+	_emit_terrain_changed([cell])
+	return true
+
+
 func toggle_feature(cell: Vector2i, type: FeatureType) -> void:
 	if features.get(cell, FeatureType.NONE) == type:
 		remove_feature(cell)
