@@ -270,7 +270,11 @@ static func remove_building(
 		)
 		if overlay_result.success:
 			return RemovalResult.succeeded(overlay_result.refund, true)
-		return RemovalResult.failed(overlay_result.error)
+		# Stale overlay entries should not block base building removal.
+		if overlay_result.error == "Invalid overlay reference" and not utility_overlays.has(cell):
+			pass
+		else:
+			return RemovalResult.failed(overlay_result.error)
 
 	# Check if building exists
 	if not buildings.has(cell):
@@ -343,10 +347,14 @@ static func _deregister_building(
 		# Also remove any overlays on this building
 		if utility_overlays.has(occupied_cell):
 			var overlay = utility_overlays[occupied_cell]
-			if overlay and not removed_overlays.has(overlay.get_instance_id()):
-				removed_overlays[overlay.get_instance_id()] = true
-				OverlayOperationsScript.remove_overlay_instance(
-					overlay,
+			if not is_instance_valid(overlay):
+				utility_overlays.erase(occupied_cell)
+				continue
+			var overlay_id = overlay.get_instance_id()
+			if not removed_overlays.has(overlay_id):
+				removed_overlays[overlay_id] = true
+				OverlayOperationsScript.remove_overlay_at(
+					occupied_cell,
 					utility_overlays,
 					unique_buildings,
 					REFUND_PERCENTAGE

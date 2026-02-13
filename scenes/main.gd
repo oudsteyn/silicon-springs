@@ -456,7 +456,7 @@ func _on_panel_closed(panel_name: String) -> void:
 
 func _on_info_panel_requested(data: Dictionary) -> void:
 	# Legacy info panel retired; ignore request for now.
-	_ = data
+	pass
 
 
 func _on_dashboard_panel_requested(panel_name: String) -> void:

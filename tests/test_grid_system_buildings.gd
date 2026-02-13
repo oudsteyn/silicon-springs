@@ -114,3 +114,20 @@ func test_remove_overlay_keeps_road() -> void:
 	assert_true(removed_overlay, "Removing at cell should remove overlay first.")
 	assert_eq(grid_system.get_building_at(origin), road, "Road should remain after overlay removal.")
 	assert_false(grid_system.has_overlay_at(origin), "Overlay should be removed.")
+
+
+func test_removing_road_cleans_stale_overlay_references() -> void:
+	var road_data = _find_road_building_with_size(Vector2i(1, 1))
+	assert_not_null(road_data, "Expected a 1x1 road for stale overlay cleanup test.")
+
+	var origin = Vector2i(44, 44)
+	var road = grid_system.place_building(origin, road_data)
+	assert_not_null(road, "Road placement should succeed.")
+
+	var stale_overlay = Node2D.new()
+	grid_system.utility_overlays[origin] = stale_overlay
+	stale_overlay.free()
+
+	var removed = grid_system.remove_building(origin)
+	assert_true(removed, "Road removal should succeed even with stale overlay references.")
+	assert_false(grid_system.utility_overlays.has(origin), "Stale overlay mapping should be cleaned up.")

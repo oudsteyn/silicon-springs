@@ -60,7 +60,9 @@ func _process_build_mode_request(mode_id: String) -> void:
 		return
 
 	var mapped_id = _map_build_mode_to_building_id(mode_id)
-	if mapped_id != "":
+	# Avoid feeding already-normalized ids back into Events, which causes
+	# recursive build_mode_entered -> build_mode_changed loops.
+	if mapped_id != "" and mapped_id != mode_id:
 		events.build_mode_entered.emit(mapped_id)
 
 
