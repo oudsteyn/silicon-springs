@@ -30,6 +30,13 @@ const BASE_WATER_SELL_PRICE: float = 2.5
 func _ready() -> void:
 	Events.month_tick.connect(_on_month_tick)
 	Events.year_tick.connect(_on_year_tick)
+	deal_changed.connect(_forward_deal_to_events)
+
+
+func _forward_deal_to_events(deal_type: String) -> void:
+	Events.simulation_event.emit("neighbor_deal_changed", {
+		"deal_type": deal_type, "summary": get_deal_summary()
+	})
 
 
 func _on_month_tick() -> void:

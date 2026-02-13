@@ -220,6 +220,30 @@ func repair_building(building: Node2D) -> bool:
 	return true
 
 
+func get_average_condition(building_type: String) -> float:
+	var road_types = ["road", "collector", "arterial", "highway"]
+	var utility_types = ["power_line", "water_pipe"]
+	var match_types: Array
+	if building_type == "road":
+		match_types = road_types
+	elif building_type == "utility":
+		match_types = utility_types
+	else:
+		match_types = [building_type]
+
+	var total = 0.0
+	var count = 0
+	for building_id in infrastructure_age:
+		var data = infrastructure_age[building_id]
+		if data["type"] in match_types:
+			total += data["condition"]
+			count += 1
+
+	if count == 0:
+		return 100.0
+	return total / count
+
+
 func get_average_road_condition() -> float:
 	var total = 0.0
 	var count = 0

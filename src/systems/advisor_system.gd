@@ -26,6 +26,13 @@ var issued_advice: Dictionary = {}
 
 func _ready() -> void:
 	Events.month_tick.connect(_on_month_tick)
+	advice_ready.connect(_forward_advice_to_events)
+
+
+func _forward_advice_to_events(advisor: String, message: String, priority: int) -> void:
+	Events.simulation_event.emit("advisor_message", {
+		"advisor": advisor, "message": message, "priority": priority
+	})
 
 
 func _on_month_tick() -> void:

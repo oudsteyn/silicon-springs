@@ -488,41 +488,10 @@ func _setup_terrain() -> void:
 		# Hide the old terrain background, use renderer instead
 		terrain_background.visible = false
 
-	# Legacy grid line setup - disabled in favor of AdaptiveGridRenderer
-	# _draw_grid_lines() - now handled by AdaptiveGridRenderer
-
-
-## LEGACY: Replaced by AdaptiveGridRenderer
-## Kept for reference but no longer called
-func _draw_grid_lines() -> void:
-	# Create grid lines using Line2D nodes (sparse grid for performance)
-	var grid_spacing = 10  # Draw a line every 10 cells
-	var cell_size = GridConstants.CELL_SIZE
-	var world_width = GridConstants.GRID_WIDTH * cell_size
-	var world_height = GridConstants.GRID_HEIGHT * cell_size
-
-	# Vertical lines
-	for x in range(0, GridConstants.GRID_WIDTH + 1, grid_spacing):
-		var line = Line2D.new()
-		line.points = [Vector2(x * cell_size, 0), Vector2(x * cell_size, world_height)]
-		line.width = 1
-		line.default_color = Color(0.15, 0.3, 0.15, 0.5)
-		grid_lines.add_child(line)
-
-	# Horizontal lines
-	for y in range(0, GridConstants.GRID_HEIGHT + 1, grid_spacing):
-		var line = Line2D.new()
-		line.points = [Vector2(0, y * cell_size), Vector2(world_width, y * cell_size)]
-		line.width = 1
-		line.default_color = Color(0.15, 0.3, 0.15, 0.5)
-		grid_lines.add_child(line)
-
-
 func _process(delta: float) -> void:
 	_handle_camera_input(delta)
 	_update_hovered_cell()
 	_update_ghost_preview()
-	# _update_fine_grid() - replaced by AdaptiveGridRenderer
 	_update_cell_highlight()
 
 
@@ -754,55 +723,6 @@ func _is_linear_infrastructure(building_data) -> bool:
 	return GridConstants.is_linear_infrastructure(btype)
 
 
-## LEGACY: Replaced by AdaptiveGridRenderer
-## Was extremely inefficient - created/destroyed Line2D nodes every frame
-## Kept for reference but no longer called
-func _update_fine_grid() -> void:
-	if not fine_grid:
-		return
-
-	# Only show fine grid in build or demolish mode
-	if not build_mode and not demolish_mode:
-		fine_grid.visible = false
-		return
-
-	fine_grid.visible = true
-
-	# Clear existing grid lines
-	for child in fine_grid.get_children():
-		child.queue_free()
-
-	# Draw fine grid around cursor
-	var start_x = max(0, hovered_cell.x - FINE_GRID_RADIUS)
-	var end_x = min(GridConstants.GRID_WIDTH, hovered_cell.x + FINE_GRID_RADIUS + 1)
-	var start_y = max(0, hovered_cell.y - FINE_GRID_RADIUS)
-	var end_y = min(GridConstants.GRID_HEIGHT, hovered_cell.y + FINE_GRID_RADIUS + 1)
-
-	var grid_color = Color(0.5, 0.5, 0.5, 0.3)
-
-	# Vertical lines
-	for x in range(start_x, end_x + 1):
-		var line = Line2D.new()
-		line.points = [
-			Vector2(x * GridConstants.CELL_SIZE, start_y * GridConstants.CELL_SIZE),
-			Vector2(x * GridConstants.CELL_SIZE, end_y * GridConstants.CELL_SIZE)
-		]
-		line.width = 1
-		line.default_color = grid_color
-		fine_grid.add_child(line)
-
-	# Horizontal lines
-	for y in range(start_y, end_y + 1):
-		var line = Line2D.new()
-		line.points = [
-			Vector2(start_x * GridConstants.CELL_SIZE, y * GridConstants.CELL_SIZE),
-			Vector2(end_x * GridConstants.CELL_SIZE, y * GridConstants.CELL_SIZE)
-		]
-		line.width = 1
-		line.default_color = grid_color
-		fine_grid.add_child(line)
-
-
 func _update_cell_highlight() -> void:
 	if not cell_highlight:
 		return
@@ -1005,12 +925,7 @@ func _try_place_building() -> void:
 
 		# Track data center placement
 		if current_building_data.category == "data_center":
-			GameState.add_data_center(current_building_data.data_center_tier)
-			GameState.score += current_building_data.score_value
-			Events.data_center_placed.emit(current_building_data.data_center_tier, hovered_cell)
-			Events.simulation_event.emit("data_center_placed_success", {
-				"score": current_building_data.score_value
-			})
+			_track_data_center_placed(current_building_data, hovered_cell)
 	else:
 		# Visual feedback for failed placement
 		if cell_highlight:
@@ -1078,6 +993,16 @@ func _check_data_center_requirements(cell: Vector2i, data) -> bool:
 		return false
 
 	return true
+
+
+## Track data center placement in GameState and emit events
+func _track_data_center_placed(building_data, cell: Vector2i) -> void:
+	GameState.add_data_center(building_data.data_center_tier)
+	GameState.score += building_data.score_value
+	Events.data_center_placed.emit(building_data.data_center_tier, cell)
+	Events.simulation_event.emit("data_center_placed_success", {
+		"score": building_data.score_value
+	})
 
 
 ## Shared bulldoze logic for a single cell. Returns result dict:
@@ -1395,24 +1320,19 @@ func _on_demolish_mode_exited() -> void:
 
 
 # Tool management
+
+## Map ToolMode to cursor shape
+static func _cursor_shape_for_tool(tool: ToolMode) -> Input.CursorShape:
+	match tool:
+		ToolMode.SELECT: return Input.CURSOR_ARROW
+		ToolMode.PAN: return Input.CURSOR_DRAG
+		_: return Input.CURSOR_CROSS
+
+
 func set_tool(tool: ToolMode) -> void:
 	current_tool = tool
 	is_panning = false
-
-	# Update cursor based on tool
-	match tool:
-		ToolMode.SELECT:
-			Input.set_default_cursor_shape(Input.CURSOR_ARROW)
-		ToolMode.PAN:
-			Input.set_default_cursor_shape(Input.CURSOR_DRAG)
-		ToolMode.BUILD:
-			Input.set_default_cursor_shape(Input.CURSOR_CROSS)
-		ToolMode.DEMOLISH:
-			Input.set_default_cursor_shape(Input.CURSOR_CROSS)
-		ToolMode.ZONE:
-			Input.set_default_cursor_shape(Input.CURSOR_CROSS)
-		ToolMode.TERRAIN:
-			Input.set_default_cursor_shape(Input.CURSOR_CROSS)
+	Input.set_default_cursor_shape(_cursor_shape_for_tool(tool))
 
 	Events.tool_changed.emit(tool)
 
@@ -1427,21 +1347,7 @@ func _on_ui_manager_tool_changed(ui_tool: int) -> void:
 		# Update internal state without re-emitting to UIManager
 		current_tool = game_tool as ToolMode
 		is_panning = false
-
-		# Update cursor
-		match current_tool:
-			ToolMode.SELECT:
-				Input.set_default_cursor_shape(Input.CURSOR_ARROW)
-			ToolMode.PAN:
-				Input.set_default_cursor_shape(Input.CURSOR_DRAG)
-			ToolMode.BUILD:
-				Input.set_default_cursor_shape(Input.CURSOR_CROSS)
-			ToolMode.DEMOLISH:
-				Input.set_default_cursor_shape(Input.CURSOR_CROSS)
-			ToolMode.ZONE:
-				Input.set_default_cursor_shape(Input.CURSOR_CROSS)
-			ToolMode.TERRAIN:
-				Input.set_default_cursor_shape(Input.CURSOR_CROSS)
+		Input.set_default_cursor_shape(_cursor_shape_for_tool(current_tool))
 
 
 func get_tool() -> ToolMode:
@@ -1612,25 +1518,21 @@ func _on_building_catalog_requested() -> void:
 
 
 func _on_expense_breakdown_requested() -> void:
-	# Aggregate maintenance costs by category
+	Events.expense_breakdown_ready.emit(_compute_expense_breakdown())
+
+
+func _compute_expense_breakdown() -> Dictionary:
 	var by_category: Dictionary = {}
-	var counted: Dictionary = {}
-
-	for cell in grid_system.buildings:
-		var building = grid_system.buildings[cell]
-		if not is_instance_valid(building) or counted.has(building):
+	for building in grid_system.get_all_unique_buildings():
+		if not is_instance_valid(building) or not building.building_data:
 			continue
-		counted[building] = true
-
-		if building.building_data:
-			var cat = building.building_data.category
-			var maint = building.building_data.monthly_maintenance
-			if not by_category.has(cat):
-				by_category[cat] = {"count": 0, "total": 0}
-			by_category[cat].count += 1
-			by_category[cat].total += maint
-
-	Events.expense_breakdown_ready.emit(by_category)
+		var cat = building.building_data.category
+		var maint = building.building_data.monthly_maintenance
+		if not by_category.has(cat):
+			by_category[cat] = {"count": 0, "total": 0}
+		by_category[cat].count += 1
+		by_category[cat].total += maint
+	return by_category
 
 
 # === Command Handlers for Decoupled Actions ===
@@ -1664,12 +1566,7 @@ func _on_build_requested(building_id: String, cell: Vector2i) -> void:
 	if building:
 		# Track data center placement
 		if building_data.category == "data_center":
-			GameState.add_data_center(building_data.data_center_tier)
-			GameState.score += building_data.score_value
-			Events.data_center_placed.emit(building_data.data_center_tier, cell)
-			Events.simulation_event.emit("data_center_placed_success", {
-				"score": building_data.score_value
-			})
+			_track_data_center_placed(building_data, cell)
 
 
 func _on_demolish_requested(cell: Vector2i) -> void:

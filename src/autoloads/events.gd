@@ -276,22 +276,7 @@ signal storm_outage_started(severity: float, affected_percent: float)
 signal storm_outage_ended()
 @warning_ignore("unused_signal")
 signal power_restoration_progress(percent_restored: float)
-## @deprecated Use power_state_changed domain event instead
-@warning_ignore("unused_signal")
-signal grid_stability_changed(stability: float)
-## @deprecated Use power_state_changed domain event instead
-@warning_ignore("unused_signal")
-signal energy_storage_changed(charge_percent: float, is_charging: bool)
 
 # === WATER SYSTEM EVENTS ===
-## @deprecated Use water_state_changed domain event instead
-@warning_ignore("unused_signal")
-signal water_pressure_changed(pressure: float, status: String)
-## @deprecated Use water_state_changed domain event instead
-@warning_ignore("unused_signal")
-signal water_shortage_started(shortage_percent: float)
-## @deprecated Use water_state_changed domain event instead
-@warning_ignore("unused_signal")
-signal water_shortage_ended()
 @warning_ignore("unused_signal")
 signal water_supply_critical(remaining_days: int)
