@@ -30,6 +30,13 @@ func get_rock_count() -> int:
 	return _rock_instance.multimesh.instance_count
 
 
+func clear_instances() -> void:
+	_free_instance(_grass_instance)
+	_free_instance(_rock_instance)
+	_grass_instance = null
+	_rock_instance = null
+
+
 func _ensure_multimesh(inst: MultiMeshInstance3D, node_name: String) -> MultiMeshInstance3D:
 	if inst != null and is_instance_valid(inst):
 		return inst
@@ -48,3 +55,12 @@ func _setup_multimesh(node: MultiMeshInstance3D, mesh: Mesh, transforms: Array, 
 		mm.set_instance_transform(i, transforms[i])
 	node.multimesh = mm
 	node.visibility_range_end = visibility_range_end
+
+
+func _free_instance(node: MultiMeshInstance3D) -> void:
+	if node == null or not is_instance_valid(node):
+		return
+	node.multimesh = null
+	if node.get_parent():
+		node.get_parent().remove_child(node)
+	node.free()

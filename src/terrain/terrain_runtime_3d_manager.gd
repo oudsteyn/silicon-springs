@@ -51,6 +51,16 @@ func get_chunk_metadata(chunk: Vector2i, lod: int) -> Dictionary:
 	return _chunk_metadata.get(key, {})
 
 
+func clear_chunks() -> void:
+	for inst in _active_chunks.values():
+		_free_chunk_instance(inst)
+	for inst in _chunk_pool:
+		_free_chunk_instance(inst)
+	_active_chunks.clear()
+	_chunk_pool.clear()
+	_chunk_metadata.clear()
+
+
 func _chunk_key(chunk: Vector2i, lod: int) -> String:
 	return "%d:%d:%d" % [lod, chunk.x, chunk.y]
 
@@ -73,6 +83,15 @@ func _add_chunk_instance(inst: MeshInstance3D) -> void:
 	if inst.get_parent() != self:
 		add_child(inst)
 	inst.visible = true
+
+
+func _free_chunk_instance(inst: MeshInstance3D) -> void:
+	if not is_instance_valid(inst):
+		return
+	inst.mesh = null
+	if inst.get_parent():
+		inst.get_parent().remove_child(inst)
+	inst.free()
 
 
 func _update_chunk_mesh(

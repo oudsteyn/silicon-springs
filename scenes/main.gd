@@ -273,6 +273,10 @@ func _configure_runtime_graphics_quality() -> void:
 		GraphicsSettingsManager.bind_environment(world_environment.environment)
 		if GraphicsSettingsManager.has_method("apply_terrain_atmosphere_profile"):
 			GraphicsSettingsManager.apply_terrain_atmosphere_profile(world_environment.environment, "city_scale")
+		if GraphicsSettingsManager.has_method("apply_camera_dof_profile"):
+			var camera_3d = get_viewport().get_camera_3d()
+			if camera_3d:
+				GraphicsSettingsManager.apply_camera_dof_profile(camera_3d, int(GraphicsSettingsManager.current_preset))
 	if RenderPerformanceMonitor and GraphicsSettingsManager:
 		RenderPerformanceMonitor.set_graphics_apply_callback(_apply_recommended_quality)
 

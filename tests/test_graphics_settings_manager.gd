@@ -237,3 +237,13 @@ func test_camera_dof_profile_falls_back_by_quality_tier() -> void:
 
 	assert_false(bool(low.get("enabled", true)))
 	assert_true(bool(high.get("enabled", false)))
+
+
+func test_apply_camera_dof_profile_creates_camera_attributes() -> void:
+	var mgr = _track_node(GraphicsSettingsManagerScript.new())
+	var camera = _track_node(Camera3D.new())
+
+	var profile = mgr.apply_camera_dof_profile(camera, 2)
+
+	assert_not_null(camera.attributes)
+	assert_true(bool(profile.get("enabled", false)))

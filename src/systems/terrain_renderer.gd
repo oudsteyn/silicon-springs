@@ -5,6 +5,8 @@ class_name TerrainRenderer
 const TerrainMeshBridgeScript = preload("res://src/terrain/terrain_mesh_bridge.gd")
 const TerrainClipmapStreamerScript = preload("res://src/terrain/terrain_clipmap_streamer.gd")
 const TerrainDetailScatterScript = preload("res://src/terrain/terrain_detail_scatter.gd")
+const TerrainRuntime3DManagerScript = preload("res://src/terrain/terrain_runtime_3d_manager.gd")
+const TerrainDetailRenderer3DScript = preload("res://src/terrain/terrain_detail_renderer_3d.gd")
 
 # References
 var terrain_system: TerrainSystem = null
@@ -29,6 +31,9 @@ var _runtime_detail_transforms: Dictionary = {"grass": [], "rocks": []}
 var _mesh_bridge = TerrainMeshBridgeScript.new()
 var _clipmap_streamer = TerrainClipmapStreamerScript.new()
 var _detail_scatter = TerrainDetailScatterScript.new()
+var _runtime_3d_manager = TerrainRuntime3DManagerScript.new()
+var _runtime_detail_renderer = TerrainDetailRenderer3DScript.new()
+var _runtime_3d_enabled: bool = false
 
 # Color palette for elevation levels
 const ELEVATION_COLORS = {
@@ -65,6 +70,11 @@ func _ready() -> void:
 	Events.terrain_changed.connect(_on_terrain_changed)
 
 
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PREDELETE:
+		_cleanup_runtime_3d_nodes()
+
+
 func set_terrain_system(ts: TerrainSystem) -> void:
 	terrain_system = ts
 	if terrain_system:
@@ -83,6 +93,12 @@ func configure_runtime_terrain_pipeline(ts: TerrainSystem) -> void:
 			var size = terrain_system.get_runtime_heightmap_size()
 			var sea_level = terrain_system.get_runtime_sea_level()
 			_on_runtime_heightmap_generated(heightmap, size, sea_level)
+
+
+func set_runtime_3d_enabled(enabled: bool) -> void:
+	_runtime_3d_enabled = enabled
+	if _runtime_3d_enabled:
+		_sync_runtime_3d_pipeline()
 
 
 func set_grid_system(gs: Node) -> void:
@@ -108,6 +124,7 @@ func _process(_delta: float) -> void:
 			var camera3 = Vector3(camera.position.x, 0.0, camera.position.y)
 			var update = _clipmap_streamer.update_camera(camera3)
 			_runtime_visible_chunks = update.get("visible_chunks", {})
+			_sync_runtime_3d_pipeline()
 			queue_redraw()
 
 
@@ -119,6 +136,26 @@ func get_runtime_detail_counts() -> Dictionary:
 	return {
 		"grass": _runtime_detail_transforms.get("grass", []).size(),
 		"rocks": _runtime_detail_transforms.get("rocks", []).size()
+	}
+
+
+func get_runtime_3d_stats() -> Dictionary:
+	var active_chunks = 0
+	var chunk_pool = 0
+	var grass_instances = 0
+	var rock_instances = 0
+	if _runtime_3d_manager and is_instance_valid(_runtime_3d_manager):
+		active_chunks = _runtime_3d_manager.get_active_chunk_count()
+		chunk_pool = _runtime_3d_manager.get_pool_size()
+	if _runtime_detail_renderer and is_instance_valid(_runtime_detail_renderer):
+		grass_instances = _runtime_detail_renderer.get_grass_count()
+		rock_instances = _runtime_detail_renderer.get_rock_count()
+	return {
+		"enabled": _runtime_3d_enabled,
+		"active_chunks": active_chunks,
+		"chunk_pool": chunk_pool,
+		"grass_instances": grass_instances,
+		"rock_instances": rock_instances
 	}
 
 
@@ -172,6 +209,34 @@ func _on_runtime_heightmap_generated(heightmap: PackedFloat32Array, size: int, s
 	_runtime_sea_level = sea_level
 	_runtime_detail_transforms = _detail_scatter.build_scatter_transforms(heightmap, size, 1.0, sea_level, 1337)
 	_runtime_visible_chunks = _clipmap_streamer.update_camera(Vector3.ZERO).get("visible_chunks", {})
+	_sync_runtime_3d_pipeline()
+
+
+func _sync_runtime_3d_pipeline() -> void:
+	if not _runtime_3d_enabled:
+		return
+	if _runtime_heightmap_size <= 0 or _runtime_heightmap.is_empty():
+		return
+	if _runtime_visible_chunks.is_empty():
+		return
+	_runtime_3d_manager.sync_clipmap(_runtime_heightmap, _runtime_heightmap_size, _runtime_visible_chunks, CHUNK_SIZE)
+	_runtime_detail_renderer.configure_instances(
+		_runtime_detail_transforms.get("grass", []),
+		_runtime_detail_transforms.get("rocks", []),
+		QuadMesh.new(),
+		BoxMesh.new()
+	)
+
+
+func _cleanup_runtime_3d_nodes() -> void:
+	if _runtime_3d_manager and is_instance_valid(_runtime_3d_manager):
+		_runtime_3d_manager.clear_chunks()
+		_runtime_3d_manager.free()
+	_runtime_3d_manager = null
+	if _runtime_detail_renderer and is_instance_valid(_runtime_detail_renderer):
+		_runtime_detail_renderer.clear_instances()
+		_runtime_detail_renderer.free()
+	_runtime_detail_renderer = null
 
 
 func _draw_chunk(chunk_pos: Vector2i) -> void:

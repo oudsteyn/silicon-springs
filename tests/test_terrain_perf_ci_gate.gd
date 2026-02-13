@@ -21,3 +21,7 @@ func test_evaluate_metrics_returns_exit_code_for_ci() -> void:
 	})
 	assert_eq(fail_result.exit_code, 1)
 	assert_gt(String(fail_result.summary_markdown).length(), 0)
+
+
+func test_cli_script_exists_for_ci_usage() -> void:
+	assert_true(FileAccess.file_exists("res://scripts/terrain_perf_gate.gd"))

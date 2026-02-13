@@ -422,9 +422,31 @@ func build_camera_dof_profile(quality_tier: int) -> Dictionary:
 			}
 
 
+func apply_camera_dof_profile(camera: Camera3D, quality_tier: int) -> Dictionary:
+	if camera == null:
+		return {}
+	var profile = build_camera_dof_profile(quality_tier)
+	var attrs = camera.attributes
+	if attrs == null:
+		attrs = CameraAttributesPractical.new()
+		camera.attributes = attrs
+	_set_camera_attr_if_exists(attrs, "dof_blur_far_enabled", bool(profile.get("enabled", false)))
+	_set_camera_attr_if_exists(attrs, "dof_blur_far_distance", float(profile.get("far_distance", 0.0)))
+	_set_camera_attr_if_exists(attrs, "dof_blur_far_transition", float(profile.get("far_transition", 0.0)))
+	_set_camera_attr_if_exists(attrs, "dof_blur_far_amount", float(profile.get("far_amount", 0.0)))
+	return profile
+
+
 func _set_env_property_if_exists(env: Environment, property_name: String, value, sink: Dictionary = {}) -> void:
 	for prop in env.get_property_list():
 		if String(prop.get("name", "")) == property_name:
 			env.set(property_name, value)
 			sink[property_name] = value
+			return
+
+
+func _set_camera_attr_if_exists(attrs: Resource, property_name: String, value) -> void:
+	for prop in attrs.get_property_list():
+		if String(prop.get("name", "")) == property_name:
+			attrs.set(property_name, value)
 			return

@@ -22,6 +22,7 @@ class DummyTerrainRenderer extends Node:
 	var set_terrain_system_called = false
 	var set_grid_system_called = false
 	var set_camera_called = false
+	var runtime_3d_enabled_called = false
 	var configure_runtime_called = false
 	var refresh_called = false
 
@@ -33,6 +34,9 @@ class DummyTerrainRenderer extends Node:
 
 	func set_camera(_camera) -> void:
 		set_camera_called = true
+
+	func set_runtime_3d_enabled(_enabled: bool) -> void:
+		runtime_3d_enabled_called = true
 
 	func configure_runtime_terrain_pipeline(_terrain_system) -> void:
 		configure_runtime_called = true
@@ -74,6 +78,7 @@ func test_setup_terrain_configures_runtime_pipeline_before_generation() -> void:
 	assert_true(terrain_renderer.set_terrain_system_called)
 	assert_true(terrain_renderer.set_grid_system_called)
 	assert_true(terrain_renderer.set_camera_called)
+	assert_true(terrain_renderer.runtime_3d_enabled_called)
 	assert_true(terrain_renderer.configure_runtime_called)
 	assert_true(terrain_system.set_grid_system_called)
 	assert_true(terrain_system.configure_called)

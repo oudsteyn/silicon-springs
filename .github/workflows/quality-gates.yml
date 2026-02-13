@@ -1,0 +1,27 @@
+name: Quality Gates
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  quality-gates:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Godot
+        run: |
+          sudo add-apt-repository ppa:godotengine/godot
+          sudo apt-get update
+          sudo apt-get install -y godot4
+
+      - name: Run Headless Tests
+        run: godot --headless -s tests/run_headless.gd
+
+      - name: Run Terrain Perf Gate
+        run: ./scripts/run_terrain_perf_gate.sh ./tests/fixtures/terrain_perf_metrics_pass.json
+
+      - name: Run Visual Parity Matrix Gate
+        run: godot --headless -s res://scripts/run_visual_parity_matrix_ci.gd

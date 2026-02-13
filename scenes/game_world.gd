@@ -399,6 +399,8 @@ func _setup_terrain() -> void:
 		terrain_renderer.set_terrain_system(terrain_system)
 		terrain_renderer.set_grid_system(grid_system)
 		terrain_renderer.set_camera(camera)
+		if terrain_renderer.has_method("set_runtime_3d_enabled"):
+			terrain_renderer.set_runtime_3d_enabled(TERRAIN_RUNTIME_PIPELINE_ENABLED)
 		if terrain_renderer.has_method("configure_runtime_terrain_pipeline"):
 			terrain_renderer.configure_runtime_terrain_pipeline(terrain_system)
 		terrain_system.set_grid_system(grid_system)
