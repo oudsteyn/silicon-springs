@@ -15,6 +15,8 @@ signal building_upgrade_requested(building_id: String)
 signal building_demolish_requested(building_id: String)
 
 var _selected_building: Node2D = null
+var _events_bound: bool = false
+var _bound_events: Node = null
 
 
 func _ready() -> void:
@@ -24,10 +26,25 @@ func _ready() -> void:
 		building_upgrade_requested.connect(_process_upgrade_request)
 	if not building_demolish_requested.is_connected(_process_demolish_request):
 		building_demolish_requested.connect(_process_demolish_request)
+	_events_bound = _try_bind_events()
+	set_process(not _events_bound)
 
+
+func _process(_delta: float) -> void:
+	if _events_bound and _is_bound_events_valid():
+		set_process(false)
+		return
+	_events_bound = false
+	_bound_events = null
+	_events_bound = _try_bind_events()
+	if _events_bound:
+		set_process(false)
+
+
+func _try_bind_events() -> bool:
 	var events = get_node_or_null("/root/Events")
 	if events == null:
-		return
+		return false
 
 	if not events.budget_updated.is_connected(_on_budget_updated):
 		events.budget_updated.connect(_on_budget_updated)
@@ -43,6 +60,22 @@ func _ready() -> void:
 		events.building_deselected.connect(_on_building_deselected)
 	if not events.building_info_ready.is_connected(_on_building_info_ready):
 		events.building_info_ready.connect(_on_building_info_ready)
+	if not events.tree_exiting.is_connected(_on_bound_events_tree_exiting):
+		events.tree_exiting.connect(_on_bound_events_tree_exiting)
+	_bound_events = events
+	return true
+
+
+func _is_bound_events_valid() -> bool:
+	if not is_instance_valid(_bound_events):
+		return false
+	return _bound_events == get_node_or_null("/root/Events")
+
+
+func _on_bound_events_tree_exiting() -> void:
+	_events_bound = false
+	_bound_events = null
+	set_process(true)
 
 
 func _on_budget_updated(balance: int, income: int, expenses: int) -> void:

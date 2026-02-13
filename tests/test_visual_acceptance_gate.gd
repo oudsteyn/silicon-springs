@@ -56,3 +56,15 @@ func test_evaluate_profiles_by_phase_returns_quality_score() -> void:
 	assert_true(result.has("quality_score"))
 	assert_gte(float(result.get("quality_score", -1.0)), 0.0)
 	assert_lte(float(result.get("quality_score", 101.0)), 100.0)
+
+
+func test_in_range_edge_values_keep_minimum_quality_floor() -> void:
+	var gate = VisualGateScript.new()
+	var result = gate.evaluate_day_profile({
+		"tonemap_exposure": 1.001,
+		"tonemap_white": 1.051,
+		"fog_density": 0.0081,
+		"sun_energy": 1.34
+	})
+	assert_true(bool(result.get("passed", false)))
+	assert_gte(float(result.get("quality_score", 0.0)), 75.0)

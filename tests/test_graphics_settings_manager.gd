@@ -203,3 +203,15 @@ func test_apply_serialized_settings_clamps_visual_ranges() -> void:
 	assert_approx(float(settings.get("ssao_power", 0.0)), 4.0, 0.001)
 	assert_approx(float(settings.get("tonemap_exposure", 0.0)), 0.4, 0.001)
 	assert_approx(float(settings.get("tonemap_white", 0.0)), 2.5, 0.001)
+
+
+func test_apply_serialized_settings_clamps_invalid_enum_values() -> void:
+	var mgr = _track_node(GraphicsSettingsManagerScript.new())
+	mgr.apply_serialized_settings({
+		"preset": 999,
+		"shadow_quality": -99
+	}, false)
+	var settings = mgr.get_current_settings()
+
+	assert_eq(int(settings.get("preset", -1)), int(mgr.QualityPreset.HIGH))
+	assert_eq(int(settings.get("shadow_quality", -1)), int(mgr.ShadowQuality.HIGH))

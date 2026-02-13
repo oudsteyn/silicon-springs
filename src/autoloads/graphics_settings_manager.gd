@@ -174,8 +174,8 @@ func to_serializable_dict() -> Dictionary:
 
 
 func apply_serialized_settings(data: Dictionary, apply_now: bool = true) -> void:
-	current_preset = int(data.get("preset", int(current_preset)))
-	current_shadow_quality = int(data.get("shadow_quality", int(current_shadow_quality)))
+	current_preset = _sanitize_preset(int(data.get("preset", int(current_preset))))
+	current_shadow_quality = _sanitize_shadow_quality(int(data.get("shadow_quality", int(current_shadow_quality))))
 	ssao_enabled = bool(data.get("ssao_enabled", ssao_enabled))
 	ssr_enabled = bool(data.get("ssr_enabled", ssr_enabled))
 	volumetric_fog_enabled = bool(data.get("volumetric_fog_enabled", volumetric_fog_enabled))
@@ -189,6 +189,18 @@ func apply_serialized_settings(data: Dictionary, apply_now: bool = true) -> void
 		apply_current_settings()
 		apply_shadow_quality()
 	settings_changed.emit(get_current_settings())
+
+
+func _sanitize_preset(value: int) -> QualityPreset:
+	if value < int(QualityPreset.LOW) or value > int(QualityPreset.ULTRA):
+		return QualityPreset.HIGH
+	return value as QualityPreset
+
+
+func _sanitize_shadow_quality(value: int) -> ShadowQuality:
+	if value < int(ShadowQuality.LOW) or value > int(ShadowQuality.ULTRA):
+		return ShadowQuality.HIGH
+	return value as ShadowQuality
 
 
 func set_settings_path_for_tests(path: String) -> void:

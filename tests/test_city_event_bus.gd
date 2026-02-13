@@ -14,6 +14,14 @@ class DummyBuilding extends Node2D:
 	var efficiency: float = 0.75
 	var grid_cell: Vector2i = Vector2i(11, 17)
 
+class DummyBuildingInvalidCell extends Node2D:
+	var building_data: DummyBuildingData = DummyBuildingData.new()
+	var is_operational: bool = true
+	var workers: int = 15
+	var workers_required: int = 20
+	var efficiency: float = 0.75
+	var grid_cell = "invalid"
+
 class DummyEvents extends Node:
 	signal budget_updated(balance: int, income: int, expenses: int)
 	signal population_changed(population: int, delta: int)
@@ -196,4 +204,58 @@ func test_popup_actions_ignore_non_selected_building_id() -> void:
 	bus.emit_signal("building_demolish_requested", "other-id")
 
 	assert_eq(upgrade_count, 0)
+	assert_eq(demolish_count, 0)
+
+
+func test_rebinds_after_bound_events_exit_signal() -> void:
+	var events = _get_events_node()
+	var bus = _track_node(CityEventBusScript.new())
+	get_tree().root.add_child(bus)
+
+	var balances: Array[int] = []
+	bus.finance_snapshot_updated.connect(func(balance: int, _income: int, _expenses: int): balances.append(balance))
+
+	events.budget_updated.emit(100, 0, 0)
+	bus._on_bound_events_tree_exiting()
+	bus._process(0.0)
+	events.budget_updated.emit(200, 0, 0)
+
+	assert_eq(balances, [100, 200])
+
+
+func test_popup_actions_are_ignored_after_deselection() -> void:
+	var events = _get_events_node()
+	var bus = _track_node(CityEventBusScript.new())
+	var building = _track_node(DummyBuilding.new())
+	get_tree().root.add_child(bus)
+
+	var upgrade_count := 0
+	var demolish_count := 0
+	if events.has_signal("upgrade_requested"):
+		events.connect("upgrade_requested", func(_target: Node2D): upgrade_count += 1)
+	if events.has_signal("demolish_requested"):
+		events.connect("demolish_requested", func(_cell: Vector2i): demolish_count += 1)
+
+	bus._on_building_selected(building)
+	bus._on_building_deselected()
+	bus.emit_signal("building_upgrade_requested", str(building.get_instance_id()))
+	bus.emit_signal("building_demolish_requested", str(building.get_instance_id()))
+
+	assert_eq(upgrade_count, 0)
+	assert_eq(demolish_count, 0)
+
+
+func test_demolish_request_ignores_invalid_grid_cell_type() -> void:
+	var events = _get_events_node()
+	var bus = _track_node(CityEventBusScript.new())
+	var building = _track_node(DummyBuildingInvalidCell.new())
+	get_tree().root.add_child(bus)
+
+	var demolish_count := 0
+	if events.has_signal("demolish_requested"):
+		events.connect("demolish_requested", func(_cell: Vector2i): demolish_count += 1)
+
+	bus._on_building_selected(building)
+	bus.emit_signal("building_demolish_requested", str(building.get_instance_id()))
+
 	assert_eq(demolish_count, 0)

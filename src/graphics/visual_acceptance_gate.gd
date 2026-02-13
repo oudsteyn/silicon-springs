@@ -1,6 +1,8 @@
 class_name VisualAcceptanceGate
 extends RefCounted
 
+const IN_RANGE_BASE_SCORE := 0.75
+
 const DAY_TARGETS := {
 	"tonemap_exposure": Vector2(1.00, 1.15),
 	"tonemap_white": Vector2(1.05, 1.30),
@@ -84,4 +86,7 @@ func _score_metric(value: float, range: Vector2) -> float:
 	var center: float = (range.x + range.y) * 0.5
 	var half_span: float = maxf((range.y - range.x) * 0.5, 0.00001)
 	var normalized_distance: float = absf(value - center) / half_span
-	return clampf(1.0 - normalized_distance, 0.0, 1.0)
+	var score = clampf(1.0 - normalized_distance, 0.0, 1.0)
+	if value >= range.x and value <= range.y:
+		return maxf(score, IN_RANGE_BASE_SCORE)
+	return score

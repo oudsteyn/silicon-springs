@@ -5,6 +5,7 @@ const VisualParityCliScript = preload("res://src/graphics/visual_parity_cli.gd")
 class FakeRunner:
 	var calls: Array = []
 	var response: Dictionary = {"status": "PASS", "exit_code": 0}
+	var responses: Array = []
 	func execute_with_contract(graphics, daylight, baseline_path, artifact_dir, contract, profile, context):
 		calls.append({
 			"graphics": graphics,
@@ -14,6 +15,8 @@ class FakeRunner:
 			"profile": profile,
 			"context": context.duplicate(true)
 		})
+		if not responses.is_empty():
+			return responses.pop_front().duplicate(true)
 		return response.duplicate(true)
 
 class FakeContract:
@@ -88,3 +91,76 @@ func test_run_respects_contract_build_failure_policy() -> void:
 		"daylight_controller": {}
 	})
 	assert_eq(int(output.get("exit_code", 0)), 2)
+
+
+func test_run_auto_seed_retries_verify_after_seed_required() -> void:
+	var cli = VisualParityCliScript.new()
+	var runner = FakeRunner.new()
+	runner.responses = [
+		{"status": "SEED_REQUIRED", "exit_code": 2},
+		{"status": "PASS", "exit_code": 0}
+	]
+	var contract = FakeContract.new()
+
+	var output = cli.run(["--auto-seed=true"], {
+		"runner": runner,
+		"contract": contract,
+		"graphics_settings_manager": {},
+		"daylight_controller": {}
+	})
+
+	assert_eq(runner.calls.size(), 2)
+	assert_eq(str(runner.calls[0]["context"]["mode"]), "verify_or_record")
+	assert_eq(str(runner.calls[1]["context"]["mode"]), "verify")
+	assert_eq(str(output.get("manifest", {}).get("status", "")), "PASS")
+	assert_eq(int(output.get("exit_code", 1)), 0)
+
+
+func test_run_auto_seed_preserves_seed_required_without_flag() -> void:
+	var cli = VisualParityCliScript.new()
+	var runner = FakeRunner.new()
+	runner.response = {"status": "SEED_REQUIRED", "exit_code": 2}
+	var contract = FakeContract.new()
+	contract.fail_build = true
+
+	var output = cli.run([], {
+		"runner": runner,
+		"contract": contract,
+		"graphics_settings_manager": {},
+		"daylight_controller": {}
+	})
+
+	assert_eq(runner.calls.size(), 1)
+	assert_eq(str(output.get("manifest", {}).get("status", "")), "SEED_REQUIRED")
+	assert_eq(int(output.get("exit_code", 1)), 2)
+
+
+func test_run_injects_default_capture_provider_when_not_supplied() -> void:
+	var cli = VisualParityCliScript.new()
+	var runner = FakeRunner.new()
+	var contract = FakeContract.new()
+	cli.run([], {
+		"runner": runner,
+		"contract": contract,
+		"graphics_settings_manager": {},
+		"daylight_controller": {}
+	})
+	var context = runner.calls[0]["context"]
+	assert_true(context.has("capture_provider"))
+	assert_true(context["capture_provider"] != null)
+	assert_true(context["capture_provider"].has_method("capture_profile_frame"))
+
+
+func test_run_respects_auto_capture_flag_false() -> void:
+	var cli = VisualParityCliScript.new()
+	var runner = FakeRunner.new()
+	var contract = FakeContract.new()
+	cli.run(["--auto-capture=false"], {
+		"runner": runner,
+		"contract": contract,
+		"graphics_settings_manager": {},
+		"daylight_controller": {}
+	})
+	var context = runner.calls[0]["context"]
+	assert_true(context.has("capture_provider"))
+	assert_eq(context["capture_provider"], null)
