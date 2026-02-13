@@ -397,6 +397,31 @@ func apply_terrain_atmosphere_profile(env: Environment, profile: String = "city_
 	return applied
 
 
+func build_camera_dof_profile(quality_tier: int) -> Dictionary:
+	match quality_tier:
+		0:
+			return {
+				"enabled": false,
+				"far_distance": 0.0,
+				"far_transition": 0.0,
+				"far_amount": 0.0
+			}
+		1:
+			return {
+				"enabled": true,
+				"far_distance": 2400.0,
+				"far_transition": 900.0,
+				"far_amount": 0.03
+			}
+		_:
+			return {
+				"enabled": true,
+				"far_distance": 1800.0,
+				"far_transition": 750.0,
+				"far_amount": 0.05
+			}
+
+
 func _set_env_property_if_exists(env: Environment, property_name: String, value, sink: Dictionary = {}) -> void:
 	for prop in env.get_property_list():
 		if String(prop.get("name", "")) == property_name:

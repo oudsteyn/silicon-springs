@@ -16,3 +16,15 @@ func test_update_camera_rebuilds_on_chunk_boundary_crossing() -> void:
 	assert_true(third.rebuilt)
 	assert_true(third.visible_chunks.has(0))
 
+
+func test_stream_commands_include_lod_and_seam_mask() -> void:
+	var streamer = TerrainClipmapStreamerScript.new()
+	streamer.chunk_size_meters = 128.0
+	streamer.update_camera(Vector3(0.0, 0.0, 0.0))
+
+	var commands = streamer.get_pending_chunk_commands()
+	assert_not_empty(commands)
+	var first = commands[0]
+	assert_true(first.has("lod"))
+	assert_true(first.has("chunk"))
+	assert_true(first.has("seam_mask"))

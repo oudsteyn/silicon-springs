@@ -226,3 +226,14 @@ func test_apply_terrain_atmosphere_profile_enables_fog_and_dof() -> void:
 	assert_true(env.volumetric_fog_enabled)
 	assert_true(bool(applied.get("dof_far_enabled", false)))
 	assert_gt(float(applied.get("dof_far_distance", 0.0)), 1000.0)
+
+
+func test_camera_dof_profile_falls_back_by_quality_tier() -> void:
+	var mgr = _track_node(GraphicsSettingsManagerScript.new())
+	assert_true(mgr.has_method("build_camera_dof_profile"))
+
+	var low = mgr.build_camera_dof_profile(0)
+	var high = mgr.build_camera_dof_profile(2)
+
+	assert_false(bool(low.get("enabled", true)))
+	assert_true(bool(high.get("enabled", false)))
