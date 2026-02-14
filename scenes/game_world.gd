@@ -253,6 +253,12 @@ func _setup_additional_wiring() -> void:
 	# Zoning system special initialization
 	zoning_system.initialize(grid_system, service_coverage, land_value_system, terrain_system)
 
+	# Grid system needs zoning reference for power line neighbor detection
+	grid_system.set_zoning_system(zoning_system)
+
+	# When zones change, adjacent utilities need to update orientation
+	zoning_system.zone_changed.connect(_on_zone_changed_for_utilities)
+
 	# Disaster system special initialization
 	disaster_system.initialize(grid_system, service_coverage)
 
@@ -591,7 +597,7 @@ func _input(event: InputEvent) -> void:
 			if is_zone_painting:
 				_end_zone_paint()
 			# End drag building/demolishing
-			if is_drag_building and _is_linear_infrastructure(current_building_data):
+			if is_drag_building and _is_path_preview_type(current_building_data):
 				_end_path_build()  # Phase 3: complete path placement
 			is_drag_building = false
 			is_drag_demolishing = false
@@ -615,8 +621,8 @@ func _input(event: InputEvent) -> void:
 				if build_mode and current_building_data:
 					is_drag_building = true
 					last_drag_cell = hovered_cell
-					# Start path preview for linear infrastructure (Phase 3)
-					if _is_linear_infrastructure(current_building_data) and path_preview_overlay:
+					# Start path preview for roads (Phase 3)
+					if _is_path_preview_type(current_building_data) and path_preview_overlay:
 						path_preview_overlay.start_path(hovered_cell, current_building_data)
 				elif demolish_mode:
 					is_drag_demolishing = true
@@ -682,12 +688,12 @@ func _update_ghost_preview() -> void:
 			path_preview_overlay.update_path(hovered_cell)
 		return
 
-	# Check if this is a drag-building operation for linear infrastructure
-	if is_drag_building and _is_linear_infrastructure(current_building_data):
+	# Check if this is a drag-building operation for roads (path preview)
+	if is_drag_building and _is_path_preview_type(current_building_data):
 		ghost_preview.visible = false
 		if placement_preview_overlay:
 			placement_preview_overlay.hide_preview()
-		# Path preview handles linear drag-building
+		# Path preview handles road drag-building
 		if path_preview_overlay:
 			path_preview_overlay.update_path(hovered_cell)
 		return
@@ -735,6 +741,15 @@ func _is_linear_infrastructure(building_data) -> bool:
 		return false
 	var btype = building_data.building_type if building_data.get("building_type") else ""
 	return GridConstants.is_linear_infrastructure(btype)
+
+
+## Check if building type uses L-shaped path preview for drag placement.
+## Roads use path preview; utilities (power lines, water pipes) use cell-by-cell drag.
+func _is_path_preview_type(building_data) -> bool:
+	if not building_data:
+		return false
+	var btype = building_data.building_type if building_data.get("building_type") else ""
+	return GridConstants.is_road_type(btype)
 
 
 func _update_cell_highlight() -> void:
@@ -1128,9 +1143,9 @@ func _handle_drag_build() -> void:
 	if current_building_data.size != Vector2i(1, 1):
 		return
 
-	# For linear infrastructure with path preview, don't place individually
+	# For roads with path preview, don't place individually
 	# (placement happens on mouse release via _end_path_build)
-	if _is_linear_infrastructure(current_building_data) and path_preview_overlay and path_preview_overlay.is_active():
+	if _is_path_preview_type(current_building_data) and path_preview_overlay and path_preview_overlay.is_active():
 		# Path preview updates in _update_ghost_preview
 		return
 
@@ -1602,6 +1617,12 @@ func _on_build_requested(building_id: String, cell: Vector2i) -> void:
 		# Track data center placement
 		if building_data.category == "data_center":
 			_track_data_center_placed(building_data, cell)
+
+
+func _on_zone_changed_for_utilities(cell: Vector2i, _zone_type: String) -> void:
+	# Emit at the zone cell so adjacent power lines/water pipes detect adjacency and re-render
+	Events.power_line_network_changed.emit(cell, true)
+	Events.water_pipe_network_changed.emit(cell, true)
 
 
 func _on_demolish_requested(cell: Vector2i) -> void:

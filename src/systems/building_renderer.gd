@@ -103,7 +103,7 @@ func _get_road_neighbors(cell: Vector2i) -> Dictionary:
 	return GridConstants.get_directional_neighbors(cell, [grid_system.get_road_cell_map()])
 
 
-## Get power line neighbors (other power lines, power-producing buildings)
+## Get power line neighbors (other power lines, power-producing buildings, zones)
 func _get_power_line_neighbors(cell: Vector2i) -> Dictionary:
 	var neighbors = {"north": 0, "south": 0, "east": 0, "west": 0}
 	if not grid_system:
@@ -119,6 +119,11 @@ func _get_power_line_neighbors(cell: Vector2i) -> Dictionary:
 
 		# Check for buildings with power connectivity
 		if _is_power_connectable_building(neighbor_cell):
+			neighbors[dir_name] = 1
+			continue
+
+		# Check for zoned cells (power lines connect toward zones)
+		if _has_zone_at(neighbor_cell):
 			neighbors[dir_name] = 1
 
 	return neighbors
@@ -137,11 +142,19 @@ func _is_power_connectable_building(cell: Vector2i) -> bool:
 	# Power infrastructure types
 	if GridConstants.is_power_type(btype):
 		return true
-	# Buildings that produce power (generators)
-	if building.building_data.power_production > 0:
+	# Buildings that produce or consume power
+	if building.building_data.power_production > 0 or building.building_data.power_consumption > 0:
 		return true
 
 	return false
+
+
+## Check if there's a zone at cell (power lines connect toward zoned areas)
+func _has_zone_at(cell: Vector2i) -> bool:
+	var zoning = grid_system.get("zoning_system") if grid_system else null
+	if not zoning or not zoning.has_method("get_zone_at"):
+		return false
+	return zoning.get_zone_at(cell) != 0
 
 
 ## Check if there's a power line overlay at cell
@@ -165,11 +178,6 @@ func _get_water_pipe_neighbors(cell: Vector2i) -> Dictionary:
 	for dir_name in GridConstants.DIRECTIONS:
 		var neighbor_cell = cell + GridConstants.DIRECTIONS[dir_name]
 
-		# Check for roads (pipes run under roads)
-		if grid_system.has_road_at(neighbor_cell):
-			neighbors[dir_name] = 1
-			continue
-
 		# Check for buildings with water connectivity
 		if _is_water_connectable_building(neighbor_cell):
 			neighbors[dir_name] = 1
@@ -177,6 +185,11 @@ func _get_water_pipe_neighbors(cell: Vector2i) -> Dictionary:
 
 		# Check for water pipes in utility overlays
 		if _is_water_pipe_overlay(neighbor_cell):
+			neighbors[dir_name] = 1
+			continue
+
+		# Check for zoned cells (water pipes connect toward zones)
+		if _has_zone_at(neighbor_cell):
 			neighbors[dir_name] = 1
 
 	return neighbors
@@ -496,41 +509,23 @@ func _draw_power_line(image: Image, w: int, h: int, _base_color: Color, neighbor
 	var has_vertical = has_north or has_south
 	var has_horizontal = has_east or has_west
 
-	# Draw wire segments per direction (like water pipes)
-	# North segment: two vertical wires from top edge to center
-	if has_north:
-		for y in range(0, cy + wire_offset):
+	# Draw full-axis wire segments (wires span entire tile per connected axis)
+	# Vertical wires — span full tile height when any vertical connection exists
+	if has_vertical:
+		for y in range(h):
 			for x_off in [cx - wire_offset, cx + wire_offset]:
 				for lw in range(-1, 2):
 					var px = x_off + lw
-					if px >= 0 and px < w and y >= 0 and y < h:
+					if px >= 0 and px < w:
 						image.set_pixel(px, y, wire_highlight if lw == 0 else wire_color)
 
-	# South segment: two vertical wires from center to bottom edge
-	if has_south:
-		for y in range(cy - wire_offset, h):
-			for x_off in [cx - wire_offset, cx + wire_offset]:
-				for lw in range(-1, 2):
-					var px = x_off + lw
-					if px >= 0 and px < w and y >= 0 and y < h:
-						image.set_pixel(px, y, wire_highlight if lw == 0 else wire_color)
-
-	# East segment: two horizontal wires from center to right edge
-	if has_east:
-		for x in range(cx - wire_offset, w):
+	# Horizontal wires — span full tile width when any horizontal connection exists
+	if has_horizontal:
+		for x in range(w):
 			for y_off in [cy - wire_offset, cy + wire_offset]:
 				for lw in range(-1, 2):
 					var py = y_off + lw
-					if x >= 0 and x < w and py >= 0 and py < h:
-						image.set_pixel(x, py, wire_highlight if lw == 0 else wire_color)
-
-	# West segment: two horizontal wires from left edge to center
-	if has_west:
-		for x in range(0, cx + wire_offset):
-			for y_off in [cy - wire_offset, cy + wire_offset]:
-				for lw in range(-1, 2):
-					var py = y_off + lw
-					if x >= 0 and x < w and py >= 0 and py < h:
+					if py >= 0 and py < h:
 						image.set_pixel(x, py, wire_highlight if lw == 0 else wire_color)
 
 	# Default: no neighbors — draw horizontal wires spanning full cell

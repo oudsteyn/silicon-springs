@@ -84,9 +84,17 @@ func test_overlay_blocked_when_overlay_already_exists() -> void:
 
 # === Neighbor Detection Tests ===
 
+class FakeZoningSystem extends RefCounted:
+	var _zones: Dictionary = {}
+
+	func get_zone_at(cell: Vector2i) -> int:
+		return _zones.get(cell, 0)
+
+
 class FakeGridForNeighbors extends Node:
 	var _buildings: Dictionary = {}
 	var _overlays: Dictionary = {}
+	var zoning_system: RefCounted = null
 
 	func has_building_at(cell: Vector2i) -> bool:
 		return _buildings.has(cell)
@@ -111,7 +119,7 @@ class FakeBuilding extends Node2D:
 	var building_data: Resource
 
 
-func _make_fake_building(btype: String, power_prod: float = 0.0) -> Node2D:
+func _make_fake_building(btype: String, power_prod: float = 0.0, power_cons: float = 0.0) -> Node2D:
 	var building = _track(FakeBuilding.new())
 	var data = BuildingDataScript.new()
 	data.id = btype
@@ -119,6 +127,7 @@ func _make_fake_building(btype: String, power_prod: float = 0.0) -> Node2D:
 	data.size = Vector2i.ONE
 	data.color = Color.WHITE
 	data.power_production = power_prod
+	data.power_consumption = power_cons
 	building.building_data = data
 	return building
 
@@ -172,6 +181,61 @@ func test_power_line_ignores_non_power_building() -> void:
 
 	var neighbors = renderer._get_power_line_neighbors(Vector2i(10, 10))
 	assert_eq(neighbors["west"], 0, "Should not detect non-power building")
+
+
+func test_power_line_detects_power_consumer() -> void:
+	var renderer = _track(BuildingRendererScript.new())
+	var grid = _track(FakeGridForNeighbors.new())
+	renderer.set_grid_system(grid)
+
+	# Place a power-consuming building (e.g. commercial zone) to the north
+	grid._buildings[Vector2i(10, 9)] = _make_fake_building("commercial", 0.0, 50.0)
+
+	var neighbors = renderer._get_power_line_neighbors(Vector2i(10, 10))
+	assert_eq(neighbors["north"], 1, "Should detect power-consuming building to the north")
+
+
+func test_power_line_detects_adjacent_zone() -> void:
+	var renderer = _track(BuildingRendererScript.new())
+	var grid = _track(FakeGridForNeighbors.new())
+	var zoning = FakeZoningSystem.new()
+	grid.zoning_system = zoning
+	renderer.set_grid_system(grid)
+
+	# Place a commercial zone to the north (zone type 4 = COMMERCIAL_LOW)
+	zoning._zones[Vector2i(10, 9)] = 4
+
+	var neighbors = renderer._get_power_line_neighbors(Vector2i(10, 10))
+	assert_eq(neighbors["north"], 1, "Should detect zone to the north")
+	assert_eq(neighbors["south"], 0, "Should not detect zone where there is none")
+
+
+func test_power_line_zone_no_zoning_system() -> void:
+	var renderer = _track(BuildingRendererScript.new())
+	var grid = _track(FakeGridForNeighbors.new())
+	# zoning_system is null — should not crash
+	renderer.set_grid_system(grid)
+
+	var neighbors = renderer._get_power_line_neighbors(Vector2i(10, 10))
+	assert_eq(neighbors["north"], 0, "Should not detect zone with null zoning system")
+
+
+func test_power_line_zone_cleared_removes_neighbor() -> void:
+	var renderer = _track(BuildingRendererScript.new())
+	var grid = _track(FakeGridForNeighbors.new())
+	var zoning = FakeZoningSystem.new()
+	grid.zoning_system = zoning
+	renderer.set_grid_system(grid)
+
+	# Zone to the east
+	zoning._zones[Vector2i(11, 10)] = 4
+	var neighbors = renderer._get_power_line_neighbors(Vector2i(10, 10))
+	assert_eq(neighbors["east"], 1, "Should detect zone to the east")
+
+	# Clear the zone (type 0 = NONE)
+	zoning._zones[Vector2i(11, 10)] = 0
+	neighbors = renderer._get_power_line_neighbors(Vector2i(10, 10))
+	assert_eq(neighbors["east"], 0, "Should not detect cleared zone")
 
 
 func test_power_line_detects_all_four_neighbors() -> void:
@@ -270,9 +334,9 @@ func test_power_line_tee_renders_three_directions() -> void:
 	assert_gt(image.get_pixel(cx - 6, image.get_height() - 3).a, 0.1, "South wire")
 	assert_gt(image.get_pixel(image.get_width() - 3, cy - 6).a, 0.1, "East wire")
 
-	# West should be empty near edge
+	# West edge also has wire (full-axis rendering spans entire tile width)
 	var west_edge = image.get_pixel(2, cy - 6)
-	assert_approx(west_edge.a, 0.0, 0.01, "West edge should be transparent for T-shape")
+	assert_gt(west_edge.a, 0.1, "West edge should have wire from full-axis horizontal rendering")
 
 
 func test_power_line_cross_renders_all_four_directions() -> void:
