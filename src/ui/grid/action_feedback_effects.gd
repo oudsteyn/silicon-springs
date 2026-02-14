@@ -85,8 +85,6 @@ func _get_events() -> Node:
 
 
 func _process(delta: float) -> void:
-	var has_active = false
-
 	# Update all effects
 	for i in range(_effects.size() - 1, -1, -1):
 		var effect = _effects[i]
@@ -99,10 +97,8 @@ func _process(delta: float) -> void:
 		# Remove completed effects
 		if effect.time >= effect.duration:
 			_effects.remove_at(i)
-		else:
-			has_active = true
 
-	if has_active or _effects.size() > 0:
+	if _effects.size() > 0:
 		queue_redraw()
 
 
@@ -545,35 +541,14 @@ func _on_building_removed(cell: Vector2i, _building) -> void:
 
 
 func _on_simulation_event(event_type: String, data: Dictionary) -> void:
+	var cell = data.get("cell", Vector2i(-1, -1))
+	if cell == Vector2i(-1, -1):
+		return
+
 	match event_type:
-		"zone_painted":
-			# Zone paint effect handled separately via spawn_zone_effect
-			pass
-		"path_built":
-			# Path effect handled separately via spawn_path_effect
-			pass
 		"insufficient_funds":
-			# Show error at cursor position
-			var cell = data.get("cell", Vector2i(-1, -1))
-			if cell != Vector2i(-1, -1):
-				spawn_effect(EffectType.PLACEMENT_FAIL, cell)
-		"rocks_cleared":
-			var cell = data.get("cell", Vector2i(-1, -1))
-			if cell != Vector2i(-1, -1):
-				spawn_effect(EffectType.DEMOLITION, cell)
-		"trees_cleared":
-			var cell = data.get("cell", Vector2i(-1, -1))
-			if cell != Vector2i(-1, -1):
-				spawn_effect(EffectType.DEMOLITION, cell)
-		"zone_cleared":
-			var cell = data.get("cell", Vector2i(-1, -1))
-			if cell != Vector2i(-1, -1):
-				spawn_effect(EffectType.DEMOLITION, cell)
-		"beach_cleared":
-			var cell = data.get("cell", Vector2i(-1, -1))
-			if cell != Vector2i(-1, -1):
-				spawn_effect(EffectType.DEMOLITION, cell)
+			spawn_effect(EffectType.PLACEMENT_FAIL, cell)
+		"rocks_cleared", "trees_cleared", "zone_cleared", "beach_cleared":
+			spawn_effect(EffectType.DEMOLITION, cell)
 		"building_upgraded":
-			var cell = data.get("cell", Vector2i(-1, -1))
-			if cell != Vector2i(-1, -1):
-				spawn_effect(EffectType.UPGRADE, cell, data)
+			spawn_effect(EffectType.UPGRADE, cell, data)

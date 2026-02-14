@@ -42,7 +42,6 @@ const COLORS = {
 }
 
 # Current state
-var current_cell: Vector2i = Vector2i(-1, -1)
 var target_cell: Vector2i = Vector2i(-1, -1)
 var current_state: String = "default"
 var building_size: Vector2i = Vector2i(1, 1)
@@ -311,12 +310,6 @@ func clear_demolish_info() -> void:
 ## Hide the highlight
 func hide_highlight() -> void:
 	target_cell = Vector2i(-1, -1)
-
-
-## Show the highlight
-func show_highlight() -> void:
-	# Will be shown on next set_cell call
-	pass
 
 
 ## Get appropriate state based on game context

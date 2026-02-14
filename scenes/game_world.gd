@@ -172,10 +172,7 @@ func _ready() -> void:
 	_setup_world3d_bridge()
 
 	# Connect events
-	Events.build_mode_entered.connect(_on_build_mode_entered)
 	Events.build_mode_exited.connect(_on_build_mode_exited)
-	Events.demolish_mode_entered.connect(_on_demolish_mode_entered)
-	Events.demolish_mode_exited.connect(_on_demolish_mode_exited)
 	Events.year_tick.connect(_on_year_tick)
 
 	# Connect query signals for decoupled UI data requests
@@ -1335,20 +1332,8 @@ func enter_zone_mode(zone_type: int) -> void:
 	Events.simulation_event.emit("zone_mode_entered", {})
 
 
-func _on_build_mode_entered(_building_id: String) -> void:
-	pass
-
-
 func _on_build_mode_exited() -> void:
 	coverage_visualizer.clear_coverage()
-
-
-func _on_demolish_mode_entered() -> void:
-	pass
-
-
-func _on_demolish_mode_exited() -> void:
-	pass
 
 
 # Tool management

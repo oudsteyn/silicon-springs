@@ -51,16 +51,12 @@ func get_building_texture(building_data: Resource, development_level: int = 1, g
 	var has_position = grid_cell != NO_CELL
 	var btype: String = building_data.building_type if building_data.get("building_type") else ""
 
-	# Determine cache key based on building type
 	# Infrastructure types need neighbor info for context-aware rendering
-	if has_position and GridConstants.is_road_type(btype):
-		neighbors = _get_road_neighbors(grid_cell)
-		cache_key = _make_neighbor_cache_key(building_data.id, development_level, neighbors)
-	elif has_position and GridConstants.is_power_type(btype):
-		neighbors = _get_power_line_neighbors(grid_cell)
-		cache_key = _make_neighbor_cache_key(building_data.id, development_level, neighbors)
-	elif has_position and GridConstants.is_water_type(btype):
-		neighbors = _get_water_pipe_neighbors(grid_cell)
+	if has_position and GridConstants.is_linear_infrastructure(btype):
+		if GridConstants.is_road_type(btype):
+			neighbors = _get_road_neighbors(grid_cell)
+		else:
+			neighbors = _get_utility_neighbors(grid_cell, "power" if GridConstants.is_power_type(btype) else "water")
 		cache_key = _make_neighbor_cache_key(building_data.id, development_level, neighbors)
 	else:
 		cache_key = "%s_%d" % [building_data.id, development_level]
@@ -122,11 +118,9 @@ func _get_utility_neighbors(cell: Vector2i, utility_type: String) -> Dictionary:
 	for dir_name in GridConstants.DIRECTIONS:
 		var neighbor_cell = cell + GridConstants.DIRECTIONS[dir_name]
 
-		if _is_utility_overlay(neighbor_cell, utility_type):
-			neighbors[dir_name] = 1
-		elif _is_connectable_building(neighbor_cell, utility_type):
-			neighbors[dir_name] = 1
-		elif _has_zone_at(neighbor_cell):
+		if _is_utility_overlay(neighbor_cell, utility_type) \
+				or _is_connectable_building(neighbor_cell, utility_type) \
+				or _has_zone_at(neighbor_cell):
 			neighbors[dir_name] = 1
 
 	return neighbors
