@@ -666,42 +666,32 @@ func _update_hovered_cell() -> void:
 
 
 func _update_ghost_preview() -> void:
-	# Zone painting preview - use drag_selection_overlay (Phase 3)
+	ghost_preview.visible = false
+
+	# Zone painting preview
 	if zone_mode:
-		ghost_preview.visible = false  # Disable legacy preview
-		if is_zone_painting:
-			# Drag selection overlay handles the visualization
-			if drag_selection_overlay:
-				drag_selection_overlay.update_selection(hovered_cell)
-		else:
-			# Show single cell preview using placement_preview when not dragging
-			# (drag_selection_overlay only activates on mouse down)
-			pass
+		if is_zone_painting and drag_selection_overlay:
+			drag_selection_overlay.update_selection(hovered_cell)
 		return
 
-	# Build mode preview - use placement_preview_overlay (Phase 3)
+	# Not in build mode — keep path preview alive if active (e.g. during release frame)
 	if not build_mode or not current_building_data:
-		ghost_preview.visible = false
 		if placement_preview_overlay:
 			placement_preview_overlay.hide_preview()
 		if path_preview_overlay and path_preview_overlay.is_active():
 			path_preview_overlay.update_path(hovered_cell)
 		return
 
-	# Check if this is a drag-building operation for roads (path preview)
+	# Road drag-building uses path preview
 	if is_drag_building and _is_path_preview_type(current_building_data):
-		ghost_preview.visible = false
 		if placement_preview_overlay:
 			placement_preview_overlay.hide_preview()
-		# Path preview handles road drag-building
 		if path_preview_overlay:
 			path_preview_overlay.update_path(hovered_cell)
 		return
 
-	# Standard building preview - use PlacementPreviewOverlay
-	ghost_preview.visible = false  # Disable legacy preview
+	# Standard building preview
 	var can_afford = GameState.can_afford(current_building_data.build_cost)
-
 	if placement_preview_overlay:
 		placement_preview_overlay.update_position(hovered_cell, can_afford)
 
@@ -733,14 +723,6 @@ func _is_mouse_over_ui() -> bool:
 			node = node.get_parent()
 
 	return false
-
-
-## Check if building is linear infrastructure (roads, power lines, water pipes)
-func _is_linear_infrastructure(building_data) -> bool:
-	if not building_data:
-		return false
-	var btype = building_data.building_type if building_data.get("building_type") else ""
-	return GridConstants.is_linear_infrastructure(btype)
 
 
 ## Check if building type uses L-shaped path preview for drag placement.

@@ -2,7 +2,6 @@ extends TestBase
 ## Tests for water pipe neighbor detection, zone connectivity, and rendering
 
 const BuildingRendererScript = preload("res://src/systems/building_renderer.gd")
-const BuildingDataScript = preload("res://src/resources/building_data.gd")
 const TestHelpers = preload("res://tests/helpers.gd")
 
 var _to_free: Array = []
@@ -22,77 +21,21 @@ func _track(instance):
 
 
 func _make_water_pipe_data() -> Resource:
-	var data = BuildingDataScript.new()
-	data.id = "water_pipe"
-	data.building_type = "water_pipe"
-	data.size = Vector2i.ONE
-	data.color = Color(0.3, 0.7, 0.9, 1)
-	data.requires_road_adjacent = false
-	data.build_cost = 30
-	return data
+	return TestHelpers.make_building_data("water_pipe", "water_pipe", {
+		"color": Color(0.3, 0.7, 0.9, 1), "build_cost": 30
+	})
 
 
 func _make_road_data() -> Resource:
-	var data = BuildingDataScript.new()
-	data.id = "road"
-	data.building_type = "road"
-	data.size = Vector2i.ONE
-	data.color = Color.WHITE
-	data.requires_road_adjacent = false
-	data.build_cost = 100
-	return data
-
-
-# === Fake Test Helpers ===
-
-class FakeZoningSystem extends RefCounted:
-	var _zones: Dictionary = {}
-
-	func get_zone_at(cell: Vector2i) -> int:
-		return _zones.get(cell, 0)
-
-
-class FakeGridForNeighbors extends Node:
-	var _buildings: Dictionary = {}
-	var _overlays: Dictionary = {}
-	var _roads: Dictionary = {}
-	var zoning_system: RefCounted = null
-
-	func has_building_at(cell: Vector2i) -> bool:
-		return _buildings.has(cell)
-
-	func get_building_at(cell: Vector2i) -> Node2D:
-		return _buildings.get(cell)
-
-	func has_overlay_at(cell: Vector2i) -> bool:
-		return _overlays.has(cell)
-
-	func get_overlay_at(cell: Vector2i) -> Node2D:
-		return _overlays.get(cell)
-
-	func get_road_cell_map() -> Dictionary:
-		return _roads
-
-	func has_road_at(cell: Vector2i) -> bool:
-		return _roads.has(cell)
-
-
-class FakeBuilding extends Node2D:
-	var building_data: Resource
+	return TestHelpers.make_building_data("road")
 
 
 func _make_fake_building(btype: String, water_prod: float = 0.0, water_cons: float = 0.0, power_prod: float = 0.0, power_cons: float = 0.0) -> Node2D:
-	var building = _track(FakeBuilding.new())
-	var data = BuildingDataScript.new()
-	data.id = btype
-	data.building_type = btype
-	data.size = Vector2i.ONE
-	data.color = Color.WHITE
-	data.water_production = water_prod
-	data.water_consumption = water_cons
-	data.power_production = power_prod
-	data.power_consumption = power_cons
-	building.building_data = data
+	var building = _track(TestHelpers.FakeBuilding.new())
+	building.building_data = TestHelpers.make_building_data(btype, btype, {
+		"water_production": water_prod, "water_consumption": water_cons,
+		"power_production": power_prod, "power_consumption": power_cons
+	})
 	return building
 
 
@@ -100,7 +43,7 @@ func _make_fake_building(btype: String, water_prod: float = 0.0, water_cons: flo
 
 func test_water_pipe_detects_adjacent_water_pipe() -> void:
 	var renderer = _track(BuildingRendererScript.new())
-	var grid = _track(FakeGridForNeighbors.new())
+	var grid = _track(TestHelpers.FakeGridForNeighbors.new())
 	renderer.set_grid_system(grid)
 
 	grid._buildings[Vector2i(11, 10)] = _make_fake_building("water_pipe")
@@ -114,7 +57,7 @@ func test_water_pipe_detects_adjacent_water_pipe() -> void:
 
 func test_water_pipe_ignores_plain_road() -> void:
 	var renderer = _track(BuildingRendererScript.new())
-	var grid = _track(FakeGridForNeighbors.new())
+	var grid = _track(TestHelpers.FakeGridForNeighbors.new())
 	renderer.set_grid_system(grid)
 
 	# Plain road without water pipe overlay should NOT be a neighbor
@@ -126,7 +69,7 @@ func test_water_pipe_ignores_plain_road() -> void:
 
 func test_water_pipe_detects_road_with_water_overlay() -> void:
 	var renderer = _track(BuildingRendererScript.new())
-	var grid = _track(FakeGridForNeighbors.new())
+	var grid = _track(TestHelpers.FakeGridForNeighbors.new())
 	renderer.set_grid_system(grid)
 
 	# Road with a water pipe overlay should be a neighbor
@@ -139,7 +82,7 @@ func test_water_pipe_detects_road_with_water_overlay() -> void:
 
 func test_water_pipe_detects_water_producer() -> void:
 	var renderer = _track(BuildingRendererScript.new())
-	var grid = _track(FakeGridForNeighbors.new())
+	var grid = _track(TestHelpers.FakeGridForNeighbors.new())
 	renderer.set_grid_system(grid)
 
 	grid._buildings[Vector2i(10, 11)] = _make_fake_building("water_pump", 200.0)
@@ -150,7 +93,7 @@ func test_water_pipe_detects_water_producer() -> void:
 
 func test_water_pipe_detects_water_consumer() -> void:
 	var renderer = _track(BuildingRendererScript.new())
-	var grid = _track(FakeGridForNeighbors.new())
+	var grid = _track(TestHelpers.FakeGridForNeighbors.new())
 	renderer.set_grid_system(grid)
 
 	grid._buildings[Vector2i(9, 10)] = _make_fake_building("residential", 0.0, 50.0)
@@ -161,7 +104,7 @@ func test_water_pipe_detects_water_consumer() -> void:
 
 func test_water_pipe_detects_water_overlay() -> void:
 	var renderer = _track(BuildingRendererScript.new())
-	var grid = _track(FakeGridForNeighbors.new())
+	var grid = _track(TestHelpers.FakeGridForNeighbors.new())
 	renderer.set_grid_system(grid)
 
 	grid._overlays[Vector2i(10, 9)] = _make_fake_building("water_pipe")
@@ -172,8 +115,8 @@ func test_water_pipe_detects_water_overlay() -> void:
 
 func test_water_pipe_detects_adjacent_zone() -> void:
 	var renderer = _track(BuildingRendererScript.new())
-	var grid = _track(FakeGridForNeighbors.new())
-	var zoning = FakeZoningSystem.new()
+	var grid = _track(TestHelpers.FakeGridForNeighbors.new())
+	var zoning = TestHelpers.FakeZoningSystem.new()
 	grid.zoning_system = zoning
 	renderer.set_grid_system(grid)
 
@@ -187,7 +130,7 @@ func test_water_pipe_detects_adjacent_zone() -> void:
 
 func test_water_pipe_ignores_non_water_building() -> void:
 	var renderer = _track(BuildingRendererScript.new())
-	var grid = _track(FakeGridForNeighbors.new())
+	var grid = _track(TestHelpers.FakeGridForNeighbors.new())
 	renderer.set_grid_system(grid)
 
 	grid._buildings[Vector2i(11, 10)] = _make_fake_building("power_line")
@@ -198,7 +141,7 @@ func test_water_pipe_ignores_non_water_building() -> void:
 
 func test_water_pipe_detects_all_four_neighbors() -> void:
 	var renderer = _track(BuildingRendererScript.new())
-	var grid = _track(FakeGridForNeighbors.new())
+	var grid = _track(TestHelpers.FakeGridForNeighbors.new())
 	renderer.set_grid_system(grid)
 
 	grid._buildings[Vector2i(10, 9)] = _make_fake_building("water_pipe")
@@ -215,7 +158,7 @@ func test_water_pipe_detects_all_four_neighbors() -> void:
 
 func test_water_pipe_zone_no_zoning_system() -> void:
 	var renderer = _track(BuildingRendererScript.new())
-	var grid = _track(FakeGridForNeighbors.new())
+	var grid = _track(TestHelpers.FakeGridForNeighbors.new())
 	# zoning_system is null
 	renderer.set_grid_system(grid)
 

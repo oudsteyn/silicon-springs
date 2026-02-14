@@ -105,6 +105,16 @@ func _get_road_neighbors(cell: Vector2i) -> Dictionary:
 
 ## Get power line neighbors (other power lines, power-producing buildings, zones)
 func _get_power_line_neighbors(cell: Vector2i) -> Dictionary:
+	return _get_utility_neighbors(cell, "power")
+
+
+func _get_water_pipe_neighbors(cell: Vector2i) -> Dictionary:
+	return _get_utility_neighbors(cell, "water")
+
+
+## Generic utility neighbor detection for power lines and water pipes.
+## utility_type: "power" or "water"
+func _get_utility_neighbors(cell: Vector2i, utility_type: String) -> Dictionary:
 	var neighbors = {"north": 0, "south": 0, "east": 0, "west": 0}
 	if not grid_system:
 		return neighbors
@@ -112,119 +122,49 @@ func _get_power_line_neighbors(cell: Vector2i) -> Dictionary:
 	for dir_name in GridConstants.DIRECTIONS:
 		var neighbor_cell = cell + GridConstants.DIRECTIONS[dir_name]
 
-		# Check for power line overlay on a road
-		if _is_power_overlay(neighbor_cell):
+		if _is_utility_overlay(neighbor_cell, utility_type):
 			neighbors[dir_name] = 1
-			continue
-
-		# Check for buildings with power connectivity
-		if _is_power_connectable_building(neighbor_cell):
+		elif _is_connectable_building(neighbor_cell, utility_type):
 			neighbors[dir_name] = 1
-			continue
-
-		# Check for zoned cells (power lines connect toward zones)
-		if _has_zone_at(neighbor_cell):
+		elif _has_zone_at(neighbor_cell):
 			neighbors[dir_name] = 1
 
 	return neighbors
 
 
-## Check if a building at cell can connect to power lines
-func _is_power_connectable_building(cell: Vector2i) -> bool:
+## Check if there's a utility overlay of the given type at cell
+func _is_utility_overlay(cell: Vector2i, utility_type: String) -> bool:
+	if not grid_system.has_overlay_at(cell):
+		return false
+	var overlay = grid_system.get_overlay_at(cell)
+	if not is_instance_valid(overlay) or not overlay.building_data:
+		return false
+	var btype = overlay.building_data.building_type
+	return GridConstants.is_power_type(btype) if utility_type == "power" else GridConstants.is_water_type(btype)
+
+
+## Check if a building at cell can connect to the given utility type
+func _is_connectable_building(cell: Vector2i, utility_type: String) -> bool:
 	if not grid_system.has_building_at(cell):
 		return false
-
 	var building = grid_system.get_building_at(cell)
 	if not is_instance_valid(building) or not building.building_data:
 		return false
-
 	var btype: String = building.building_data.building_type
-	# Power infrastructure types
-	if GridConstants.is_power_type(btype):
-		return true
-	# Buildings that produce or consume power
-	if building.building_data.power_production > 0 or building.building_data.power_consumption > 0:
-		return true
-
-	return false
+	var data = building.building_data
+	if utility_type == "power":
+		return GridConstants.is_power_type(btype) or data.power_production > 0 or data.power_consumption > 0
+	else:
+		return GridConstants.is_water_type(btype) or btype == "water_source" or btype == "water_tower" \
+			or data.water_production > 0 or data.water_consumption > 0
 
 
-## Check if there's a zone at cell (power lines connect toward zoned areas)
+## Check if there's a zone at cell (utilities connect toward zoned areas)
 func _has_zone_at(cell: Vector2i) -> bool:
 	var zoning = grid_system.get("zoning_system") if grid_system else null
 	if not zoning or not zoning.has_method("get_zone_at"):
 		return false
 	return zoning.get_zone_at(cell) != 0
-
-
-## Check if there's a power line overlay at cell
-func _is_power_overlay(cell: Vector2i) -> bool:
-	if not grid_system.has_overlay_at(cell):
-		return false
-
-	var overlay = grid_system.get_overlay_at(cell)
-	if not is_instance_valid(overlay) or not overlay.building_data:
-		return false
-
-	return GridConstants.is_power_type(overlay.building_data.building_type)
-
-
-## Get water pipe neighbors (roads, water infrastructure, buildings with water)
-func _get_water_pipe_neighbors(cell: Vector2i) -> Dictionary:
-	var neighbors = {"north": 0, "south": 0, "east": 0, "west": 0}
-	if not grid_system:
-		return neighbors
-
-	for dir_name in GridConstants.DIRECTIONS:
-		var neighbor_cell = cell + GridConstants.DIRECTIONS[dir_name]
-
-		# Check for buildings with water connectivity
-		if _is_water_connectable_building(neighbor_cell):
-			neighbors[dir_name] = 1
-			continue
-
-		# Check for water pipes in utility overlays
-		if _is_water_pipe_overlay(neighbor_cell):
-			neighbors[dir_name] = 1
-			continue
-
-		# Check for zoned cells (water pipes connect toward zones)
-		if _has_zone_at(neighbor_cell):
-			neighbors[dir_name] = 1
-
-	return neighbors
-
-
-## Check if a building at cell can connect to water pipes
-func _is_water_connectable_building(cell: Vector2i) -> bool:
-	if not grid_system.has_building_at(cell):
-		return false
-
-	var building = grid_system.get_building_at(cell)
-	if not is_instance_valid(building) or not building.building_data:
-		return false
-
-	var btype: String = building.building_data.building_type
-	# Water infrastructure types
-	if GridConstants.is_water_type(btype) or btype == "water_source" or btype == "water_tower":
-		return true
-	# Buildings that produce or consume water
-	if building.building_data.water_production > 0 or building.building_data.water_consumption > 0:
-		return true
-
-	return false
-
-
-## Check if there's a water pipe overlay at cell
-func _is_water_pipe_overlay(cell: Vector2i) -> bool:
-	if not grid_system.has_overlay_at(cell):
-		return false
-
-	var overlay = grid_system.get_overlay_at(cell)
-	if not is_instance_valid(overlay) or not overlay.building_data:
-		return false
-
-	return GridConstants.is_water_type(overlay.building_data.building_type)
 
 
 ## Generate the actual texture for a building

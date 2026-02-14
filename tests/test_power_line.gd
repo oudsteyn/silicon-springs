@@ -2,7 +2,6 @@ extends TestBase
 ## Tests for power line placement, neighbor detection, and rendering
 
 const BuildingRendererScript = preload("res://src/systems/building_renderer.gd")
-const BuildingDataScript = preload("res://src/resources/building_data.gd")
 const TestHelpers = preload("res://tests/helpers.gd")
 
 var _to_free: Array = []
@@ -22,29 +21,26 @@ func _track(instance):
 
 
 func _make_power_line_data() -> Resource:
-	var data = BuildingDataScript.new()
-	data.id = "power_line"
-	data.building_type = "power_line"
-	data.size = Vector2i.ONE
-	data.color = Color(0.9, 0.7, 0.1, 1)
-	data.requires_road_adjacent = false
-	data.build_cost = 50
-	return data
+	return TestHelpers.make_building_data("power_line", "power_line", {
+		"color": Color(0.9, 0.7, 0.1, 1), "build_cost": 50
+	})
 
 
 func _make_road_data() -> Resource:
-	var data = BuildingDataScript.new()
-	data.id = "road"
-	data.building_type = "road"
-	data.size = Vector2i.ONE
-	data.color = Color.WHITE
-	data.requires_road_adjacent = false
-	data.build_cost = 100
-	return data
+	return TestHelpers.make_building_data("road")
 
 
 func _color_close(a: Color, b: Color, eps: float = 0.02) -> bool:
 	return abs(a.r - b.r) <= eps and abs(a.g - b.g) <= eps and abs(a.b - b.b) <= eps and abs(a.a - b.a) <= eps
+
+
+func _make_fake_building(btype: String, power_prod: float = 0.0, power_cons: float = 0.0, water_prod: float = 0.0, water_cons: float = 0.0) -> Node2D:
+	var building = _track(TestHelpers.FakeBuilding.new())
+	building.building_data = TestHelpers.make_building_data(btype, btype, {
+		"power_production": power_prod, "power_consumption": power_cons,
+		"water_production": water_prod, "water_consumption": water_cons
+	})
+	return building
 
 
 # === Overlay Placement Tests ===
@@ -52,12 +48,10 @@ func _color_close(a: Color, b: Color, eps: float = 0.02) -> bool:
 func test_overlay_on_road_skips_terrain_check() -> void:
 	var grid_system = TestHelpers.create_grid_system(self)
 
-	# Place a road first
 	var road_data = _make_road_data()
 	var road = grid_system.place_building(Vector2i(20, 20), road_data)
 	assert_not_null(road, "Road placement should succeed")
 
-	# Power line overlay should be allowed even without terrain system
 	var pl_data = _make_power_line_data()
 	var plan = grid_system.plan_building_placement(Vector2i(20, 20), pl_data)
 	assert_true(plan.can_place, "Power line overlay on road should be allowed")
@@ -75,66 +69,15 @@ func test_overlay_blocked_when_overlay_already_exists() -> void:
 	var pl_data = _make_power_line_data()
 	grid_system.place_building(Vector2i(20, 20), pl_data)
 
-	# Second overlay should be blocked
 	var plan = grid_system.plan_building_placement(Vector2i(20, 20), pl_data)
 	assert_false(plan.can_place, "Should not allow second overlay")
 
 	grid_system.free()
 
 
-# === Neighbor Detection Tests ===
-
-class FakeZoningSystem extends RefCounted:
-	var _zones: Dictionary = {}
-
-	func get_zone_at(cell: Vector2i) -> int:
-		return _zones.get(cell, 0)
-
-
-class FakeGridForNeighbors extends Node:
-	var _buildings: Dictionary = {}
-	var _overlays: Dictionary = {}
-	var zoning_system: RefCounted = null
-
-	func has_building_at(cell: Vector2i) -> bool:
-		return _buildings.has(cell)
-
-	func get_building_at(cell: Vector2i) -> Node2D:
-		return _buildings.get(cell)
-
-	func has_overlay_at(cell: Vector2i) -> bool:
-		return _overlays.has(cell)
-
-	func get_overlay_at(cell: Vector2i) -> Node2D:
-		return _overlays.get(cell)
-
-	func get_road_cell_map() -> Dictionary:
-		return {}
-
-	func has_road_at(_cell: Vector2i) -> bool:
-		return false
-
-
-class FakeBuilding extends Node2D:
-	var building_data: Resource
-
-
-func _make_fake_building(btype: String, power_prod: float = 0.0, power_cons: float = 0.0) -> Node2D:
-	var building = _track(FakeBuilding.new())
-	var data = BuildingDataScript.new()
-	data.id = btype
-	data.building_type = btype
-	data.size = Vector2i.ONE
-	data.color = Color.WHITE
-	data.power_production = power_prod
-	data.power_consumption = power_cons
-	building.building_data = data
-	return building
-
-
 func test_power_line_detects_adjacent_power_line_building() -> void:
 	var renderer = _track(BuildingRendererScript.new())
-	var grid = _track(FakeGridForNeighbors.new())
+	var grid = _track(TestHelpers.FakeGridForNeighbors.new())
 	renderer.set_grid_system(grid)
 
 	# Place a power line to the east
@@ -149,7 +92,7 @@ func test_power_line_detects_adjacent_power_line_building() -> void:
 
 func test_power_line_detects_power_overlay() -> void:
 	var renderer = _track(BuildingRendererScript.new())
-	var grid = _track(FakeGridForNeighbors.new())
+	var grid = _track(TestHelpers.FakeGridForNeighbors.new())
 	renderer.set_grid_system(grid)
 
 	# Place a power line overlay to the north
@@ -161,7 +104,7 @@ func test_power_line_detects_power_overlay() -> void:
 
 func test_power_line_detects_generator() -> void:
 	var renderer = _track(BuildingRendererScript.new())
-	var grid = _track(FakeGridForNeighbors.new())
+	var grid = _track(TestHelpers.FakeGridForNeighbors.new())
 	renderer.set_grid_system(grid)
 
 	# Place a generator (power-producing building) to the south
@@ -173,7 +116,7 @@ func test_power_line_detects_generator() -> void:
 
 func test_power_line_ignores_non_power_building() -> void:
 	var renderer = _track(BuildingRendererScript.new())
-	var grid = _track(FakeGridForNeighbors.new())
+	var grid = _track(TestHelpers.FakeGridForNeighbors.new())
 	renderer.set_grid_system(grid)
 
 	# Place a non-power building to the west
@@ -185,7 +128,7 @@ func test_power_line_ignores_non_power_building() -> void:
 
 func test_power_line_detects_power_consumer() -> void:
 	var renderer = _track(BuildingRendererScript.new())
-	var grid = _track(FakeGridForNeighbors.new())
+	var grid = _track(TestHelpers.FakeGridForNeighbors.new())
 	renderer.set_grid_system(grid)
 
 	# Place a power-consuming building (e.g. commercial zone) to the north
@@ -197,8 +140,8 @@ func test_power_line_detects_power_consumer() -> void:
 
 func test_power_line_detects_adjacent_zone() -> void:
 	var renderer = _track(BuildingRendererScript.new())
-	var grid = _track(FakeGridForNeighbors.new())
-	var zoning = FakeZoningSystem.new()
+	var grid = _track(TestHelpers.FakeGridForNeighbors.new())
+	var zoning = TestHelpers.FakeZoningSystem.new()
 	grid.zoning_system = zoning
 	renderer.set_grid_system(grid)
 
@@ -212,7 +155,7 @@ func test_power_line_detects_adjacent_zone() -> void:
 
 func test_power_line_zone_no_zoning_system() -> void:
 	var renderer = _track(BuildingRendererScript.new())
-	var grid = _track(FakeGridForNeighbors.new())
+	var grid = _track(TestHelpers.FakeGridForNeighbors.new())
 	# zoning_system is null — should not crash
 	renderer.set_grid_system(grid)
 
@@ -222,8 +165,8 @@ func test_power_line_zone_no_zoning_system() -> void:
 
 func test_power_line_zone_cleared_removes_neighbor() -> void:
 	var renderer = _track(BuildingRendererScript.new())
-	var grid = _track(FakeGridForNeighbors.new())
-	var zoning = FakeZoningSystem.new()
+	var grid = _track(TestHelpers.FakeGridForNeighbors.new())
+	var zoning = TestHelpers.FakeZoningSystem.new()
 	grid.zoning_system = zoning
 	renderer.set_grid_system(grid)
 
@@ -240,7 +183,7 @@ func test_power_line_zone_cleared_removes_neighbor() -> void:
 
 func test_power_line_detects_all_four_neighbors() -> void:
 	var renderer = _track(BuildingRendererScript.new())
-	var grid = _track(FakeGridForNeighbors.new())
+	var grid = _track(TestHelpers.FakeGridForNeighbors.new())
 	renderer.set_grid_system(grid)
 
 	grid._buildings[Vector2i(10, 9)] = _make_fake_building("power_line")
@@ -437,6 +380,64 @@ func test_road_on_power_line_places_correctly() -> void:
 	assert_eq(overlay.building_data.building_type, "power_line")
 
 	grid_system.free()
+
+
+# === Generic Utility Neighbor Tests ===
+
+func test_get_utility_neighbors_power_detects_overlay() -> void:
+	var renderer = _track(BuildingRendererScript.new())
+	var grid = _track(TestHelpers.FakeGridForNeighbors.new())
+	renderer.set_grid_system(grid)
+
+	grid._overlays[Vector2i(10, 9)] = _make_fake_building("power_line")
+
+	var neighbors = renderer._get_utility_neighbors(Vector2i(10, 10), "power")
+	assert_eq(neighbors["north"], 1, "Generic power should detect overlay")
+
+
+func test_get_utility_neighbors_water_detects_overlay() -> void:
+	var renderer = _track(BuildingRendererScript.new())
+	var grid = _track(TestHelpers.FakeGridForNeighbors.new())
+	renderer.set_grid_system(grid)
+
+	grid._overlays[Vector2i(10, 11)] = _make_fake_building("water_pipe")
+
+	var neighbors = renderer._get_utility_neighbors(Vector2i(10, 10), "water")
+	assert_eq(neighbors["south"], 1, "Generic water should detect overlay")
+
+
+func test_get_utility_neighbors_power_detects_zone() -> void:
+	var renderer = _track(BuildingRendererScript.new())
+	var grid = _track(TestHelpers.FakeGridForNeighbors.new())
+	var zoning = TestHelpers.FakeZoningSystem.new()
+	grid.zoning_system = zoning
+	renderer.set_grid_system(grid)
+
+	zoning._zones[Vector2i(11, 10)] = 4
+
+	var neighbors = renderer._get_utility_neighbors(Vector2i(10, 10), "power")
+	assert_eq(neighbors["east"], 1, "Generic power should detect zone")
+
+
+func test_get_utility_neighbors_water_detects_connectable() -> void:
+	var renderer = _track(BuildingRendererScript.new())
+	var grid = _track(TestHelpers.FakeGridForNeighbors.new())
+	renderer.set_grid_system(grid)
+
+	grid._buildings[Vector2i(9, 10)] = _make_fake_building("water_pump", 0.0, 0.0, 200.0)
+
+	var neighbors = renderer._get_utility_neighbors(Vector2i(10, 10), "water")
+	assert_eq(neighbors["west"], 1, "Generic water should detect connectable building")
+
+
+func test_get_utility_neighbors_returns_empty_without_grid() -> void:
+	var renderer = _track(BuildingRendererScript.new())
+
+	var neighbors = renderer._get_utility_neighbors(Vector2i(10, 10), "power")
+	assert_eq(neighbors["north"], 0)
+	assert_eq(neighbors["south"], 0)
+	assert_eq(neighbors["east"], 0)
+	assert_eq(neighbors["west"], 0)
 
 
 # === Bulldoze Overlay Tests ===
