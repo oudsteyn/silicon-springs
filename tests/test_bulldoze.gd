@@ -42,12 +42,24 @@ class MockBuildingData extends Resource:
 
 class MockGridSystem extends Node:
 	var _buildings: Dictionary = {}  # cell -> MockBuilding
+	var _overlays: Dictionary = {}   # cell -> MockBuilding
 	var _removed_cells: Array = []
 
 	func get_building_at(cell: Vector2i):
 		return _buildings.get(cell)
 
+	func has_overlay_at(cell: Vector2i) -> bool:
+		return _overlays.has(cell)
+
+	func get_overlay_at(cell: Vector2i):
+		return _overlays.get(cell)
+
 	func remove_building(cell: Vector2i) -> bool:
+		# Remove overlay first if present, then building
+		if _overlays.has(cell):
+			_overlays.erase(cell)
+			_removed_cells.append(cell)
+			return true
 		if _buildings.has(cell):
 			_buildings.erase(cell)
 			_removed_cells.append(cell)
@@ -57,11 +69,14 @@ class MockGridSystem extends Node:
 	func is_valid_cell(_cell: Vector2i) -> bool:
 		return true
 
-	func place_building(cell: MockBuildingData, _data) -> Node2D:
+	func place_building(_cell, _data) -> Node2D:
 		return null
 
 	func set_building(cell: Vector2i, building: MockBuilding) -> void:
 		_buildings[cell] = building
+
+	func set_overlay(cell: Vector2i, overlay: MockBuilding) -> void:
+		_overlays[cell] = overlay
 
 
 class MockZoningSystem extends Node:
@@ -253,6 +268,31 @@ func test_bulldoze_cell_building_before_zone() -> void:
 	assert_eq(result.type, "building_demolished", "Building should be cleared before zone")
 	# Zone should still exist
 	assert_eq(world.zoning_system.get_zone_at(cell), 2)
+
+
+func test_bulldoze_cell_overlay_before_building() -> void:
+	var world = _make_world()
+	var cell = Vector2i(5, 5)
+	var base_data = MockBuildingData.new()
+	base_data.display_name = "Road"
+	base_data.build_cost = 200
+	var base = _track(MockBuilding.new(base_data))
+	world.grid_system.set_building(cell, base)
+
+	var overlay_data = MockBuildingData.new()
+	overlay_data.display_name = "Power Line"
+	overlay_data.build_cost = 50
+	var overlay = _track(MockBuilding.new(overlay_data))
+	world.grid_system.set_overlay(cell, overlay)
+
+	var result = world._bulldoze_cell(cell)
+
+	assert_true(result.cleared)
+	assert_eq(result.type, "building_demolished", "Overlay should be cleared before base building")
+	assert_eq(result.data.name, "Power Line")
+	assert_eq(result.data.refund, 25)  # 50% of 50
+	# Base building should still exist
+	assert_not_null(world.grid_system.get_building_at(cell), "Base building should remain")
 
 
 func test_bulldoze_cell_zone_before_rock() -> void:
