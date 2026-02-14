@@ -57,7 +57,7 @@ func get_building_texture(building_data: Resource, development_level: int = 1, g
 		neighbors = _get_road_neighbors(grid_cell)
 		cache_key = _make_neighbor_cache_key(building_data.id, development_level, neighbors)
 	elif has_position and GridConstants.is_power_type(btype):
-		neighbors = _get_road_neighbors(grid_cell)  # Power lines follow roads
+		neighbors = _get_power_line_neighbors(grid_cell)
 		cache_key = _make_neighbor_cache_key(building_data.id, development_level, neighbors)
 	elif has_position and GridConstants.is_water_type(btype):
 		neighbors = _get_water_pipe_neighbors(grid_cell)
@@ -94,13 +94,66 @@ func _create_error_texture() -> ImageTexture:
 	return ImageTexture.create_from_image(image)
 
 
-## Get road neighbors for a cell (used by roads and power lines)
+## Get road neighbors for a cell (used by roads)
 func _get_road_neighbors(cell: Vector2i) -> Dictionary:
 	if not grid_system:
 		return {"north": 0, "south": 0, "east": 0, "west": 0}
 
 	# Use GridConstants utility for simple cell set lookup
 	return GridConstants.get_directional_neighbors(cell, [grid_system.get_road_cell_map()])
+
+
+## Get power line neighbors (other power lines, power-producing buildings)
+func _get_power_line_neighbors(cell: Vector2i) -> Dictionary:
+	var neighbors = {"north": 0, "south": 0, "east": 0, "west": 0}
+	if not grid_system:
+		return neighbors
+
+	for dir_name in GridConstants.DIRECTIONS:
+		var neighbor_cell = cell + GridConstants.DIRECTIONS[dir_name]
+
+		# Check for power line overlay on a road
+		if _is_power_overlay(neighbor_cell):
+			neighbors[dir_name] = 1
+			continue
+
+		# Check for buildings with power connectivity
+		if _is_power_connectable_building(neighbor_cell):
+			neighbors[dir_name] = 1
+
+	return neighbors
+
+
+## Check if a building at cell can connect to power lines
+func _is_power_connectable_building(cell: Vector2i) -> bool:
+	if not grid_system.has_building_at(cell):
+		return false
+
+	var building = grid_system.get_building_at(cell)
+	if not is_instance_valid(building) or not building.building_data:
+		return false
+
+	var btype: String = building.building_data.building_type
+	# Power infrastructure types
+	if GridConstants.is_power_type(btype):
+		return true
+	# Buildings that produce power (generators)
+	if building.building_data.power_production > 0:
+		return true
+
+	return false
+
+
+## Check if there's a power line overlay at cell
+func _is_power_overlay(cell: Vector2i) -> bool:
+	if not grid_system.has_overlay_at(cell):
+		return false
+
+	var overlay = grid_system.get_overlay_at(cell)
+	if not is_instance_valid(overlay) or not overlay.building_data:
+		return false
+
+	return GridConstants.is_power_type(overlay.building_data.building_type)
 
 
 ## Get water pipe neighbors (roads, water infrastructure, buildings with water)
@@ -423,15 +476,18 @@ func _is_in_quadrant(x: int, y: int, cx: int, cy: int, quadrant: String) -> bool
 func _draw_power_line(image: Image, w: int, h: int, _base_color: Color, neighbors: Dictionary = {}) -> void:
 	image.fill(Color(0, 0, 0, 0))  # Transparent background
 
-	# Improved visibility: brighter pole and wire colors
 	var pole_color = Color(0.55, 0.48, 0.35)
 	var wire_color = Color(0.35, 0.35, 0.38)
-	var wire_highlight = Color(0.45, 0.45, 0.50)  # Slight glow effect
+	var wire_highlight = Color(0.45, 0.45, 0.50)
 
 	var cx: int = int(w * 0.5)
 	var cy: int = int(h * 0.5)
 
-	# Determine orientation based on road neighbors
+	# Wire offset from center (reduced 50% from 12 to 6)
+	var wire_offset: int = 6
+	# Crossbar half-length (reduced 50% from 16 to 8)
+	var crossbar_half: int = 8
+
 	var has_north = neighbors.get("north", 0) == 1
 	var has_south = neighbors.get("south", 0) == 1
 	var has_east = neighbors.get("east", 0) == 1
@@ -440,49 +496,88 @@ func _draw_power_line(image: Image, w: int, h: int, _base_color: Color, neighbor
 	var has_vertical = has_north or has_south
 	var has_horizontal = has_east or has_west
 
-	# Draw wires based on road direction
-	# For vertical roads (north-south): wires run vertically
-	# For horizontal roads (east-west): wires run horizontally
-	var is_vertical_road = has_vertical and not has_horizontal
+	# Draw wire segments per direction (like water pipes)
+	# North segment: two vertical wires from top edge to center
+	if has_north:
+		for y in range(0, cy + wire_offset):
+			for x_off in [cx - wire_offset, cx + wire_offset]:
+				for lw in range(-1, 2):
+					var px = x_off + lw
+					if px >= 0 and px < w and y >= 0 and y < h:
+						image.set_pixel(px, y, wire_highlight if lw == 0 else wire_color)
 
-	# Draw pole base (small square in center - top-down view of pole)
-	for x in range(cx - 5, cx + 6):
-		for y in range(cy - 5, cy + 6):
+	# South segment: two vertical wires from center to bottom edge
+	if has_south:
+		for y in range(cy - wire_offset, h):
+			for x_off in [cx - wire_offset, cx + wire_offset]:
+				for lw in range(-1, 2):
+					var px = x_off + lw
+					if px >= 0 and px < w and y >= 0 and y < h:
+						image.set_pixel(px, y, wire_highlight if lw == 0 else wire_color)
+
+	# East segment: two horizontal wires from center to right edge
+	if has_east:
+		for x in range(cx - wire_offset, w):
+			for y_off in [cy - wire_offset, cy + wire_offset]:
+				for lw in range(-1, 2):
+					var py = y_off + lw
+					if x >= 0 and x < w and py >= 0 and py < h:
+						image.set_pixel(x, py, wire_highlight if lw == 0 else wire_color)
+
+	# West segment: two horizontal wires from left edge to center
+	if has_west:
+		for x in range(0, cx + wire_offset):
+			for y_off in [cy - wire_offset, cy + wire_offset]:
+				for lw in range(-1, 2):
+					var py = y_off + lw
+					if x >= 0 and x < w and py >= 0 and py < h:
+						image.set_pixel(x, py, wire_highlight if lw == 0 else wire_color)
+
+	# Default: no neighbors — draw horizontal wires spanning full cell
+	if not has_vertical and not has_horizontal:
+		for x in range(w):
+			for y_off in [cy - wire_offset, cy + wire_offset]:
+				for lw in range(-1, 2):
+					var py = y_off + lw
+					if py >= 0 and py < h:
+						image.set_pixel(x, py, wire_highlight if lw == 0 else wire_color)
+
+	# Junction fill for corners/tees/crosses: connect wires through center
+	if has_vertical and has_horizontal:
+		for x in range(cx - wire_offset - 1, cx + wire_offset + 2):
+			for y in range(cy - wire_offset - 1, cy + wire_offset + 2):
+				if x >= 0 and x < w and y >= 0 and y < h:
+					# Only fill wire lanes, not the whole square
+					var on_v_wire = (abs(x - (cx - wire_offset)) <= 1 or abs(x - (cx + wire_offset)) <= 1)
+					var on_h_wire = (abs(y - (cy - wire_offset)) <= 1 or abs(y - (cy + wire_offset)) <= 1)
+					if on_v_wire or on_h_wire:
+						image.set_pixel(x, y, wire_highlight)
+
+	# Draw crossbar(s) through center based on connections
+	if has_vertical:
+		# Horizontal crossbar (perpendicular to vertical wires)
+		for x in range(cx - crossbar_half, cx + crossbar_half + 1):
+			for y in range(cy - 2, cy + 3):
+				if x >= 0 and x < w and y >= 0 and y < h:
+					image.set_pixel(x, y, pole_color)
+	if has_horizontal:
+		# Vertical crossbar (perpendicular to horizontal wires)
+		for y in range(cy - crossbar_half, cy + crossbar_half + 1):
+			for x in range(cx - 2, cx + 3):
+				if x >= 0 and x < w and y >= 0 and y < h:
+					image.set_pixel(x, y, pole_color)
+	if not has_vertical and not has_horizontal:
+		# Default: vertical crossbar for horizontal wires
+		for y in range(cy - crossbar_half, cy + crossbar_half + 1):
+			for x in range(cx - 2, cx + 3):
+				if x >= 0 and x < w and y >= 0 and y < h:
+					image.set_pixel(x, y, pole_color)
+
+	# Draw pole base (small square in center, reduced 50% from 5 to 3)
+	for x in range(cx - 3, cx + 4):
+		for y in range(cy - 3, cy + 4):
 			if x >= 0 and x < w and y >= 0 and y < h:
 				image.set_pixel(x, y, pole_color)
-
-	if is_vertical_road:
-		# Vertical road: wires run north-south, crossbar runs east-west
-		# Draw horizontal crossbar (perpendicular to wires)
-		for x in range(cx - 16, cx + 17):
-			for y in range(cy - 3, cy + 4):
-				if x >= 0 and x < w and y >= 0 and y < h:
-					image.set_pixel(x, y, pole_color)
-
-		# Draw vertical wires (running north-south) - 2px width with highlight
-		for y in range(h):
-			for x_offset in [cx - 12, cx + 12]:
-				for lw in range(-1, 2):  # 3px width for visibility
-					var px = x_offset + lw
-					if px >= 0 and px < w:
-						var c = wire_highlight if lw == 0 else wire_color
-						image.set_pixel(px, y, c)
-	else:
-		# Horizontal road (or intersection): wires run east-west, crossbar runs north-south
-		# Draw vertical crossbar (perpendicular to wires)
-		for y in range(cy - 16, cy + 17):
-			for x in range(cx - 3, cx + 4):
-				if x >= 0 and x < w and y >= 0 and y < h:
-					image.set_pixel(x, y, pole_color)
-
-		# Draw horizontal wires (running east-west) - 2px width with highlight
-		for x in range(w):
-			for y_offset in [cy - 12, cy + 12]:
-				for lw in range(-1, 2):  # 3px width for visibility
-					var py = y_offset + lw
-					if py >= 0 and py < h:
-						var c = wire_highlight if lw == 0 else wire_color
-						image.set_pixel(x, py, c)
 
 
 func _draw_water_pipe(image: Image, w: int, h: int, _base_color: Color, neighbors: Dictionary = {}) -> void:

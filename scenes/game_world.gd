@@ -577,51 +577,56 @@ func _input(event: InputEvent) -> void:
 			else:
 				set_tool(ToolMode.SELECT)
 
-	# Mouse handling for pan mode
-	# Skip if mouse is over UI elements (like minimap)
+	# Mouse handling — always process button releases to clear drag state,
+	# but block presses and motion when the pointer is over UI.
+	var over_ui = false
 	if event is InputEventMouseButton or event is InputEventMouseMotion:
-		if _is_mouse_over_ui():
-			return
+		over_ui = _is_mouse_over_ui()
+
+	# Button releases must always be processed (clears drag/pan/zone state)
+	if event is InputEventMouseButton and not event.pressed:
+		if event.button_index == MOUSE_BUTTON_LEFT:
+			if is_panning:
+				_end_pan()
+			if is_zone_painting:
+				_end_zone_paint()
+			# End drag building/demolishing
+			if is_drag_building and _is_linear_infrastructure(current_building_data):
+				_end_path_build()  # Phase 3: complete path placement
+			is_drag_building = false
+			is_drag_demolishing = false
+			last_drag_cell = Vector2i(-1, -1)
+			_drag_bulldoze_cost = 0
+		elif event.button_index == MOUSE_BUTTON_MIDDLE:
+			_end_pan()
+		return
+
+	# Block presses and motion when pointer is over UI
+	if over_ui:
+		return
 
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT:
-			if event.pressed:
-				if current_tool == ToolMode.PAN:
-					_start_pan(event.position)
-				else:
-					_handle_left_click()
-					# Start drag building/demolishing
-					if build_mode and current_building_data:
-						is_drag_building = true
-						last_drag_cell = hovered_cell
-						# Start path preview for linear infrastructure (Phase 3)
-						if _is_linear_infrastructure(current_building_data) and path_preview_overlay:
-							path_preview_overlay.start_path(hovered_cell, current_building_data)
-					elif demolish_mode:
-						is_drag_demolishing = true
-						last_drag_cell = hovered_cell
-						_drag_bulldoze_cost = 0
-			else:
-				if is_panning:
-					_end_pan()
-				if is_zone_painting:
-					_end_zone_paint()
-				# End drag building/demolishing
-				if is_drag_building and _is_linear_infrastructure(current_building_data):
-					_end_path_build()  # Phase 3: complete path placement
-				is_drag_building = false
-				is_drag_demolishing = false
-				last_drag_cell = Vector2i(-1, -1)
-				_drag_bulldoze_cost = 0
-		elif event.button_index == MOUSE_BUTTON_RIGHT:
-			if event.pressed:
-				_handle_right_click()
-		# Middle mouse button always pans
-		elif event.button_index == MOUSE_BUTTON_MIDDLE:
-			if event.pressed:
+			if current_tool == ToolMode.PAN:
 				_start_pan(event.position)
 			else:
-				_end_pan()
+				_handle_left_click()
+				# Start drag building/demolishing
+				if build_mode and current_building_data:
+					is_drag_building = true
+					last_drag_cell = hovered_cell
+					# Start path preview for linear infrastructure (Phase 3)
+					if _is_linear_infrastructure(current_building_data) and path_preview_overlay:
+						path_preview_overlay.start_path(hovered_cell, current_building_data)
+				elif demolish_mode:
+					is_drag_demolishing = true
+					last_drag_cell = hovered_cell
+					_drag_bulldoze_cost = 0
+		elif event.button_index == MOUSE_BUTTON_RIGHT:
+			_handle_right_click()
+		# Middle mouse button always pans
+		elif event.button_index == MOUSE_BUTTON_MIDDLE:
+			_start_pan(event.position)
 
 	# Mouse motion for panning
 	if event is InputEventMouseMotion and is_panning:
@@ -697,10 +702,6 @@ func _update_ghost_preview() -> void:
 
 ## Check if mouse is over UI elements that should block game input
 func _is_mouse_over_ui() -> bool:
-	var hovered_control: Control = get_viewport().gui_get_hovered_control()
-	if hovered_control and hovered_control.is_visible_in_tree():
-		return true
-
 	# Check if minimap is being dragged
 	if minimap_overlay and minimap_overlay._is_dragging:
 		return true
@@ -711,6 +712,19 @@ func _is_mouse_over_ui() -> bool:
 		var minimap_rect = minimap_overlay.get_global_rect()
 		if minimap_rect.has_point(mouse_pos):
 			return true
+
+	# Check if an interactive UI control is under the mouse
+	var hovered_control: Control = get_viewport().gui_get_hovered_control()
+	if hovered_control and hovered_control.is_visible_in_tree():
+		# Only block for controls inside a CanvasLayer (HUD elements)
+		# Ignore controls that are children of the game world Node2D
+		var node = hovered_control
+		while node:
+			if node is CanvasLayer:
+				return true
+			if node == self:
+				return false  # Part of game world, not UI
+			node = node.get_parent()
 
 	return false
 
@@ -769,6 +783,17 @@ func _update_cell_highlight() -> void:
 
 
 func _update_demolish_cost_preview(cell: Vector2i) -> void:
+	# Overlay → show overlay refund (e.g. power line on road)
+	if grid_system.has_overlay_at(cell):
+		var overlay = grid_system.get_overlay_at(cell)
+		if overlay and is_instance_valid(overlay) and overlay.building_data:
+			var refund = int(overlay.building_data.build_cost * 0.5)
+			if refund > 0:
+				cell_highlight.set_demolish_info("+$%d" % refund)
+			else:
+				cell_highlight.set_demolish_info("Free")
+			return
+
 	# Building → show refund amount
 	var building = grid_system.get_building_at(cell)
 	if building:
@@ -1008,6 +1033,16 @@ func _track_data_center_placed(building_data, cell: Vector2i) -> void:
 ## Shared bulldoze logic for a single cell. Returns result dict:
 ## { "cleared": bool, "type": String, "cost": int }
 func _bulldoze_cell(cell: Vector2i) -> Dictionary:
+	# Priority 0: Overlay present → remove overlay first (e.g. power line on road)
+	var overlay = grid_system.get_overlay_at(cell) if grid_system.has_overlay_at(cell) else null
+	if overlay and is_instance_valid(overlay) and overlay.building_data:
+		var overlay_data = overlay.building_data
+		var overlay_name = overlay_data.display_name if overlay_data else "Overlay"
+		grid_system.remove_building(cell)  # Removes overlay first internally
+		var refund = int(overlay_data.build_cost * 0.5)
+		return {"cleared": true, "type": "building_demolished", "cost": -refund,
+				"data": {"name": overlay_name, "refund": refund}}
+
 	# Priority 1: Building present → remove building (refund via grid_system.remove_building)
 	var building = grid_system.get_building_at(cell)
 	if building:

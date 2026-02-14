@@ -230,9 +230,10 @@ func plan_building_placement(cell: Vector2i, building_data: Resource) -> Diction
 					result.reasons.append("Cell already occupied")
 					return result
 
-				# Track overlay cells for utility-on-road placement
-				if is_utility and GridConstants.is_road_type(existing_type):
+				# Track overlay cells (utility-on-road or road-on-utility)
+				if can_overlay:
 					result.overlay_cells.append(check_cell)
+					continue  # Skip terrain check — road already validated terrain
 
 			# Check terrain constraints
 			if terrain_system and terrain_system.has_method("is_buildable"):

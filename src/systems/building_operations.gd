@@ -198,6 +198,8 @@ static func _register_building(
 	var is_overlay = false
 	var registered_cells: Array[Vector2i] = []
 
+	var is_road = GridConstants.is_road_type(building_type)
+
 	# Register in all occupied cells
 	for occupied_cell in GridConstants.get_building_cells(cell, building_data.size):
 		# Check if placing utility on existing road
@@ -207,6 +209,13 @@ static func _register_building(
 				OverlayOperationsScript.add_overlay(occupied_cell, building, utility_overlays)
 				is_overlay = true
 				continue
+
+		# Check if placing road on existing utility — move utility to overlay
+		if is_road and buildings.has(occupied_cell):
+			var existing = buildings[occupied_cell]
+			if existing.building_data and GridConstants.is_utility_type(existing.building_data.building_type):
+				OverlayOperationsScript.add_overlay(occupied_cell, existing, utility_overlays)
+				is_overlay = false  # The road is the base, not an overlay
 
 		buildings[occupied_cell] = building
 		registered_cells.append(occupied_cell)
