@@ -59,7 +59,6 @@ const TERRAIN_TOOLS = [
 	{"id": "flatten", "label": "Flatten", "icon": "━", "terrain_tool": "flatten"},
 	{"id": "water", "label": "Add Water", "icon": "〰", "terrain_tool": "water"},
 	{"id": "tree", "label": "Plant Trees", "icon": "T", "terrain_tool": "tree"},
-	{"id": "rock", "label": "Place Rocks", "icon": "O", "terrain_tool": "rock"},
 ]
 
 # Settings options
