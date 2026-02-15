@@ -73,8 +73,7 @@ const COLORS = {
 }
 
 # References to UI components (set by main.gd)
-var status_pill = null
-var tool_palette = null
+var bottom_toolbar = null
 var info_panel = null
 var dashboard_panel = null
 

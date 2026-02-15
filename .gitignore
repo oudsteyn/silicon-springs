@@ -25,6 +25,9 @@ mono_crash.*.json
 .vscode/
 *.code-workspace
 
+# Plans
+plans/
+
 # Debug/logs/temp
 *.log
 *.tmp

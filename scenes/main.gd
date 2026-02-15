@@ -5,8 +5,7 @@ extends Node
 @onready var world_environment: WorldEnvironment = $WorldEnvironment
 
 # New minimalist UI components
-var status_pill: StatusPill
-var tool_palette: ToolPalette
+var bottom_toolbar: BottomToolbar
 var dashboard_panel: DashboardPanel
 var toast_system: ToastNotificationSystem
 var difficulty_selector: DifficultySelector
@@ -160,15 +159,10 @@ func _on_difficulty_cancelled() -> void:
 
 
 func _create_new_ui() -> void:
-	# Status Pill (top-left, compact status)
-	status_pill = StatusPill.new()
-	add_child(status_pill)
-	UIManager.status_pill = status_pill
-
-	# Tool Palette (left edge, vertical tool strip)
-	tool_palette = ToolPalette.new()
-	add_child(tool_palette)
-	UIManager.tool_palette = tool_palette
+	# Bottom Toolbar (replaces StatusPill and ToolPalette)
+	bottom_toolbar = BottomToolbar.new()
+	add_child(bottom_toolbar)
+	UIManager.bottom_toolbar = bottom_toolbar
 
 	# Dashboard Panel (modal, hidden by default)
 	dashboard_panel = DashboardPanel.new()
@@ -182,12 +176,12 @@ func _create_new_ui() -> void:
 	# Load and add modal panels
 	_create_modal_panels()
 
-	# Connect tool palette signals
-	tool_palette.building_selected.connect(_on_building_selected)
-	tool_palette.zone_selected.connect(_on_zone_selected)
-	tool_palette.demolish_selected.connect(_on_demolish_selected)
-	tool_palette.overlay_selected.connect(_on_overlay_selected)
-	tool_palette.setting_selected.connect(_on_setting_selected)
+	# Connect bottom toolbar signals
+	bottom_toolbar.building_selected.connect(_on_building_selected)
+	bottom_toolbar.zone_selected.connect(_on_zone_selected)
+	bottom_toolbar.demolish_selected.connect(_on_demolish_selected)
+	bottom_toolbar.overlay_selected.connect(_on_overlay_selected)
+	bottom_toolbar.setting_selected.connect(_on_setting_selected)
 	if CityEventBus and not CityEventBus.build_mode_changed.is_connected(_on_city_build_mode_changed):
 		CityEventBus.build_mode_changed.connect(_on_city_build_mode_changed)
 
