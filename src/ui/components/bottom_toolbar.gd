@@ -11,18 +11,18 @@ const SETTINGS_BTN_SIZE: int = 30
 
 # Toolbar categories (12 buttons)
 const TOOLBAR_CATEGORIES = [
-	{"id": "infrastructure", "icon": "R", "label": "Roads", "type": "build"},
-	{"id": "zoning", "icon": "Z", "label": "Zoning", "type": "zone"},
-	{"id": "power", "icon": "P", "label": "Power", "type": "build"},
-	{"id": "water", "icon": "W", "label": "Water", "type": "build"},
-	{"id": "service", "icon": "S", "label": "Services", "type": "build"},
-	{"id": "transit", "icon": "T", "label": "Transit", "type": "build"},
-	{"id": "recreation", "icon": "R", "label": "Recreation", "type": "build"},
-	{"id": "landmark", "icon": "L", "label": "Landmarks", "type": "build"},
-	{"id": "data_center", "icon": "D", "label": "Data Centers", "type": "build"},
-	{"id": "terrain", "icon": "M", "label": "Terrain", "type": "terrain"},
-	{"id": "overlay", "icon": "O", "label": "Overlays", "type": "overlay"},
-	{"id": "demolish", "icon": "X", "label": "Demolish", "type": "demolish"}
+	{"id": "infrastructure", "icon": "🛤", "label": "Roads", "type": "build"},
+	{"id": "zoning", "icon": "▦", "label": "Zoning", "type": "zone"},
+	{"id": "power", "icon": "⚡", "label": "Power", "type": "build"},
+	{"id": "water", "icon": "💧", "label": "Water", "type": "build"},
+	{"id": "service", "icon": "🏛", "label": "Services", "type": "build"},
+	{"id": "transit", "icon": "🚌", "label": "Transit", "type": "build"},
+	{"id": "recreation", "icon": "🌳", "label": "Recreation", "type": "build"},
+	{"id": "landmark", "icon": "🏆", "label": "Landmarks", "type": "build"},
+	{"id": "data_center", "icon": "🖥", "label": "Data Centers", "type": "build"},
+	{"id": "terrain", "icon": "⛰", "label": "Terrain", "type": "terrain"},
+	{"id": "overlay", "icon": "👁", "label": "Overlays", "type": "overlay"},
+	{"id": "demolish", "icon": "🚜", "label": "Demolish", "type": "demolish"}
 ]
 
 # Zone types (from ToolPalette)
@@ -58,14 +58,14 @@ const TERRAIN_TOOLS = [
 	{"id": "lower", "label": "Lower Terrain", "icon": "▼", "terrain_tool": "lower"},
 	{"id": "flatten", "label": "Flatten", "icon": "━", "terrain_tool": "flatten"},
 	{"id": "water", "label": "Add Water", "icon": "〰", "terrain_tool": "water"},
-	{"id": "tree", "label": "Plant Trees", "icon": "T", "terrain_tool": "tree"},
+	{"id": "tree", "label": "Plant Trees", "icon": "🌲", "terrain_tool": "tree"},
 ]
 
 # Settings options
 const SETTINGS_OPTIONS = [
-	{"id": "dashboard", "label": "D", "action": "dashboard", "tooltip": "Dashboard (D)"},
-	{"id": "save", "label": "S", "action": "save", "tooltip": "Save Game"},
-	{"id": "overlay_toggle", "label": "O", "action": "overlay_toggle", "tooltip": "Overlays"},
+	{"id": "dashboard", "label": "📊", "action": "dashboard", "tooltip": "Dashboard (D)"},
+	{"id": "save", "label": "💾", "action": "save", "tooltip": "Save Game"},
+	{"id": "overlay_toggle", "label": "👁", "action": "overlay_toggle", "tooltip": "Overlays"},
 	{"id": "options", "label": "⚙", "action": "options", "tooltip": "Options"}
 ]
 
