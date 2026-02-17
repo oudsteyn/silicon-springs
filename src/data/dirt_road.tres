@@ -30,6 +30,7 @@ color = Color(0.45, 0.38, 0.3, 1)
 sprite_path = ""
 pollution_radius = 0
 happiness_modifier = 0.0
+conducts_utilities = false
 road_capacity = 25
 road_speed = 0.6
 noise_radius = 0

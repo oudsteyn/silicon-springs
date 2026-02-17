@@ -59,6 +59,7 @@ class_name BuildingData
 @export var happiness_modifier: float = 0.0  # Applied to nearby tiles
 
 # Road properties (for road hierarchy)
+@export var conducts_utilities: bool = true  # Whether this road type conducts power/water
 @export var road_capacity: int = 100  # Vehicles per road tile per month
 @export var road_speed: float = 1.0  # Speed multiplier (1.0 = normal)
 @export var noise_radius: int = 0  # Noise pollution radius for highways/arterials

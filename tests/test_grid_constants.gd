@@ -161,9 +161,9 @@ func test_rect_from_cells_reversed() -> void:
 
 func test_is_road_type() -> void:
 	assert_true(GridConstants.is_road_type("road"))
-	assert_true(GridConstants.is_road_type("collector"))
-	assert_true(GridConstants.is_road_type("arterial"))
 	assert_true(GridConstants.is_road_type("highway"))
+	assert_false(GridConstants.is_road_type("collector"))
+	assert_false(GridConstants.is_road_type("arterial"))
 	assert_false(GridConstants.is_road_type("power_line"))
 	assert_false(GridConstants.is_road_type("building"))
 

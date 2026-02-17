@@ -103,8 +103,8 @@ func _on_building_placed(cell: Vector2i, building: Node2D) -> void:
 	if GridConstants.is_power_type(data.building_type):
 		_network.add_power_line(cell)
 
-	# Track roads in network (power follows roads)
-	if GridConstants.is_road_type(data.building_type):
+	# Track roads in network (power follows roads, if they conduct utilities)
+	if GridConstants.is_road_type(data.building_type) and data.conducts_utilities:
 		_network.add_road(cell)
 
 	_update_power_network()
@@ -126,7 +126,7 @@ func _on_building_removed(cell: Vector2i, building: Node2D) -> void:
 	if GridConstants.is_power_type(data.building_type):
 		_network.remove_power_line(cell)
 
-	if GridConstants.is_road_type(data.building_type):
+	if GridConstants.is_road_type(data.building_type) and data.conducts_utilities:
 		_network.remove_road(cell)
 
 	_update_power_network()

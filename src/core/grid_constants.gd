@@ -33,7 +33,7 @@ const HALF_CELL: int = 32  # CELL_SIZE / 2
 # =============================================================================
 
 ## All road building types (for checking road adjacency, connectivity, etc.)
-const ROAD_TYPES: Array[String] = ["road", "collector", "arterial", "highway"]
+const ROAD_TYPES: Array[String] = ["road", "highway"]
 
 ## Utility building types that can overlay on roads
 const UTILITY_TYPES: Array[String] = ["power_line", "water_pipe", "large_water_pipe"]
@@ -46,13 +46,13 @@ const WATER_TYPES: Array[String] = ["water_pipe", "large_water_pipe"]
 
 ## Linear infrastructure (1x1 drag-build types)
 const LINEAR_INFRASTRUCTURE: Array[String] = [
-	"road", "collector", "arterial", "highway",
+	"road", "highway",
 	"power_line", "power_pole",
 	"water_pipe", "large_water_pipe"
 ]
 
 ## Terrain action types (not real buildings - perform terrain modifications)
-const TERRAIN_ACTION_TYPES: Array[String] = ["clear_rocks"]
+const TERRAIN_ACTION_TYPES: Array[String] = []
 
 ## Bulldozer costs for clearing terrain features
 const BULLDOZE_COST_ROCK_SMALL: int = 500
@@ -252,8 +252,6 @@ const MAX_COVERAGE_RADIUS: int = 32
 ## Highways and arterials should not allow direct access - use collectors/local roads
 const ROAD_ACCESS_TYPES: Dictionary = {
 	"road": true,       # Local road - full access
-	"collector": true,  # Collector road - full access
-	"arterial": false,  # Arterial - limited access (no direct building connections)
 	"highway": false,   # Highway - no direct access
 }
 

@@ -109,8 +109,8 @@ func _on_building_placed(cell: Vector2i, building: Node2D) -> void:
 	if GridConstants.is_water_type(data.building_type):
 		water_pipe_cells[cell] = true
 
-	# Track roads (roads conduct water between adjacent buildings)
-	if GridConstants.is_road_type(data.building_type):
+	# Track roads (roads conduct water between adjacent buildings, if they conduct utilities)
+	if GridConstants.is_road_type(data.building_type) and data.conducts_utilities:
 		road_cells[cell] = true
 
 	# Recalculate network and immediately update water status
@@ -136,7 +136,7 @@ func _on_building_removed(cell: Vector2i, building: Node2D) -> void:
 	if GridConstants.is_water_type(data.building_type):
 		water_pipe_cells.erase(cell)
 
-	if GridConstants.is_road_type(data.building_type):
+	if GridConstants.is_road_type(data.building_type) and data.conducts_utilities:
 		road_cells.erase(cell)
 
 	_update_water_network()
@@ -340,8 +340,13 @@ func _update_water_network() -> void:
 	if not grid_system:
 		return
 
-	# Sync road cells from grid system
-	road_cells = grid_system.get_road_cell_map()
+	# Sync road cells from grid system (only roads that conduct utilities)
+	road_cells.clear()
+	var all_roads = grid_system.get_road_cell_map()
+	for cell in all_roads:
+		var building = grid_system.get_building_at(cell)
+		if is_instance_valid(building) and building.building_data and building.building_data.conducts_utilities:
+			road_cells[cell] = true
 
 	# Start from each water source and flood-fill through water pipes
 	for source in water_sources:

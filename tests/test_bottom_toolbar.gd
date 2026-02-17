@@ -727,3 +727,24 @@ func test_unlock_tiers_no_stale_roads() -> void:
 
 	assert_not_in("collector_road", all_tiered, "collector_road should not be in unlock tiers")
 	assert_not_in("arterial_road", all_tiered, "arterial_road should not be in unlock tiers")
+
+
+# ============================================
+# CONDUCTS UTILITIES TESTS
+# ============================================
+
+func test_dirt_road_does_not_conduct_utilities() -> void:
+	var data = load("res://src/data/dirt_road.tres")
+	assert_false(data.conducts_utilities, "Dirt road should not conduct utilities")
+
+
+func test_paved_roads_conduct_utilities() -> void:
+	var ids = ["road", "street", "avenue", "boulevard", "parkway", "streetcar_parkway", "highway"]
+	for id in ids:
+		var data = load("res://src/data/%s.tres" % id)
+		assert_true(data.conducts_utilities, "%s should conduct utilities" % id)
+
+
+func test_road_types_no_stale_entries() -> void:
+	assert_not_in("collector", GridConstants.ROAD_TYPES, "ROAD_TYPES should not contain collector")
+	assert_not_in("arterial", GridConstants.ROAD_TYPES, "ROAD_TYPES should not contain arterial")

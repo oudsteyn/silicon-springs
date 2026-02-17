@@ -25,7 +25,13 @@ func update_network(power_sources: Array[Node2D], storage_buildings: Array[Node2
 	if not grid_system:
 		return
 
-	road_cells = grid_system.get_road_cell_map()
+	# Only include roads that conduct utilities (excludes dirt roads)
+	road_cells.clear()
+	var all_roads = grid_system.get_road_cell_map()
+	for cell in all_roads:
+		var building = grid_system.get_building_at(cell)
+		if is_instance_valid(building) and building.building_data and building.building_data.conducts_utilities:
+			road_cells[cell] = true
 
 	# Flood fill from power sources
 	for source in power_sources:
