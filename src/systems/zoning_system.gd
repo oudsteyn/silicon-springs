@@ -68,7 +68,7 @@ const ZONE_FAR_LIMITS = {
 	ZoneType.INDUSTRIAL_LOW: 0.4,     # Warehouses, light manufacturing
 	ZoneType.INDUSTRIAL_MED: 0.6,     # Medium industrial
 	ZoneType.INDUSTRIAL_HIGH: 0.8,    # Heavy industrial (typically low-rise but dense)
-	ZoneType.AGRICULTURAL: 0.1,       # Farm buildings only
+	ZoneType.AGRICULTURAL: 0.0,       # No FAR limit for farmland
 }
 
 # Building spawn chance per month (when conditions are met) - Legacy constants, use GameConfig
@@ -370,6 +370,10 @@ func _can_zone_develop(cell: Vector2i, _zone_data: ZoneData) -> bool:
 		if not terrain_check.can_build:
 			return false
 
+	# Agricultural zones are self-sufficient — skip power, water, and road checks
+	if _zone_data.type == ZoneType.AGRICULTURAL:
+		return true
+
 	# Check power
 	if GameState.has_power_shortage():
 		return false
@@ -378,8 +382,8 @@ func _can_zone_develop(cell: Vector2i, _zone_data: ZoneData) -> bool:
 	if GameState.has_water_shortage():
 		return false
 
-	# Check road access (agricultural zones exempt)
-	if _zone_data.type != ZoneType.AGRICULTURAL and not _has_adjacent_road(cell):
+	# Check road access
+	if not _has_adjacent_road(cell):
 		return false
 
 	return true
