@@ -211,8 +211,8 @@ func initialize(data: Resource, cell: Vector2i) -> void:
 	grid_cell = cell
 	name = "%s_%d_%d" % [data.id, cell.x, cell.y]
 
-	# Zones start under construction
-	if data.category == "zone":
+	# Zones start under construction (except agricultural — crops grow, not built)
+	if data.category == "zone" and data.building_type != "agricultural":
 		is_under_construction = true
 		construction_progress = 0.0
 
