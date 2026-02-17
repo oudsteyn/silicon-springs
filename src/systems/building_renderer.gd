@@ -1402,25 +1402,19 @@ func _draw_corner_arc(image: Image, corner_x: int, corner_y: int, radius: int, s
 # New building type renderers
 
 func _draw_farm(image: Image, w: int, h: int, _base_color: Color) -> void:
-	# Field background
-	_fill_with_gradient(image, w, h, Color(0.6, 0.55, 0.25), Color(0.55, 0.5, 0.2))
+	# Tilled earth background
+	_fill_with_gradient(image, w, h, Color(0.45, 0.38, 0.2), Color(0.5, 0.42, 0.22))
 
-	# Crop rows
-	var row_color = Color(0.4, 0.55, 0.25)
-	for row in range(0, h, 12):
-		_draw_rect(image, 10, row, w - 20, 6, row_color)
+	# Crop rows (green stripes on brown soil)
+	var crop_color = Color(0.35, 0.55, 0.2)
+	var row_spacing = maxi(6, int(h / 6.0))
+	for row in range(3, h - 3, row_spacing):
+		_draw_rect(image, 3, row, w - 6, int(row_spacing * 0.5), crop_color)
 
-	# Farmhouse
-	var house_color = Color(0.7, 0.5, 0.3)
-	_draw_rect(image, 10, 10, 40, 35, house_color)
-	_draw_triangle_roof(image, 8, 10, 44, 20, Color(0.5, 0.3, 0.2))
-
-	# Barn
-	var barn_color = Color(0.6, 0.2, 0.15)
-	_draw_rect(image, w - 60, 15, 50, 45, barn_color)
-	_draw_rect(image, w - 55, 35, 20, 25, Color(0.3, 0.15, 0.1))  # Door
-
-	_draw_rect_outline(image, 2, 2, w - 4, h - 4, Color(0.5, 0.45, 0.2, 0.5))
+	# Soil furrow lines between rows
+	var furrow_color = Color(0.38, 0.32, 0.18)
+	for row in range(3 + int(row_spacing * 0.5), h - 3, row_spacing):
+		_draw_rect(image, 3, row, w - 6, 1, furrow_color)
 
 
 func _draw_bus_stop(image: Image, w: int, h: int, base_color: Color) -> void:

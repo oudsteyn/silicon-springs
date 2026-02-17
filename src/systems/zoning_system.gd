@@ -51,7 +51,7 @@ const ZONE_CAPACITY = {
 	ZoneType.INDUSTRIAL_LOW: {"pop": 0, "jobs": 15, "size": 1},
 	ZoneType.INDUSTRIAL_MED: {"pop": 0, "jobs": 60, "size": 2},
 	ZoneType.INDUSTRIAL_HIGH: {"pop": 0, "jobs": 150, "size": 3},
-	ZoneType.AGRICULTURAL: {"pop": 0, "jobs": 10, "size": 3}
+	ZoneType.AGRICULTURAL: {"pop": 0, "jobs": 2, "size": 1}
 }
 
 # FAR (Floor Area Ratio) limits by zone type
@@ -439,22 +439,34 @@ func _calculate_growth_rate(cell: Vector2i, _zone_data: ZoneData, demand: float)
 
 
 func _spawn_building(cell: Vector2i, zone_data: ZoneData) -> void:
-	zone_data.developed = true
-	zone_data.development_level = 1
-	zone_data.development_progress = 0.0
-
 	# Determine building ID based on zone type
 	var building_id = _get_building_for_zone(zone_data.type, 1)
-	zone_data.building_id = building_id
 
 	# Place the building
 	var building_data = grid_system.get_building_data(building_id)
-	if building_data:
-		# Temporarily make it free
-		var original_cost = building_data.build_cost
-		building_data.build_cost = 0
-		grid_system.place_building(cell, building_data)
-		building_data.build_cost = original_cost
+	if not building_data:
+		return
+
+	# Check that all cells the building would occupy are zoned the same type
+	for x in range(building_data.size.x):
+		for y in range(building_data.size.y):
+			var check_cell = cell + Vector2i(x, y)
+			if get_zone_at(check_cell) != zone_data.type:
+				return
+
+	# Temporarily make it free
+	var original_cost = building_data.build_cost
+	building_data.build_cost = 0
+	var placed = grid_system.place_building(cell, building_data)
+	building_data.build_cost = original_cost
+
+	if not placed:
+		return
+
+	zone_data.developed = true
+	zone_data.development_level = 1
+	zone_data.development_progress = 0.0
+	zone_data.building_id = building_id
 
 	building_spawned.emit(cell, building_id)
 
