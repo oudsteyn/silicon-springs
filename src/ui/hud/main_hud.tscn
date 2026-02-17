@@ -1,8 +1,7 @@
-[gd_scene load_steps=7 format=3 uid="uid://main_hud"]
+[gd_scene load_steps=6 format=3 uid="uid://main_hud"]
 
 [ext_resource type="Script" path="res://src/ui/hud/main_hud_controller.gd" id="1_controller"]
 [ext_resource type="PackedScene" path="res://src/ui/hud/build_menu_panel.tscn" id="2_build_menu"]
-[ext_resource type="PackedScene" path="res://src/ui/hud/city_stats_panel.tscn" id="3_stats_panel"]
 [ext_resource type="PackedScene" path="res://src/ui/hud/building_info_popup.tscn" id="4_popup"]
 [ext_resource type="Theme" path="res://src/ui/theme/modern_dark_theme.tres" id="5_theme"]
 
@@ -29,19 +28,6 @@ anchor_bottom = 1.0
 offset_top = -160.0
 grow_horizontal = 2
 grow_vertical = 0
-
-[node name="StatsPanel" parent="Root" instance=ExtResource("3_stats_panel")]
-layout_mode = 1
-anchors_preset = 9
-anchor_left = 1.0
-anchor_top = 0.0
-anchor_right = 1.0
-anchor_bottom = 0.0
-offset_left = -216.0
-offset_top = 232.0
-offset_right = -16.0
-offset_bottom = 328.0
-grow_horizontal = 0
 
 [node name="FinancePanel" type="PanelContainer" parent="Root"]
 unique_name_in_owner = true

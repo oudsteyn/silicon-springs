@@ -31,10 +31,6 @@ var _events: Node = null
 
 # Color mapping for building types
 const TYPE_COLORS = {
-	"road": Color(0.4, 0.4, 0.4),
-	"collector": Color(0.5, 0.5, 0.5),
-	"arterial": Color(0.6, 0.6, 0.6),
-	"highway": Color(0.7, 0.7, 0.7),
 	"residential": Color(0.3, 0.7, 0.3),
 	"commercial": Color(0.3, 0.5, 0.9),
 	"industrial": Color(0.8, 0.6, 0.2),
@@ -45,6 +41,18 @@ const TYPE_COLORS = {
 	"data_center": Color(0.5, 1.0, 0.8),
 	"park": Color(0.2, 0.6, 0.2),
 	"default": Color(0.5, 0.5, 0.5)
+}
+
+# Road colors by building ID (light → dark as capacity increases)
+const ROAD_COLORS = {
+	"dirt_road": Color(0.42, 0.36, 0.26),
+	"road": Color(0.4, 0.4, 0.4),
+	"street": Color(0.45, 0.45, 0.45),
+	"avenue": Color(0.5, 0.5, 0.5),
+	"boulevard": Color(0.55, 0.55, 0.55),
+	"highway": Color(0.65, 0.65, 0.65),
+	"parkway": Color(0.6, 0.6, 0.6),
+	"streetcar_parkway": Color(0.6, 0.55, 0.6),
 }
 
 
@@ -265,6 +273,12 @@ func _get_building_color(data) -> Color:
 	# Check category first
 	if data.category == "data_center":
 		return TYPE_COLORS["data_center"]
+
+	# Roads: use building ID for per-type colors
+	if data.building_type == "road":
+		if ROAD_COLORS.has(data.id):
+			return ROAD_COLORS[data.id]
+		return TYPE_COLORS["default"]
 
 	# Check building type
 	var btype = data.building_type

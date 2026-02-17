@@ -4,9 +4,6 @@ const MainHUDControllerScript = preload("res://src/ui/hud/main_hud_controller.gd
 const BuildMenuPanelScript = preload("res://src/ui/hud/build_menu_panel.gd")
 
 class FakeBus extends Node:
-	signal economy_changed(money: int)
-	signal population_changed(population: int)
-	signal happiness_changed(happiness: float)
 	signal building_selected(building_id: String, payload: Dictionary)
 	signal building_deselected()
 	signal building_stats_changed(building_id: String, payload: Dictionary)
@@ -68,48 +65,6 @@ func _build_hud(bus: Node, use_build_menu_script: bool = false) -> CanvasLayer:
 		var btn := Button.new()
 		btn.name = button_name
 		row.add_child(btn)
-
-	var stats_panel := PanelContainer.new()
-	stats_panel.name = "StatsPanel"
-	stats_panel.offset_top = 232.0
-	stats_panel.offset_bottom = 328.0
-	stats_panel.custom_minimum_size = Vector2(200, 96)
-	root.add_child(stats_panel)
-
-	var stats_margin := MarginContainer.new()
-	stats_margin.name = "Margin"
-	stats_panel.add_child(stats_margin)
-
-	var stats_vbox := VBoxContainer.new()
-	stats_vbox.name = "VBox"
-	stats_margin.add_child(stats_vbox)
-
-	var stats_header := HBoxContainer.new()
-	stats_header.name = "Header"
-	stats_vbox.add_child(stats_header)
-
-	var stats_title := Label.new()
-	stats_title.name = "TitleLabel"
-	stats_title.text = "Stats"
-	stats_header.add_child(stats_title)
-
-	var header_spacer := Control.new()
-	header_spacer.name = "HeaderSpacer"
-	header_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	stats_header.add_child(header_spacer)
-
-	var stats_close := Button.new()
-	stats_close.name = "StatsCloseButton"
-	stats_header.add_child(stats_close)
-
-	var grid := GridContainer.new()
-	grid.name = "Grid"
-	stats_vbox.add_child(grid)
-
-	for label_name in ["MoneyValue", "PopulationValue", "HappinessValue"]:
-		var lbl := Label.new()
-		lbl.name = label_name
-		grid.add_child(lbl)
 
 	var finance_panel := PanelContainer.new()
 	finance_panel.name = "FinancePanel"
@@ -289,39 +244,3 @@ func test_popup_actions_route_to_event_bus() -> void:
 	bus.free()
 
 
-func test_stats_close_rolls_up_to_header_and_reopens() -> void:
-	var bus = FakeBus.new()
-	var hud = _build_hud(bus)
-	add_child(bus)
-	add_child(hud)
-
-	var stats_panel := hud.get_node("Root/StatsPanel") as PanelContainer
-	var stats_close := hud.get_node("Root/StatsPanel/Margin/VBox/Header/StatsCloseButton") as Button
-	var stats_grid := hud.get_node("Root/StatsPanel/Margin/VBox/Grid") as GridContainer
-	var initial_bottom := stats_panel.offset_bottom
-	var initial_height := stats_panel.size.y
-
-	assert_true(stats_panel.visible)
-	assert_true(stats_grid.visible)
-	assert_true(stats_close.text == "x" or stats_close.text == "+")
-
-	stats_close.emit_signal("pressed")
-	assert_true(stats_panel.visible)
-	assert_false(stats_grid.visible)
-	assert_eq(stats_close.text, "+")
-	assert_lt(stats_panel.offset_bottom, initial_bottom)
-	assert_lt(stats_panel.custom_minimum_size.y, 96.0)
-	assert_lt(stats_panel.size.y, initial_height)
-	var collapsed_bottom := stats_panel.offset_bottom
-	var collapsed_height := stats_panel.size.y
-
-	stats_close.emit_signal("pressed")
-	assert_true(stats_panel.visible)
-	assert_true(stats_grid.visible)
-	assert_eq(stats_close.text, "x")
-	assert_gt(stats_panel.offset_bottom, collapsed_bottom)
-	assert_true(stats_panel.custom_minimum_size.y >= 96.0)
-	assert_gt(stats_panel.size.y, collapsed_height)
-
-	hud.free()
-	bus.free()

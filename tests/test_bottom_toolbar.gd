@@ -11,6 +11,22 @@ class FakeGameWorld extends Node:
 class FakeEvents extends Node:
 	signal building_catalog_ready(catalog)
 	signal building_catalog_requested()
+	signal budget_updated(balance, income, expenses)
+	signal population_changed(new_pop, delta)
+	signal month_tick()
+	signal simulation_speed_changed(speed)
+	signal simulation_paused(paused)
+	signal weather_changed(temperature, conditions)
+	signal storm_started()
+	signal storm_ended()
+	signal flood_started()
+	signal flood_ended()
+	signal heat_wave_started()
+	signal heat_wave_ended()
+	signal cold_snap_started()
+	signal cold_snap_ended()
+	signal power_state_changed(event)
+	signal storm_outage_changed(event)
 
 
 ## Helper: create a toolbar ready for testing
@@ -176,6 +192,7 @@ func test_x_activates_demolish() -> void:
 	var result = []
 	toolbar.demolish_selected.connect(func(): result.append(true))
 
+	# Simulate pressing X (which calls _on_category_pressed("demolish") internally)
 	toolbar._on_category_pressed("demolish")
 
 	assert_eq(result.size(), 1)
@@ -220,6 +237,59 @@ func test_locked_building_not_selectable() -> void:
 	assert_true(btn.disabled)
 
 	sub_panel.free()
+
+
+# ============================================
+# STATUS BAR TESTS
+# ============================================
+
+func test_status_bar_updates_on_budget() -> void:
+	var toolbar = _make_toolbar()
+
+	toolbar._on_budget_updated(100000, 5000, 3000)
+	assert_not_null(toolbar._budget_label)
+
+	toolbar.free()
+
+
+func test_status_bar_updates_on_population() -> void:
+	var toolbar = _make_toolbar()
+
+	toolbar._on_population_changed(1500, 100)
+	assert_not_null(toolbar._population_label)
+
+	toolbar.free()
+
+
+func test_status_bar_updates_on_month_tick() -> void:
+	var toolbar = _make_toolbar()
+
+	toolbar._on_month_tick()
+	assert_not_null(toolbar._date_label)
+
+	toolbar.free()
+
+
+# ============================================
+# SPEED BUTTON TESTS
+# ============================================
+
+func test_speed_buttons_exist() -> void:
+	var toolbar = _make_toolbar()
+
+	assert_eq(toolbar._speed_buttons.size(), 3)
+	assert_not_null(toolbar._pause_button)
+
+	toolbar.free()
+
+
+func test_speed_change_updates_buttons() -> void:
+	var toolbar = _make_toolbar()
+
+	toolbar._on_speed_changed(2)
+	assert_eq(toolbar._speed_buttons.size(), 3)
+
+	toolbar.free()
 
 
 # ============================================
@@ -326,5 +396,33 @@ func test_settings_emits_signal() -> void:
 
 	assert_eq(result.size(), 1)
 	assert_eq(result[0], "dashboard")
+
+	toolbar.free()
+
+
+# ============================================
+# ALERT TESTS
+# ============================================
+
+func test_alert_shows_icon() -> void:
+	var toolbar = _make_toolbar()
+
+	assert_false(toolbar._alert_container.visible)
+
+	toolbar._on_alert_changed("power", true)
+	assert_true(toolbar._alert_container.visible)
+	assert_true(toolbar._alert_icons["power"].visible)
+
+	toolbar._on_alert_changed("power", false)
+	assert_false(toolbar._alert_icons["power"].visible)
+
+	toolbar.free()
+
+
+func test_weather_update() -> void:
+	var toolbar = _make_toolbar()
+
+	toolbar._on_weather_changed(25.0, "Clear")
+	assert_true(toolbar._weather_label.text.contains("25"))
 
 	toolbar.free()

@@ -4,14 +4,14 @@
 
 [resource]
 script = ExtResource("1")
-id = "clear_rocks"
-display_name = "Clear Rocks"
-description = "Remove rocks to make terrain buildable."
-tooltip = "Clears rock formations from the terrain. Small rocks cost $500, large rocks cost $1000."
+id = "streetcar_parkway"
+display_name = "With Streetcars"
+description = "A wide six-lane avenue with traffic lights and dedicated streetcar tracks. The highest capacity avenue type."
+tooltip = "Six lanes plus streetcar tracks. Maximum avenue capacity."
 category = "infrastructure"
-building_type = "clear_rocks"
-build_cost = 500
-monthly_maintenance = 0
+building_type = "road"
+build_cost = 800
+monthly_maintenance = 15
 size = Vector2i(1, 1)
 power_production = 0.0
 power_consumption = 0.0
@@ -26,7 +26,14 @@ score_value = 0
 requires_road_adjacent = false
 requires_power = false
 requires_water = false
-color = Color(0.6, 0.5, 0.4, 1)
+color = Color(0.33, 0.33, 0.4, 1)
 sprite_path = ""
 pollution_radius = 0
 happiness_modifier = 0.0
+road_capacity = 400
+road_speed = 1.0
+noise_radius = 2
+allows_direct_access = true
+parking_spaces_required = 0
+is_green_building = false
+tree_coverage = 0

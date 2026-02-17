@@ -173,7 +173,7 @@ func _generate_texture(building_data: Resource, level: int, neighbors: Dictionar
 
 	# Handle infrastructure types using GridConstants helpers
 	if GridConstants.is_road_type(btype):
-		_draw_road(image, width, height, neighbors)
+		_draw_road(image, width, height, neighbors, building_data.id)
 	elif GridConstants.is_power_type(btype):
 		_draw_power_line(image, width, height, base_color, neighbors)
 	elif GridConstants.is_water_type(btype):
@@ -219,12 +219,80 @@ func _generate_texture(building_data: Resource, level: int, neighbors: Dictionar
 	return texture
 
 
-func _draw_road(image: Image, w: int, h: int, neighbors: Dictionary = {}) -> void:
-	var road_color = Color(0.25, 0.25, 0.28)
-	var line_color = Color(0.9, 0.85, 0.3)
-	var sidewalk_color = Color(0.45, 0.45, 0.42)
+func _draw_road(image: Image, w: int, h: int, neighbors: Dictionary = {}, road_id: String = "road") -> void:
+	# Road style parameters by type
+	var road_color: Color
+	var line_color: Color
+	var sidewalk_color: Color
+	var edge_width: int
+	var has_median: bool = false
+	var median_color := Color(0.3, 0.5, 0.3)
+	var median_width: int = 6
+	var has_rail: bool = false
+	var lane_count: int = 2
+	var has_crosswalks: bool = true
 
-	# Fill with road color
+	match road_id:
+		"dirt_road":
+			road_color = Color(0.42, 0.36, 0.26)
+			line_color = Color(0, 0, 0, 0)  # No lane markings
+			sidewalk_color = Color(0.48, 0.42, 0.30)
+			edge_width = 3
+			lane_count = 1
+			has_crosswalks = false
+		"road":
+			road_color = Color(0.25, 0.25, 0.28)
+			line_color = Color(0.9, 0.85, 0.3)
+			sidewalk_color = Color(0.45, 0.45, 0.42)
+			edge_width = 4
+			lane_count = 2
+		"street":
+			road_color = Color(0.23, 0.23, 0.26)
+			line_color = Color(0.9, 0.9, 0.9)
+			sidewalk_color = Color(0.45, 0.45, 0.42)
+			edge_width = 4
+			lane_count = 4
+		"avenue":
+			road_color = Color(0.22, 0.22, 0.25)
+			line_color = Color(0.9, 0.9, 0.9)
+			sidewalk_color = Color(0.48, 0.48, 0.44)
+			edge_width = 5
+			lane_count = 4
+		"boulevard":
+			road_color = Color(0.22, 0.22, 0.25)
+			line_color = Color(0.9, 0.9, 0.9)
+			sidewalk_color = Color(0.48, 0.48, 0.44)
+			edge_width = 5
+			lane_count = 4
+			has_median = true
+			median_color = Color(0.25, 0.45, 0.25)
+		"parkway":
+			road_color = Color(0.20, 0.20, 0.24)
+			line_color = Color(0.9, 0.9, 0.9)
+			sidewalk_color = Color(0.35, 0.48, 0.35)
+			edge_width = 6
+			lane_count = 6
+			has_median = true
+			median_color = Color(0.22, 0.42, 0.22)
+			median_width = 8
+		"streetcar_parkway":
+			road_color = Color(0.20, 0.20, 0.24)
+			line_color = Color(0.9, 0.9, 0.9)
+			sidewalk_color = Color(0.35, 0.48, 0.35)
+			edge_width = 6
+			lane_count = 6
+			has_median = true
+			median_color = Color(0.22, 0.42, 0.22)
+			median_width = 8
+			has_rail = true
+		_:
+			road_color = Color(0.25, 0.25, 0.28)
+			line_color = Color(0.9, 0.85, 0.3)
+			sidewalk_color = Color(0.45, 0.45, 0.42)
+			edge_width = 4
+			lane_count = 2
+
+	# Fill with road surface
 	image.fill(road_color)
 
 	# Determine road configuration
@@ -239,133 +307,193 @@ func _draw_road(image: Image, w: int, h: int, neighbors: Dictionary = {}) -> voi
 
 	var cx: int = int(w * 0.5)
 	var cy: int = int(h * 0.5)
-	var edge_width = 4
 	var dash_len = 8
 	var gap_len = 6
 
 	# Draw sidewalk/edges where there are no connections
 	if not has_north:
-		for x in range(w):
-			for y in range(edge_width):
-				image.set_pixel(x, y, sidewalk_color)
-
+		_draw_rect(image, 0, 0, w, edge_width, sidewalk_color)
 	if not has_south:
-		for x in range(w):
-			for y in range(edge_width):
-				image.set_pixel(x, h - 1 - y, sidewalk_color)
-
+		_draw_rect(image, 0, h - edge_width, w, edge_width, sidewalk_color)
 	if not has_west:
-		for y in range(h):
-			for x in range(edge_width):
-				image.set_pixel(x, y, sidewalk_color)
-
+		_draw_rect(image, 0, 0, edge_width, h, sidewalk_color)
 	if not has_east:
-		for y in range(h):
-			for x in range(edge_width):
-				image.set_pixel(w - 1 - x, y, sidewalk_color)
+		_draw_rect(image, w - edge_width, 0, edge_width, h, sidewalk_color)
 
-	# Curved corner geometry for L-turn road tiles.
+	# Curved corner geometry for L-turn road tiles
 	if connection_count == 2 and has_vertical and has_horizontal:
 		_carve_road_inner_corner(image, w, h, has_north, has_south, has_east, has_west, sidewalk_color)
 
-	# Determine road type and draw appropriate lane lines
-	if connection_count >= 3:
-		# Intersection (3-way or 4-way) - draw crosswalks
-		var crosswalk_color = Color(0.9, 0.9, 0.9)
-		var stripe_width = 4
-		var stripe_gap = 4
-		var crosswalk_offset = 8  # Distance from edge
+	# Draw median for boulevard/parkway types
+	if has_median and connection_count < 3:
+		var mhalf = int(median_width * 0.5)
+		if has_vertical and not has_horizontal:
+			var start_y = 0 if has_north else edge_width
+			var end_y = h if has_south else h - edge_width
+			_draw_rect(image, cx - mhalf, start_y, median_width, end_y - start_y, median_color)
+		elif has_horizontal and not has_vertical:
+			var start_x = 0 if has_west else edge_width
+			var end_x = w if has_east else w - edge_width
+			_draw_rect(image, start_x, cy - mhalf, end_x - start_x, median_width, median_color)
+		elif connection_count == 2 and has_vertical and has_horizontal:
+			# Corner median
+			if has_north or has_south:
+				var ys = 0 if has_north else cy
+				var ye = cy if has_north else h
+				_draw_rect(image, cx - mhalf, ys, median_width, ye - ys, median_color)
+			if has_east or has_west:
+				var xs = 0 if has_west else cx
+				var xe = cx if has_west else w
+				_draw_rect(image, xs, cy - mhalf, xe - xs, median_width, median_color)
+		elif connection_count == 0:
+			_draw_rect(image, cx - mhalf, 0, median_width, h, median_color)
 
-		# Draw crosswalks on sides that have connections
-		if has_north:
-			# Crosswalk at north edge
-			for x in range(crosswalk_offset, w - crosswalk_offset, stripe_width + stripe_gap):
-				for dx in range(min(stripe_width, w - crosswalk_offset - x)):
-					for y in range(2, 10):
-						if x + dx < w and y < h:
-							image.set_pixel(x + dx, y, crosswalk_color)
+	# Draw streetcar rails on median
+	if has_rail and connection_count < 3:
+		var rail_color = Color(0.55, 0.55, 0.58)
+		if has_vertical or (not has_vertical and not has_horizontal):
+			for lx in [cx - 3, cx + 2]:
+				for y in range(h):
+					if lx >= 0 and lx < w:
+						image.set_pixel(lx, y, rail_color)
+		if has_horizontal:
+			for ly in [cy - 3, cy + 2]:
+				for x in range(w):
+					if ly >= 0 and ly < h:
+						image.set_pixel(x, ly, rail_color)
 
-		if has_south:
-			# Crosswalk at south edge
-			for x in range(crosswalk_offset, w - crosswalk_offset, stripe_width + stripe_gap):
-				for dx in range(min(stripe_width, w - crosswalk_offset - x)):
-					for y in range(h - 10, h - 2):
-						if x + dx < w and y >= 0:
-							image.set_pixel(x + dx, y, crosswalk_color)
-
-		if has_west:
-			# Crosswalk at west edge
-			for y in range(crosswalk_offset, h - crosswalk_offset, stripe_width + stripe_gap):
-				for dy in range(min(stripe_width, h - crosswalk_offset - y)):
-					for x in range(2, 10):
-						if y + dy < h and x < w:
-							image.set_pixel(x, y + dy, crosswalk_color)
-
-		if has_east:
-			# Crosswalk at east edge
-			for y in range(crosswalk_offset, h - crosswalk_offset, stripe_width + stripe_gap):
-				for dy in range(min(stripe_width, h - crosswalk_offset - y)):
-					for x in range(w - 10, w - 2):
-						if y + dy < h and x >= 0:
-							image.set_pixel(x, y + dy, crosswalk_color)
+	# Draw lane lines and intersection markings
+	if line_color.a < 0.1:
+		# Dirt road: no lane markings, add tire ruts instead
+		var rut_color = road_color.darkened(0.12)
+		if has_vertical or (not has_vertical and not has_horizontal):
+			for lx in [cx - 6, cx + 5]:
+				for y in range(h):
+					if lx >= 0 and lx < w:
+						image.set_pixel(lx, y, rut_color)
+		if has_horizontal:
+			for ly in [cy - 6, cy + 5]:
+				for x in range(w):
+					if ly >= 0 and ly < h:
+						image.set_pixel(x, ly, rut_color)
+	elif connection_count >= 3 and has_crosswalks:
+		_draw_road_crosswalks(image, w, h, has_north, has_south, has_east, has_west)
 	elif has_vertical and has_horizontal and connection_count == 2:
-		# Corner piece (2 connections at 90 degrees) - draw curved lane line
 		_draw_curved_lane(image, w, h, has_north, has_south, has_east, has_west, line_color)
 	elif has_vertical and not has_horizontal:
-		# Straight vertical road (north-south) - vertical dashed line
-		var start_y = 0 if has_north else edge_width
-		var end_y = h if has_south else h - edge_width
+		_draw_road_lane_lines_vertical(image, w, h, cx, has_north, has_south, edge_width, lane_count, line_color, dash_len, gap_len)
+	elif has_horizontal and not has_vertical:
+		_draw_road_lane_lines_horizontal(image, w, h, cy, has_west, has_east, edge_width, lane_count, line_color, dash_len, gap_len)
+	elif connection_count == 1:
+		if has_north or has_south:
+			_draw_road_lane_lines_vertical(image, w, h, cx, has_north, has_south, edge_width, lane_count, line_color, dash_len, gap_len)
+		else:
+			_draw_road_lane_lines_horizontal(image, w, h, cy, has_west, has_east, edge_width, lane_count, line_color, dash_len, gap_len)
+	else:
+		# Isolated tile - crosshatch
+		var edge_col = road_color.lightened(0.12)
+		for x in range(w):
+			for y in range(h):
+				if (x + y) % 16 < 2:
+					image.set_pixel(x, y, edge_col)
 
+
+func _draw_road_crosswalks(image: Image, w: int, h: int, has_north: bool, has_south: bool, has_east: bool, has_west: bool) -> void:
+	var crosswalk_color = Color(0.9, 0.9, 0.9)
+	var stripe_width = 4
+	var stripe_gap = 4
+	var crosswalk_offset = 8
+
+	if has_north:
+		for x in range(crosswalk_offset, w - crosswalk_offset, stripe_width + stripe_gap):
+			for dx in range(min(stripe_width, w - crosswalk_offset - x)):
+				for y in range(2, 10):
+					if x + dx < w and y < h:
+						image.set_pixel(x + dx, y, crosswalk_color)
+	if has_south:
+		for x in range(crosswalk_offset, w - crosswalk_offset, stripe_width + stripe_gap):
+			for dx in range(min(stripe_width, w - crosswalk_offset - x)):
+				for y in range(h - 10, h - 2):
+					if x + dx < w and y >= 0:
+						image.set_pixel(x + dx, y, crosswalk_color)
+	if has_west:
+		for y in range(crosswalk_offset, h - crosswalk_offset, stripe_width + stripe_gap):
+			for dy in range(min(stripe_width, h - crosswalk_offset - y)):
+				for x in range(2, 10):
+					if y + dy < h and x < w:
+						image.set_pixel(x, y + dy, crosswalk_color)
+	if has_east:
+		for y in range(crosswalk_offset, h - crosswalk_offset, stripe_width + stripe_gap):
+			for dy in range(min(stripe_width, h - crosswalk_offset - y)):
+				for x in range(w - 10, w - 2):
+					if y + dy < h and x >= 0:
+						image.set_pixel(x, y + dy, crosswalk_color)
+
+
+func _draw_road_lane_lines_vertical(image: Image, w: int, h: int, cx: int, has_north: bool, has_south: bool, edge_width: int, lane_count: int, line_color: Color, dash_len: int, gap_len: int) -> void:
+	var start_y = 0 if has_north else edge_width
+	var end_y = h if has_south else h - edge_width
+
+	if lane_count <= 2:
+		# Single center dashed line
 		for y in range(start_y, end_y, dash_len + gap_len):
 			for dy in range(min(dash_len, end_y - y)):
 				if y + dy < end_y:
 					for lx in range(cx - 1, cx + 2):
 						if lx >= 0 and lx < w:
 							image.set_pixel(lx, y + dy, line_color)
-	elif has_horizontal and not has_vertical:
-		# Straight horizontal road (east-west) - horizontal dashed line
-		var start_x = 0 if has_west else edge_width
-		var end_x = w if has_east else w - edge_width
+	else:
+		# Multiple lane lines based on count
+		var road_width = w - edge_width * 2
+		var lane_width = road_width / lane_count
+		for lane_idx in range(1, lane_count):
+			var lx = edge_width + int(lane_idx * lane_width)
+			var is_center = (lane_idx == lane_count / 2)
+			if is_center and lane_count >= 4:
+				# Solid double center line
+				for y in range(start_y, end_y):
+					for dx in [-2, -1, 1, 2]:
+						if lx + dx >= 0 and lx + dx < w:
+							image.set_pixel(lx + dx, y, line_color)
+			else:
+				# Dashed lane line
+				for y in range(start_y, end_y, dash_len + gap_len):
+					for dy in range(min(dash_len, end_y - y)):
+						if y + dy < end_y and lx >= 0 and lx < w:
+							image.set_pixel(lx, y + dy, line_color)
 
+
+func _draw_road_lane_lines_horizontal(image: Image, w: int, h: int, cy: int, has_west: bool, has_east: bool, edge_width: int, lane_count: int, line_color: Color, dash_len: int, gap_len: int) -> void:
+	var start_x = 0 if has_west else edge_width
+	var end_x = w if has_east else w - edge_width
+
+	if lane_count <= 2:
+		# Single center dashed line
 		for x in range(start_x, end_x, dash_len + gap_len):
 			for dx in range(min(dash_len, end_x - x)):
 				if x + dx < end_x:
 					for ly in range(cy - 1, cy + 2):
 						if ly >= 0 and ly < h:
 							image.set_pixel(x + dx, ly, line_color)
-	elif connection_count == 1:
-		# Dead-end road - draw line toward the connection
-		if has_north:
-			for y in range(0, cy, dash_len + gap_len):
-				for dy in range(min(dash_len, cy - y)):
-					for lx in range(cx - 1, cx + 2):
-						if lx >= 0 and lx < w:
-							image.set_pixel(lx, y + dy, line_color)
-		elif has_south:
-			for y in range(cy, h, dash_len + gap_len):
-				for dy in range(min(dash_len, h - y)):
-					for lx in range(cx - 1, cx + 2):
-						if lx >= 0 and lx < w:
-							image.set_pixel(lx, y + dy, line_color)
-		elif has_east:
-			for x in range(cx, w, dash_len + gap_len):
-				for dx in range(min(dash_len, w - x)):
-					for ly in range(cy - 1, cy + 2):
-						if ly >= 0 and ly < h:
-							image.set_pixel(x + dx, ly, line_color)
-		elif has_west:
-			for x in range(0, cx, dash_len + gap_len):
-				for dx in range(min(dash_len, cx - x)):
-					for ly in range(cy - 1, cy + 2):
-						if ly >= 0 and ly < h:
-							image.set_pixel(x + dx, ly, line_color)
 	else:
-		# Isolated tile (no connections) - draw crosshatch pattern
-		var edge_col = Color(0.35, 0.35, 0.38)
-		for x in range(w):
-			for y in range(h):
-				if (x + y) % 16 < 2:
-					image.set_pixel(x, y, edge_col)
+		# Multiple lane lines based on count
+		var road_height = h - edge_width * 2
+		var lane_height = road_height / lane_count
+		for lane_idx in range(1, lane_count):
+			var ly = edge_width + int(lane_idx * lane_height)
+			var is_center = (lane_idx == lane_count / 2)
+			if is_center and lane_count >= 4:
+				# Solid double center line
+				for x in range(start_x, end_x):
+					for dy in [-2, -1, 1, 2]:
+						if ly + dy >= 0 and ly + dy < h:
+							image.set_pixel(x, ly + dy, line_color)
+			else:
+				# Dashed lane line
+				for x in range(start_x, end_x, dash_len + gap_len):
+					for dx in range(min(dash_len, end_x - x)):
+						if x + dx < end_x and ly >= 0 and ly < h:
+							image.set_pixel(x + dx, ly, line_color)
 
 
 func _carve_road_inner_corner(

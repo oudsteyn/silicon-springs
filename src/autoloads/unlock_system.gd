@@ -16,7 +16,7 @@ const UNLOCK_TIERS: Dictionary = {
 		"description": "Basic infrastructure to get your city started",
 		"buildings": [
 			# Infrastructure
-			"road", "power_line", "water_pipe",
+			"dirt_road", "road", "power_line", "water_pipe",
 			# Power
 			"coal_plant",
 			# Water
@@ -54,7 +54,7 @@ const UNLOCK_TIERS: Dictionary = {
 			# Services
 			"police_station", "school",
 			# Roads
-			"collector_road",
+			"street",
 			# Transit
 			"bus_depot"
 		]
@@ -86,7 +86,7 @@ const UNLOCK_TIERS: Dictionary = {
 			# Services
 			"university", "community_center",
 			# Roads
-			"arterial_road",
+			"avenue", "boulevard",
 			# Data Centers
 			"data_center_tier1",
 			# Water
@@ -114,7 +114,7 @@ const UNLOCK_TIERS: Dictionary = {
 		"description": "Your metropolis can handle the biggest infrastructure!",
 		"buildings": [
 			# Roads
-			"highway", "avenue",
+			"highway", "parkway", "streetcar_parkway",
 			# Transit
 			"seaport",
 			# Data Centers
