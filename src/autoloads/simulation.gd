@@ -223,7 +223,7 @@ func _update_employment() -> void:
 
 		# Only count jobs from operational buildings
 		if building.is_operational:
-			var jobs = 0
+			var jobs: float = 0.0
 			# Use effective jobs if available (zones with development levels)
 			if building.has_method("get_effective_jobs"):
 				var effective = building.get_effective_jobs()
@@ -441,15 +441,15 @@ func _update_population() -> void:
 
 	# CRITICAL: No growth without jobs available
 	# People won't move to a city without employment
-	var job_capacity = int(GameState.jobs_available)
-	if GameState.population >= job_capacity and growth_rate > 0:
-		# Can't grow beyond job capacity
+	var job_capacity = ceili(GameState.jobs_available)
+	if GameState.population >= GameState.jobs_available and growth_rate > 0:
+		# Can't grow beyond job capacity (round up so fractional jobs allow at least 1)
 		max_pop = mini(max_pop, job_capacity)
 
 	# Jobs attract workers - if jobs > population, faster growth
 	var job_bonus = GameConfig.job_attraction_bonus if GameConfig else 0.05
-	if int(GameState.jobs_available) > GameState.population and GameState.population > 0:
-		var job_attraction = float(job_capacity - GameState.population) / float(GameState.population)
+	if GameState.jobs_available > float(GameState.population) and GameState.population > 0:
+		var job_attraction = (GameState.jobs_available - float(GameState.population)) / float(GameState.population)
 		growth_rate += min(job_bonus, job_attraction * 0.1)
 
 	# Apply resource shortages (use GameConfig penalty)
@@ -714,6 +714,8 @@ func _calculate_zone_development(building: Node2D) -> float:
 			demand = GameState.commercial_demand
 		"industrial":
 			demand = GameState.industrial_demand
+		"agricultural":
+			demand = max(0.2, GameState.industrial_demand)
 		"mixed_use":
 			# Mixed-use benefits from both residential and commercial demand
 			demand = (GameState.residential_demand + GameState.commercial_demand) / 2.0
@@ -722,6 +724,14 @@ func _calculate_zone_development(building: Node2D) -> float:
 		return 0.0  # No growth without demand
 
 	base_progress *= (1.0 + demand)  # Up to 2x with full demand
+
+	# Agricultural zones have simpler development - only land value and happiness matter
+	if building.building_data.building_type == "agricultural":
+		if land_value_system:
+			var land_value = land_value_system.get_land_value_at(building.grid_cell)
+			base_progress *= (0.5 + land_value)
+		base_progress *= GameState.happiness
+		return base_progress
 
 	# Land value multiplier
 	if land_value_system:

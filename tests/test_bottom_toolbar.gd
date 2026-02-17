@@ -780,6 +780,23 @@ func test_farm_no_road_required() -> void:
 	assert_false(data.requires_road_adjacent, "Farm should not require road adjacency")
 
 
+func test_farm_no_water_consumption() -> void:
+	var data = load("res://src/data/farm.tres")
+	assert_eq(data.water_consumption, 0.0, "Farm should have 0 water consumption (requires_water=false)")
+	assert_false(data.requires_water, "Farm should not require water")
+
+
+func test_farm_fractional_jobs() -> void:
+	var data = load("res://src/data/farm.tres")
+	assert_eq(data.jobs_provided, 0.25, "Farm should provide 0.25 jobs per plot")
+
+
+func test_game_config_agricultural_capacity_matches() -> void:
+	# GameConfig zone capacity should match the 0.25 jobs per farm plot
+	var ag_cap = GameConfig.zone_capacity.get("agricultural", {})
+	assert_eq(ag_cap.get("jobs", -1), 0.25, "GameConfig agricultural jobs should be 0.25")
+
+
 func test_farm_in_starter_tier() -> void:
 	var tier0 = UnlockSystemClass.UNLOCK_TIERS[0]
 	assert_in("farm", tier0.buildings, "Farm should be in Tier 0")

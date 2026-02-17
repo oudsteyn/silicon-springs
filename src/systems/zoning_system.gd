@@ -530,7 +530,7 @@ func _update_zone_counts(zone_type: int, delta: int) -> void:
 			GameState.residential_zones += delta
 		ZoneType.COMMERCIAL_LOW, ZoneType.COMMERCIAL_MED, ZoneType.COMMERCIAL_HIGH:
 			GameState.commercial_zones += delta
-		ZoneType.INDUSTRIAL_LOW, ZoneType.INDUSTRIAL_MED, ZoneType.INDUSTRIAL_HIGH, ZoneType.AGRICULTURAL:
+		ZoneType.INDUSTRIAL_LOW, ZoneType.INDUSTRIAL_MED, ZoneType.INDUSTRIAL_HIGH:
 			GameState.industrial_zones += delta
 
 

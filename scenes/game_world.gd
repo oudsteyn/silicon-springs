@@ -1260,6 +1260,7 @@ func enter_build_mode(building_id: String) -> void:
 	current_building_id = building_id
 	current_building_data = grid_system.get_building_data(building_id)
 	build_mode = true
+	zone_mode = false
 	demolish_mode = false
 	set_tool(ToolMode.BUILD)
 
@@ -1279,6 +1280,7 @@ func enter_demolish_mode() -> void:
 	_clear_cell_inspector()
 	demolish_mode = true
 	build_mode = false
+	zone_mode = false
 	current_building_id = ""
 	current_building_data = null
 	ghost_preview.visible = false

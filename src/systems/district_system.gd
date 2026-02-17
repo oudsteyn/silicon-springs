@@ -124,7 +124,7 @@ func _update_district_metrics(district: DistrictData) -> void:
 
 	var metrics = {
 		"population": 0,
-		"jobs": 0,
+		"jobs": 0.0,
 		"buildings": 0,
 		"land_value": 0.0,
 		"residential_zones": 0,

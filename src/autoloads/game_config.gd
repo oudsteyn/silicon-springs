@@ -92,7 +92,7 @@ var zone_capacity: Dictionary = {
 	"industrial_low": {"pop": 0, "jobs": 15},
 	"industrial_med": {"pop": 0, "jobs": 60},
 	"industrial_high": {"pop": 0, "jobs": 150},
-	"agricultural": {"pop": 0, "jobs": 10}
+	"agricultural": {"pop": 0, "jobs": 0.25}
 }
 
 ## Power demand per zone type

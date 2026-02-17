@@ -170,24 +170,24 @@ func update_traffic() -> void:
 			"residential":
 				# Residents generate commute traffic
 				var pop = building.get_effective_capacity() if building.has_method("get_effective_capacity") else data.population_capacity
-				traffic_generated = int(pop * 0.5)  # 50% of capacity generates traffic
+				traffic_generated = ceili(pop * 0.5)  # 50% of capacity generates traffic
 			"commercial":
 				# Commercial gets customer and worker traffic
 				var jobs = building.get_effective_jobs() if building.has_method("get_effective_jobs") else data.jobs_provided
-				traffic_generated = int(jobs * 2)  # 2x workers as customers come too
+				traffic_generated = ceili(jobs * 2)  # 2x workers as customers come too
 			"industrial":
 				# Industrial gets freight and worker traffic
 				var jobs = building.get_effective_jobs() if building.has_method("get_effective_jobs") else data.jobs_provided
-				traffic_generated = int(jobs * 1.5)  # Workers + freight
+				traffic_generated = ceili(jobs * 1.5)  # Workers + freight
 			"mixed_use":
 				# Mixed-use generates MUCH less traffic - people live and work in same place
 				# Only generates traffic for external customers and some residents who work elsewhere
 				var pop = building.get_effective_capacity() if building.has_method("get_effective_capacity") else data.population_capacity
 				var jobs = building.get_effective_jobs() if building.has_method("get_effective_jobs") else data.jobs_provided
 				# Assume 70% of residents work in the same zone, only 30% commute out
-				var commute_traffic = int(pop * 0.15)  # Much lower than pure residential
+				var commute_traffic = ceili(pop * 0.15)  # Much lower than pure residential
 				# Customer traffic is also lower due to local residents shopping locally
-				var customer_traffic = int(jobs * 0.5)  # Much lower than pure commercial
+				var customer_traffic = ceili(jobs * 0.5)  # Much lower than pure commercial
 				traffic_generated = commute_traffic + customer_traffic
 
 		# Apply transit reduction if building has transit coverage

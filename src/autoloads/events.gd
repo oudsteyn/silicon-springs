@@ -112,7 +112,7 @@ signal happiness_changed(new_happiness: float)
 signal education_changed(education_rate: float)
 ## @deprecated Use population_state_changed domain event instead
 @warning_ignore("unused_signal")
-signal employment_updated(jobs: int, employed: int, unemployment: float)
+signal employment_updated(jobs: float, employed: int, unemployment: float)
 
 # Financial events
 @warning_ignore("unused_signal")

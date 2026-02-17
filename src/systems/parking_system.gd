@@ -78,8 +78,8 @@ func _on_building_placed(cell: Vector2i, building: Node2D) -> void:
 	# Track parking demand from this building
 	var demand = _calculate_parking_required(building)
 	if demand > 0:
-		parking_demand[cell] = int(demand)
-		_update_bucket(cell, 0, int(demand))
+		parking_demand[cell] = demand
+		_update_bucket(cell, 0, demand)
 
 	_update_parking_requirements()
 

@@ -62,26 +62,27 @@ static func diagnose(
 	result.is_developing = is_under_construction
 	result.development_rate = 1.0
 
-	# Critical infrastructure requirements
-	if not has_power:
-		result.issues.append(Issue.new(
-			"no_power",
-			"critical",
-			"No power connection",
-			"Build power lines to connect to the grid",
-			1.0
-		))
-		result.development_rate = 0.0
+	# Critical infrastructure requirements (agricultural zones are self-sufficient)
+	if zone_type != "agricultural":
+		if not has_power:
+			result.issues.append(Issue.new(
+				"no_power",
+				"critical",
+				"No power connection",
+				"Build power lines to connect to the grid",
+				1.0
+			))
+			result.development_rate = 0.0
 
-	if not has_water:
-		result.issues.append(Issue.new(
-			"no_water",
-			"critical",
-			"No water connection",
-			"Build water pipes to connect to water supply",
-			1.0
-		))
-		result.development_rate = 0.0
+		if not has_water:
+			result.issues.append(Issue.new(
+				"no_water",
+				"critical",
+				"No water connection",
+				"Build water pipes to connect to water supply",
+				1.0
+			))
+			result.development_rate = 0.0
 
 	if not has_road_access and zone_type != "agricultural":
 		result.issues.append(Issue.new(

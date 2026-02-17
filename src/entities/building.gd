@@ -540,11 +540,11 @@ func get_effective_capacity() -> int:
 	return 0
 
 
-func get_effective_jobs() -> int:
+func get_effective_jobs() -> float:
 	# Higher development = more jobs (for commercial/industrial)
 	if building_data and building_data.jobs_provided > 0:
-		return int(building_data.jobs_provided * (0.5 + 0.25 * development_level))
-	return 0
+		return building_data.jobs_provided * (0.5 + 0.25 * development_level)
+	return 0.0
 
 
 func get_info() -> Dictionary:
@@ -552,6 +552,7 @@ func get_info() -> Dictionary:
 		"name": building_data.display_name if building_data else "Unknown",
 		"description": building_data.description if building_data else "",
 		"category": building_data.category if building_data else "",
+		"building_type": building_data.building_type if building_data else "",
 		"cell": grid_cell,
 		"operational": is_operational,
 		"powered": is_powered,

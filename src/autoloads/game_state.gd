@@ -198,7 +198,9 @@ func reset_game() -> void:
 	building_counts = {}
 	residential_zones = 0
 	commercial_zones = 0
-	jobs_available = 0
+	jobs_available = 0.0
+	skilled_jobs_available = 0.0
+	unskilled_jobs_available = 0.0
 	employed_population = 0
 	unemployment_rate = 0.0
 	residential_demand = 0.0
