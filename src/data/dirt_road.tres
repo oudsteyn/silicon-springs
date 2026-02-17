@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1")
 id = "dirt_road"
-display_name = "Low Density Dirt Road"
+display_name = "Dirt Road"
 description = "A cheap narrow dirt road with stop signs at intersections. Supports low density zones only."
 tooltip = "Cheapest road option. Single lane, very low capacity."
 category = "infrastructure"

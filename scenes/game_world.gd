@@ -1523,12 +1523,12 @@ func _on_building_catalog_requested() -> void:
 		if not catalog.has(category):
 			catalog[category] = []
 
-		# Convert BuildingData to dictionary for event transport
 		catalog[category].append({
 			"id": building_data.id,
 			"display_name": building_data.display_name,
 			"build_cost": building_data.build_cost,
-			"category": category
+			"category": category,
+			"resource": building_data
 		})
 
 	Events.building_catalog_ready.emit(catalog)

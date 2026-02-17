@@ -27,17 +27,39 @@ const TOOLBAR_CATEGORIES = [
 
 # Zone types (from ToolPalette)
 const ZONE_TYPES = [
-	{"id": "res_low", "label": "Residential Low", "type": 1, "color": Color(0.2, 0.8, 0.2)},
-	{"id": "res_med", "label": "Residential Med", "type": 2, "color": Color(0.1, 0.6, 0.1)},
-	{"id": "res_high", "label": "Residential High", "type": 3, "color": Color(0.0, 0.4, 0.0)},
-	{"id": "com_low", "label": "Commercial Low", "type": 4, "color": Color(0.2, 0.2, 0.8)},
-	{"id": "com_med", "label": "Commercial Med", "type": 5, "color": Color(0.1, 0.1, 0.6)},
-	{"id": "com_high", "label": "Commercial High", "type": 6, "color": Color(0.0, 0.0, 0.4)},
-	{"id": "ind_low", "label": "Industrial Low", "type": 7, "color": Color(0.8, 0.8, 0.2)},
-	{"id": "ind_med", "label": "Industrial Med", "type": 8, "color": Color(0.6, 0.6, 0.1)},
-	{"id": "ind_high", "label": "Industrial High", "type": 9, "color": Color(0.4, 0.4, 0.0)},
-	{"id": "agri", "label": "Agricultural", "type": 10, "color": Color(0.6, 0.5, 0.2)},
-	{"id": "dezone", "label": "De-zone", "type": 0, "color": Color(0.5, 0.5, 0.5)}
+	{"id": "res_low", "label": "Residential Low", "type": 1, "color": Color(0.2, 0.8, 0.2),
+		"desc": "Small houses and duplexes. Low density, quiet neighborhoods.",
+		"stats": "Low traffic | Low land value"},
+	{"id": "res_med", "label": "Residential Med", "type": 2, "color": Color(0.1, 0.6, 0.1),
+		"desc": "Townhouses and small apartments. Moderate density housing.",
+		"stats": "Medium traffic | Medium land value"},
+	{"id": "res_high", "label": "Residential High", "type": 3, "color": Color(0.0, 0.4, 0.0),
+		"desc": "Apartment towers and condos. High density, high demand for services.",
+		"stats": "High traffic | High land value"},
+	{"id": "com_low", "label": "Commercial Low", "type": 4, "color": Color(0.2, 0.2, 0.8),
+		"desc": "Small shops and local businesses. Serves nearby residents.",
+		"stats": "Low traffic | Provides jobs"},
+	{"id": "com_med", "label": "Commercial Med", "type": 5, "color": Color(0.1, 0.1, 0.6),
+		"desc": "Offices and mid-size stores. Moderate employment.",
+		"stats": "Medium traffic | More jobs"},
+	{"id": "com_high", "label": "Commercial High", "type": 6, "color": Color(0.0, 0.0, 0.4),
+		"desc": "Skyscrapers and large retail. High employment, heavy traffic.",
+		"stats": "High traffic | Many jobs"},
+	{"id": "ind_low", "label": "Industrial Low", "type": 7, "color": Color(0.8, 0.8, 0.2),
+		"desc": "Light workshops and warehouses. Some pollution.",
+		"stats": "Low pollution | Low jobs"},
+	{"id": "ind_med", "label": "Industrial Med", "type": 8, "color": Color(0.6, 0.6, 0.1),
+		"desc": "Factories and processing plants. Moderate pollution and noise.",
+		"stats": "Medium pollution | Medium jobs"},
+	{"id": "ind_high", "label": "Industrial High", "type": 9, "color": Color(0.4, 0.4, 0.0),
+		"desc": "Heavy industry and refineries. High pollution, keep away from homes.",
+		"stats": "High pollution | Many jobs"},
+	{"id": "agri", "label": "Agricultural", "type": 10, "color": Color(0.6, 0.5, 0.2),
+		"desc": "Farms and crop fields. Low pollution, requires large open areas.",
+		"stats": "No pollution | Few jobs"},
+	{"id": "dezone", "label": "De-zone", "type": 0, "color": Color(0.5, 0.5, 0.5),
+		"desc": "Remove zoning from painted tiles. Buildings will remain until demolished.",
+		"stats": ""}
 ]
 
 # Overlay modes (from ToolPalette)
@@ -573,7 +595,8 @@ func _populate_build_items(category_id: String) -> void:
 				"cost": building_info.build_cost,
 				"building_id": building_info.id,
 				"locked": not is_unlocked,
-				"unlock_population": unlock_population
+				"unlock_population": unlock_population,
+				"building_data": building_info.get("resource", null)
 			})
 
 	# Sort: unlocked first, then by cost, locked by unlock population
