@@ -38,7 +38,7 @@ class_name BuildingData
 
 # Population
 @export var population_capacity: int = 0
-@export var jobs_provided: int = 0
+@export var jobs_provided: float = 0.0
 @export_range(0.0, 1.0) var skilled_jobs_ratio: float = 0.0  # Percentage of jobs requiring education
 
 # Data center specific

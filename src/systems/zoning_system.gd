@@ -51,7 +51,7 @@ const ZONE_CAPACITY = {
 	ZoneType.INDUSTRIAL_LOW: {"pop": 0, "jobs": 15, "size": 1},
 	ZoneType.INDUSTRIAL_MED: {"pop": 0, "jobs": 60, "size": 2},
 	ZoneType.INDUSTRIAL_HIGH: {"pop": 0, "jobs": 150, "size": 3},
-	ZoneType.AGRICULTURAL: {"pop": 0, "jobs": 2, "size": 1}
+	ZoneType.AGRICULTURAL: {"pop": 0, "jobs": 0.25, "size": 1}
 }
 
 # FAR (Floor Area Ratio) limits by zone type
@@ -398,7 +398,7 @@ func _get_zone_demand(zone_type: int) -> float:
 		ZoneType.INDUSTRIAL_LOW, ZoneType.INDUSTRIAL_MED, ZoneType.INDUSTRIAL_HIGH:
 			return GameState.industrial_demand
 		ZoneType.AGRICULTURAL:
-			# Cap: 18 agricultural tiles per 20 population (1 house), minimum 9 (1 farm)
+			# Cap: ~1 agricultural tile per person, minimum 9 plots
 			var ag_limit = maxi(9, int(GameState.population * 0.9))
 			if _count_developed_zones(ZoneType.AGRICULTURAL) >= ag_limit:
 				return 0.0

@@ -117,7 +117,7 @@ class PopulationStateChanged extends RefCounted:
 	var happiness: float = 0.0
 	var education_rate: float = 0.0
 	var employment_rate: float = 0.0
-	var jobs_available: int = 0
+	var jobs_available: float = 0.0
 	var employed: int = 0
 
 	func _init(data: Dictionary = {}) -> void:

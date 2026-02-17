@@ -206,9 +206,9 @@ func _update_employment() -> void:
 	if not grid_system:
 		return
 
-	var total_jobs = 0
-	var skilled_jobs = 0
-	var unskilled_jobs = 0
+	var total_jobs: float = 0.0
+	var skilled_jobs: float = 0.0
+	var unskilled_jobs: float = 0.0
 
 	# Count jobs from all buildings
 	var counted_buildings = {}
@@ -238,8 +238,8 @@ func _update_employment() -> void:
 
 			# Split by skill requirement
 			var skill_ratio = building.building_data.skilled_jobs_ratio if building.building_data.get("skilled_jobs_ratio") != null else 0.0
-			skilled_jobs += int(jobs * skill_ratio)
-			unskilled_jobs += int(jobs * (1.0 - skill_ratio))
+			skilled_jobs += jobs * skill_ratio
+			unskilled_jobs += jobs * (1.0 - skill_ratio)
 
 	GameState.update_employment(total_jobs, skilled_jobs, unskilled_jobs)
 
@@ -266,6 +266,10 @@ func _process_random_events() -> void:
 
 		# Skip infrastructure (roads, power lines, water pipes don't burn)
 		if building_data.category == "infrastructure":
+			continue
+
+		# Skip agricultural buildings (crop plots don't catch fire)
+		if building_data.building_type == "agricultural":
 			continue
 
 		# Check fire risk for burnable buildings (zones, services, power, water, data centers)
@@ -437,14 +441,14 @@ func _update_population() -> void:
 
 	# CRITICAL: No growth without jobs available
 	# People won't move to a city without employment
-	var job_capacity = GameState.jobs_available
+	var job_capacity = int(GameState.jobs_available)
 	if GameState.population >= job_capacity and growth_rate > 0:
 		# Can't grow beyond job capacity
-		max_pop = min(max_pop, job_capacity)
+		max_pop = mini(max_pop, job_capacity)
 
 	# Jobs attract workers - if jobs > population, faster growth
 	var job_bonus = GameConfig.job_attraction_bonus if GameConfig else 0.05
-	if job_capacity > GameState.population and GameState.population > 0:
+	if int(GameState.jobs_available) > GameState.population and GameState.population > 0:
 		var job_attraction = float(job_capacity - GameState.population) / float(GameState.population)
 		growth_rate += min(job_bonus, job_attraction * 0.1)
 
@@ -465,7 +469,7 @@ func _update_population() -> void:
 		var growth = int(max(1, current_pop * growth_rate))
 		# Initial population boost if we have housing and jobs but no people
 		if current_pop == 0 and job_capacity > 0:
-			growth = min(10, job_capacity)  # Start with 10 people or job capacity
+			growth = mini(10, job_capacity)  # Start with 10 people or job capacity
 		GameState.population = min(max_pop, current_pop + growth)
 	elif current_pop > max_pop or growth_rate < 0:
 		# Population decline if over capacity or unhappy

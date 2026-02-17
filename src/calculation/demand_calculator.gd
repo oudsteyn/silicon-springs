@@ -64,7 +64,7 @@ class DemandResult:
 ## Calculate demand with full breakdown for all zone types
 static func calculate_with_breakdown(
 	population: int,
-	jobs_available: int,
+	jobs_available: float,
 	commercial_zones: int,
 	industrial_zones: int,
 	educated_population: int,
@@ -96,7 +96,7 @@ static func calculate_with_breakdown(
 ## Simple calculate (backwards compatible)
 static func calculate(
 	population: int,
-	jobs_available: int,
+	jobs_available: float,
 	commercial_zones: int,
 	industrial_zones: int,
 	educated_population: int,
@@ -113,7 +113,7 @@ static func calculate(
 	return result.to_dict()
 
 
-static func _calculate_residential_breakdown(zone: ZoneDemandBreakdown, population: int, jobs_available: int) -> void:
+static func _calculate_residential_breakdown(zone: ZoneDemandBreakdown, population: int, jobs_available: float) -> void:
 	# Residential demand: high if jobs > population (workers needed)
 	if jobs_available > 0:
 		var worker_ratio = float(population) / float(jobs_available)
@@ -123,7 +123,7 @@ static func _calculate_residential_breakdown(zone: ZoneDemandBreakdown, populati
 				"jobs_need_workers",
 				"Jobs Need Workers",
 				zone.base_demand,
-				"%d jobs available with only %d residents" % [jobs_available, population]
+				"%d jobs available with only %d residents" % [int(jobs_available), population]
 			))
 		else:
 			zone.base_demand = -0.2

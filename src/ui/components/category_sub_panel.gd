@@ -286,7 +286,10 @@ func _populate_building_tooltip(item: Dictionary) -> void:
 		if data.population_capacity > 0:
 			stats_parts.append("%d pop" % data.population_capacity)
 		if data.jobs_provided > 0:
-			stats_parts.append("%d jobs" % data.jobs_provided)
+			if data.jobs_provided >= 1.0:
+				stats_parts.append("%d jobs" % int(data.jobs_provided))
+			else:
+				stats_parts.append("%.2g jobs" % data.jobs_provided)
 	_tooltip_stats.text = " | ".join(stats_parts)
 
 	# Generate tile preview

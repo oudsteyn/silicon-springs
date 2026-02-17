@@ -112,7 +112,7 @@ var fire_chance_uncovered: float = 0.05
 var crime_chance_uncovered: float = 0.03
 
 ## Whether disasters are enabled
-var disasters_enabled: bool = true
+var disasters_enabled: bool = false
 
 ## Base disaster chance per year (scales with population)
 var disaster_chance_base: float = 0.05

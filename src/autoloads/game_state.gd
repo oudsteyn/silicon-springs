@@ -100,9 +100,9 @@ var residential_zones: int = 0
 var commercial_zones: int = 0
 
 # Employment
-var jobs_available: int = 0
-var skilled_jobs_available: int = 0
-var unskilled_jobs_available: int = 0
+var jobs_available: float = 0.0
+var skilled_jobs_available: float = 0.0
+var unskilled_jobs_available: float = 0.0
 var employed_population: int = 0
 var skilled_employed: int = 0
 var unskilled_employed: int = 0
@@ -316,7 +316,7 @@ func get_total_data_centers() -> int:
 	return total
 
 
-func update_employment(total_jobs: int, skilled: int = 0, unskilled: int = 0) -> void:
+func update_employment(total_jobs: float, skilled: float = 0.0, unskilled: float = 0.0) -> void:
 	jobs_available = total_jobs
 	skilled_jobs_available = skilled
 	unskilled_jobs_available = unskilled
@@ -326,12 +326,12 @@ func update_employment(total_jobs: int, skilled: int = 0, unskilled: int = 0) ->
 	var uneducated_pop = population - educated_population
 
 	# Uneducated workers fill unskilled jobs first
-	unskilled_employed = min(uneducated_pop, unskilled_jobs_available)
+	unskilled_employed = int(min(uneducated_pop, unskilled_jobs_available))
 	var remaining_unskilled_jobs = unskilled_jobs_available - unskilled_employed
 
 	# Educated workers fill skilled jobs, then remaining unskilled jobs
-	skilled_employed = min(educated_population, skilled_jobs_available)
-	var educated_in_unskilled = min(educated_population - skilled_employed, remaining_unskilled_jobs)
+	skilled_employed = int(min(educated_population, skilled_jobs_available))
+	var educated_in_unskilled = int(min(educated_population - skilled_employed, remaining_unskilled_jobs))
 
 	employed_population = unskilled_employed + skilled_employed + educated_in_unskilled
 
