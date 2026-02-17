@@ -272,8 +272,8 @@ func set_zone(cell: Vector2i, zone_type: int) -> bool:
 			if existing.building_data.category != "zone":
 				return false
 
-	# Must be adjacent to road
-	if zone_type != ZoneType.NONE and not _has_adjacent_road(cell):
+	# Must be adjacent to road (agricultural zones exempt)
+	if zone_type != ZoneType.NONE and zone_type != ZoneType.AGRICULTURAL and not _has_adjacent_road(cell):
 		return false
 
 	# Create or update zone
@@ -378,8 +378,8 @@ func _can_zone_develop(cell: Vector2i, _zone_data: ZoneData) -> bool:
 	if GameState.has_water_shortage():
 		return false
 
-	# Check road access
-	if not _has_adjacent_road(cell):
+	# Check road access (agricultural zones exempt)
+	if _zone_data.type != ZoneType.AGRICULTURAL and not _has_adjacent_road(cell):
 		return false
 
 	return true
@@ -391,9 +391,24 @@ func _get_zone_demand(zone_type: int) -> float:
 			return GameState.residential_demand
 		ZoneType.COMMERCIAL_LOW, ZoneType.COMMERCIAL_MED, ZoneType.COMMERCIAL_HIGH:
 			return GameState.commercial_demand
-		ZoneType.INDUSTRIAL_LOW, ZoneType.INDUSTRIAL_MED, ZoneType.INDUSTRIAL_HIGH, ZoneType.AGRICULTURAL:
+		ZoneType.INDUSTRIAL_LOW, ZoneType.INDUSTRIAL_MED, ZoneType.INDUSTRIAL_HIGH:
 			return GameState.industrial_demand
+		ZoneType.AGRICULTURAL:
+			# Cap: 18 agricultural tiles per 20 population (1 house), minimum 9 (1 farm)
+			var ag_limit = maxi(9, int(GameState.population * 0.9))
+			if _count_developed_zones(ZoneType.AGRICULTURAL) >= ag_limit:
+				return 0.0
+			return max(0.2, GameState.industrial_demand)
 	return 0.0
+
+
+func _count_developed_zones(zone_type: int) -> int:
+	var count: int = 0
+	for cell in zones:
+		var zd = zones[cell]
+		if zd.type == zone_type and zd.developed:
+			count += 1
+	return count
 
 
 func _calculate_growth_rate(cell: Vector2i, _zone_data: ZoneData, demand: float) -> float:

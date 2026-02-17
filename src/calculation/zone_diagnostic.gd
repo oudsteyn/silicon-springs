@@ -83,7 +83,7 @@ static func diagnose(
 		))
 		result.development_rate = 0.0
 
-	if not has_road_access:
+	if not has_road_access and zone_type != "agricultural":
 		result.issues.append(Issue.new(
 			"no_road",
 			"critical",

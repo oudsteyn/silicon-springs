@@ -18,11 +18,13 @@ const UNLOCK_TIERS: Dictionary = {
 			# Infrastructure
 			"dirt_road", "road", "power_line", "water_pipe",
 			# Power
-			"coal_plant",
+			"coal_plant", "windmill",
 			# Water
-			"water_pump", "water_tower",
+			"water_pump", "water_tower", "well",
 			# Zones (low density)
 			"residential_low", "commercial_low", "industrial_low",
+			# Agriculture
+			"farm",
 			# Basic service
 			"small_park"
 		]
@@ -120,9 +122,7 @@ const UNLOCK_TIERS: Dictionary = {
 			# Data Centers
 			"data_center_tier3",
 			# Special zones
-			"mixed_use_zone", "heavy_industrial_zone",
-			# Agriculture
-			"farm"
+			"mixed_use_zone", "heavy_industrial_zone"
 		]
 	},
 	7: {

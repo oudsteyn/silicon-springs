@@ -190,7 +190,7 @@ func _display_building_info(info: Dictionary) -> void:
 	_add_info_row("Position", "(%d, %d)" % [cell.x, cell.y])
 
 	# Development level (for zones)
-	var is_zone = info.get("category", "") in ["residential", "commercial", "industrial"]
+	var is_zone = info.get("category", "") in ["residential", "commercial", "industrial", "agricultural"]
 	if info.has("development_level") and info.development_level > 0:
 		var level_text = "Level %d" % info.development_level
 		if info.development_level < 3 and info.has("development_progress"):
@@ -417,6 +417,8 @@ func _display_zone_diagnostics(info: Dictionary) -> void:
 			demand = GameState.commercial_demand
 		"industrial":
 			demand = GameState.industrial_demand
+		"agricultural":
+			demand = max(0.2, GameState.industrial_demand)
 
 	# Run zone diagnostic
 	var diagnostic = ZoneDiagnostic.diagnose(

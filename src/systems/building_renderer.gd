@@ -745,6 +745,8 @@ func _draw_power_plant(image: Image, w: int, h: int, base_color: Color, id: Stri
 		_draw_solar_farm(image, w, h, base_color)
 	elif "battery" in id:
 		_draw_battery_farm(image, w, h, base_color)
+	elif "windmill" in id:
+		_draw_windmill(image, w, h, base_color)
 	else:
 		# Generic power plant
 		var building_color = base_color.darkened(0.1)
@@ -884,6 +886,45 @@ func _draw_wind_turbine(image: Image, w: int, h: int, _base_color: Color) -> voi
 					image.set_pixel(px, py, blade_color)
 
 
+func _draw_windmill(image: Image, w: int, h: int, _base_color: Color) -> void:
+	image.fill(Color(0, 0, 0, 0))  # Transparent background
+
+	var body_color = Color(0.72, 0.68, 0.6)
+	var blade_color = Color(0.75, 0.72, 0.65)
+	var cap_color = Color(0.5, 0.38, 0.25)
+
+	var cx: int = int(w * 0.5)
+	var hub_y = 12
+
+	# Tower/body (tapered, shorter than wind turbine)
+	for y in range(hub_y + 4, h - 3):
+		var tower_width = 3 + int((float(y - hub_y - 4) / float(h - hub_y - 7)) * 5)
+		for x in range(-tower_width, tower_width + 1):
+			if cx + x >= 0 and cx + x < w:
+				image.set_pixel(cx + x, y, body_color)
+
+	# Cap/roof
+	_draw_rect(image, cx - 8, hub_y + 2, 16, 5, cap_color)
+
+	# Hub
+	_draw_circle(image, cx, hub_y, 3, Color(0.5, 0.45, 0.38))
+
+	# 4 blades (cross pattern, simpler than turbine)
+	var blade_length = 16
+	var angles = [0, 90, 180, 270]
+	for angle in angles:
+		var rad = deg_to_rad(angle)
+		for i in range(blade_length):
+			var bx = cx + int(cos(rad) * i)
+			var by = hub_y + int(sin(rad) * i)
+			var blade_width = 2 if i < int(blade_length * 0.6) else 1
+			for bw in range(-blade_width, blade_width + 1):
+				var px = bx + int(sin(rad) * bw)
+				var py = by - int(cos(rad) * bw)
+				if px >= 0 and px < w and py >= 0 and py < h:
+					image.set_pixel(px, py, blade_color)
+
+
 func _draw_wind_farm(image: Image, w: int, h: int, _base_color: Color) -> void:
 	# Light ground
 	_fill_with_gradient(image, w, h, Color(0.75, 0.8, 0.75), Color(0.7, 0.75, 0.7))
@@ -997,7 +1038,32 @@ func _draw_battery_farm(image: Image, w: int, h: int, _base_color: Color) -> voi
 func _draw_water_facility(image: Image, w: int, h: int, base_color: Color, id: String) -> void:
 	_fill_with_gradient(image, w, h, base_color.darkened(0.2), base_color)
 
-	if "tower" in id:
+	if "well" in id:
+		# Well - stone circle with wooden frame and bucket
+		var stone_color = Color(0.5, 0.5, 0.48)
+		var wood_color = Color(0.45, 0.32, 0.2)
+		var water_color = Color(0.3, 0.5, 0.75)
+		var rope_color = Color(0.55, 0.45, 0.3)
+
+		var cx = int(w * 0.5)
+		var cy = int(h * 0.5)
+
+		# Stone well base (circle)
+		_draw_circle(image, cx, cy + 5, 14, stone_color)
+		_draw_circle(image, cx, cy + 5, 10, water_color.darkened(0.3))
+
+		# Wooden frame (A-frame over well)
+		_draw_rect(image, cx - 14, cy - 15, 4, 25, wood_color)
+		_draw_rect(image, cx + 10, cy - 15, 4, 25, wood_color)
+		# Crossbar
+		_draw_rect(image, cx - 14, cy - 15, 28, 3, wood_color.lightened(0.1))
+
+		# Rope
+		_draw_rect(image, cx, cy - 12, 2, 15, rope_color)
+
+		# Bucket
+		_draw_rect(image, cx - 2, cy + 2, 5, 4, Color(0.4, 0.4, 0.42))
+	elif "tower" in id:
 		# Water tower - cylindrical tank on legs
 		var tank_color = Color(0.5, 0.6, 0.7)
 		var leg_color = Color(0.4, 0.4, 0.42)

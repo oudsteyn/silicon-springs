@@ -748,3 +748,58 @@ func test_paved_roads_conduct_utilities() -> void:
 func test_road_types_no_stale_entries() -> void:
 	assert_not_in("collector", GridConstants.ROAD_TYPES, "ROAD_TYPES should not contain collector")
 	assert_not_in("arterial", GridConstants.ROAD_TYPES, "ROAD_TYPES should not contain arterial")
+
+
+# ============================================
+# FARMING BOOTSTRAP TESTS
+# ============================================
+
+func test_well_building_data() -> void:
+	var data = load("res://src/data/well.tres")
+	assert_not_null(data, "well.tres should exist")
+	assert_eq(data.category, "water")
+	assert_eq(data.building_type, "water_source")
+	assert_false(data.requires_road_adjacent, "Well should not require road")
+	assert_false(data.requires_power, "Well should not require power")
+	assert_eq(data.water_production, 100.0)
+
+
+func test_windmill_building_data() -> void:
+	var data = load("res://src/data/windmill.tres")
+	assert_not_null(data, "windmill.tres should exist")
+	assert_eq(data.category, "power")
+	assert_eq(data.building_type, "generator")
+	assert_false(data.requires_road_adjacent, "Windmill should not require road")
+	assert_false(data.requires_power, "Windmill should not require power")
+	assert_eq(data.power_production, 2.0)
+
+
+func test_farm_no_road_required() -> void:
+	var data = load("res://src/data/farm.tres")
+	assert_not_null(data, "farm.tres should exist")
+	assert_false(data.requires_road_adjacent, "Farm should not require road adjacency")
+
+
+func test_farm_in_starter_tier() -> void:
+	var tier0 = UnlockSystemClass.UNLOCK_TIERS[0]
+	assert_in("farm", tier0.buildings, "Farm should be in Tier 0")
+	# Also verify well and windmill are in Tier 0
+	assert_in("well", tier0.buildings, "Well should be in Tier 0")
+	assert_in("windmill", tier0.buildings, "Windmill should be in Tier 0")
+
+
+func test_agricultural_demand_capped_by_population() -> void:
+	var zoning = ZoningSystem.new()
+	# With 0 population, 1 farm (9 tiles) still allowed
+	var old_pop = GameState.population
+	GameState.population = 0
+	assert_gt(zoning._get_zone_demand(ZoningSystem.ZoneType.AGRICULTURAL), 0.0,
+		"Ag demand should be positive at 0 pop (1 free farm)")
+
+	# With 20 population (1 house), limit is 18 → demand > 0 with no developed farms
+	GameState.population = 20
+	assert_gt(zoning._get_zone_demand(ZoningSystem.ZoneType.AGRICULTURAL), 0.0,
+		"Ag demand should be positive with population and no developed farms")
+
+	GameState.population = old_pop
+	zoning.free()
